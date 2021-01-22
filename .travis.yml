@@ -11,6 +11,7 @@ script:
   - cd hexo
   - npm install
   - hexo clean && hexo generate
+  - mv public ..
 deploy:
   provider: pages
   cleanup: false
@@ -18,5 +19,5 @@ deploy:
   keep-history: true
   on:
     branch: master
-  local-dir: hexo/public
+  local-dir: public
   target_branch: blog
