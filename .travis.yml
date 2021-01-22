@@ -10,14 +10,5 @@ script:
   - git submodule update
   - cd hexo
   - npm install
-  - hexo clean && hexo generate
-  - mv public ..
-deploy:
-  provider: pages
-  cleanup: false
-  github-token: $WWW_BLOG_DEPLOY_TOKEN
-  keep-history: true
-  on:
-    branch: master
-  local-dir: public
-  target_branch: blog
+  - sed -i "s#%WWW_BLOG_DEPLOY_TOKEN%#$WWW_BLOG_DEPLOY_TOKEN#" _config.yml
+  - hexo clean && hexo deploy
