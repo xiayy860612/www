@@ -1,0 +1,22 @@
+dist: Bionic
+language: node_js
+node_js:
+  - 14
+cache: npm
+branches:
+  only:
+    - master # build master branch only
+script:
+  - git submodule update
+  - cd hexo
+  - npm install
+  - hexo clean && hexo generate
+deploy:
+  provider: pages
+  cleanup: false
+  github-token: $WWW_BLOG_DEPLOY_TOKEN
+  keep-history: true
+  on:
+    branch: master
+  local-dir: hexo/public
+  target_branch: blog
