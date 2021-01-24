@@ -115,7 +115,7 @@ theme_config:
     categories: /categories/ || th
     # archives: /archives/ || archive
     #schedule: /schedule/ || calendar
-    #sitemap: /sitemap.xml || sitemap
+    # sitemap: /sitemap.xml || sitemap
     #commonweal: /404/ || heartbeat
   creative_commons:
     license: by-nc-sa
@@ -124,7 +124,14 @@ theme_config:
     language: zh-Hans
   social:
     GitHub: https://github.com/xiayy860612 || github
-
+  local_search:
+    enable: true
+  search:
+    path: search.xml
+    field: post
+    format: html
+    limit: 100
+  
 # Deployment
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
