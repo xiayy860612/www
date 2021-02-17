@@ -7,7 +7,7 @@ categories:
 tags:
 ---
 
-## How to Integrate with Spring
+## 同Spring的集成
 
 Spring Security的架构是完全基于标准的Servlet过滤器进行实现的, 
 所以只要是基于Java Servlet框架就可以集成它.
