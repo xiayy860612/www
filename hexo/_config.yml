@@ -131,8 +131,8 @@ theme_config:
     field: post
     format: html
     limit: 100
-  busuanzi_count:
-    enable: true
+  # busuanzi_count:
+  #   enable: true
   symbols_count_time:
     separated_meta: true
     item_text_post: true
@@ -143,13 +143,19 @@ theme_config:
     display_in_home: true
     params:
       maxCount: 5
-  gitalk:
+  vendors:
+    valine: https://unpkg.com/valine/dist/Valine.min.js
+  valine:
     enable: true
-    github_id: xiayy860612
-    repo: www
-    client_id: 075e8d2ca1f0a570b9e7
-    client_secret: 708d78a15aa35827ea17bdd6467aaeada77183c3
-    admin_user: xiayy860612
+    appid: YnmrykAQHQwGzUR77I61DkKN-9Nh9j0Va
+    appkey: 4TzKa97Pz2JTg81B8o5l77mO
+    placeholder: 一起来聊一聊呗
+    avatar: retro
+    guest_info: nick,mail
+    pageSize: 10 # Pagination size
+    visitor: true # Article reading statistic
+    comment_count: true # If false, comment count will only be displayed in post page, not in home page
+    recordIP: true # Whether to record the commenter IP
   
 symbols_count_time:
   symbols: true
