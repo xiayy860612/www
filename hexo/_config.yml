@@ -104,6 +104,11 @@ ignore:
 theme: next
 # NexT theme config
 theme_config:
+  footer:
+    copyright: s2u2m
+    beian:
+      enable: true
+      icp: 蜀ICP备18013492号
   # author: Amos
   darkmode: false
   scheme: Pisces
