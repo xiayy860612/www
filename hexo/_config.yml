@@ -15,7 +15,7 @@ timezone: 'Asia/Shanghai'
 ## If your site is put in a subdirectory, set url as 'http://example.com/child' and root as '/child/'
 url: https://amos.s2u2m.com
 root: /
-permalink: :year/:month/:day/:title/
+permalink: :year/:month/:title/
 permalink_defaults:
 pretty_urls:
   trailing_index: true # Set to false to remove trailing 'index.html' from permalinks
@@ -104,21 +104,26 @@ ignore:
 theme: next
 # NexT theme config
 theme_config:
+  avatar:
+    # Replace the default image and set the url here.
+    url: /images/avatar.jpeg
+    # If true, the avatar will be dispalyed in circle.
+    rounded: true
+    # If true, the avatar will be rotated with the cursor.
+    rotated: true
   footer:
     copyright: s2u2m
     beian:
       enable: true
       icp: 蜀ICP备18013492号
-  # author: Amos
   darkmode: false
   scheme: Pisces
   language: zh-Hans
   menu:
-    home: / || home
-    #about: /about/ || user
-    tags: /tags/ || tags
-    categories: /categories/ || th
-    # archives: /archives/ || archive
+    home: / || fa fa-home
+    tags: /tags/ || fa fa-tags
+    categories: /categories/ || fa fa-th
+    archives: /archives/ || fa fa-archive
     #schedule: /schedule/ || calendar
     # sitemap: /sitemap.xml || sitemap
     #commonweal: /404/ || heartbeat
@@ -128,7 +133,8 @@ theme_config:
     post: true
     language: zh-Hans
   social:
-    GitHub: https://github.com/xiayy860612 || github
+    E-Mail: mailto:xiayy860612@126.com || fa fa-envelope
+    GitHub: https://github.com/xiayy860612 || fa fa-github
   local_search:
     enable: true
   search:
@@ -149,6 +155,7 @@ theme_config:
     params:
       maxCount: 5
   vendors:
+    # fontawesome: https://cdn.bootcdn.net/ajax/libs/font-awesome/5.15.2/css/all.min.css
     valine: https://unpkg.com/valine/dist/Valine.min.js
   valine:
     enable: true
