@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"amos.s2u2m.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="Spring Security的框架设计">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring Security --- Architecture">
+<meta property="og:url" content="https://amos.s2u2m.com/2021/01/spring-security/architecture/index.html">
+<meta property="og:site_name" content="观澜">
+<meta property="og:description" content="Spring Security的框架设计">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://amos.s2u2m.com/2021/01/spring-security/architecture/spring-security-integrate-to-spring.png">
+<meta property="og:image" content="https://amos.s2u2m.com/2021/01/spring-security/architecture/filter-chain-design.png">
+<meta property="og:image" content="https://amos.s2u2m.com/2021/01/spring-security/architecture/chain-default-filters.png">
+<meta property="og:image" content="https://amos.s2u2m.com/2021/01/spring-security/architecture/SecurityContext.png">
+<meta property="og:image" content="https://amos.s2u2m.com/2021/01/spring-security/architecture/spring-security-excepton-handle.png">
+<meta property="og:image" content="https://amos.s2u2m.com/2021/01/spring-security/architecture/filtersecurityinterceptor.png">
+<meta property="article:published_time" content="2021-01-23T13:29:01.000Z">
+<meta property="article:modified_time" content="2021-03-02T09:49:45.617Z">
+<meta property="article:author" content="Amos">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://amos.s2u2m.com/2021/01/spring-security/architecture/spring-security-integrate-to-spring.png">
+
+<link rel="canonical" href="https://amos.s2u2m.com/2021/01/spring-security/architecture/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Spring Security --- Architecture | 观澜</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">观澜</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">行到水穷处，坐看云起时</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://amos.s2u2m.com/2021/01/spring-security/architecture/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="Amos">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="观澜">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Spring Security --- Architecture
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-01-23 21:29:01" itemprop="dateCreated datePublished" datetime="2021-01-23T21:29:01+08:00">2021-01-23</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-03-02 17:49:45" itemprop="dateModified" datetime="2021-03-02T17:49:45+08:00">2021-03-02</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spring-Security/" itemprop="url" rel="index"><span itemprop="name">Spring Security</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/01/spring-security/architecture/" class="post-meta-item leancloud_visitors" data-flag-title="Spring Security --- Architecture" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2021/01/spring-security/architecture/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/01/spring-security/architecture/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>2.4k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>2 分钟</span>
+            </span>
+            <div class="post-description">Spring Security的框架设计</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="同Spring的集成"><a href="#同Spring的集成" class="headerlink" title="同Spring的集成"></a>同Spring的集成</h2><p>Spring Security的架构是完全基于标准的Servlet过滤器进行实现的,<br>所以只要是基于Java Servlet框架就可以集成它.</p>
+<p>整个Spring Security的入口为FilterChainProxy.</p>
+<p><img src="/2021/01/spring-security/architecture/spring-security-integrate-to-spring.png"></p>
+<p>在Spring中定义名为<strong>springSecurityFilterChain</strong>的FilterChainProxy的bean实例,<br>然后通过DelegatingFilterProxy获取它, 并将它插入到Servlet的过滤器链中.</p>
+<h2 id="过滤器链的设计"><a href="#过滤器链的设计" class="headerlink" title="过滤器链的设计"></a>过滤器链的设计</h2><p>FilterChainProxy的内部维护了多个过滤器链(SecurityFilterChain),<br>会按照Order注解定义的顺序, 每个SecurityFilterChain通过<strong>RequestMatcher</strong>对请求url进行匹配,<br>并使用第一个匹配的SecurityFilterChain对请求进行处理.<br>所以每个SecurityFilterChain的匹配规则和顺序.</p>
+<ul>
+<li>AutowiredWebSecurityConfigurersIgnoreParents#getWebSecurityConfigurers,<br>获取所有实现了<strong>WebSecurityConfigurer接口</strong>的SecurityFilterChain的配置</li>
+<li>WebSecurityConfiguration#setFilterChainProxySecurityConfigurer,<br>对所有的SecurityFilterChain的配置根据Order注解进行排序,<br>并加载到WebSecurity中用于生成SecurityFilterChain.</li>
+<li>WebSecurityConfiguration#springSecurityFilterChain,<br>定义了名为<strong>springSecurityFilterChain</strong>的FilterChainProxy的bean实例</li>
+</ul>
+<p><img src="/2021/01/spring-security/architecture/filter-chain-design.png"></p>
+<h2 id="怎样配置过滤器链"><a href="#怎样配置过滤器链" class="headerlink" title="怎样配置过滤器链"></a>怎样配置过滤器链</h2><p>Spring Security通过实现WebSecurityConfigurer接口来进行相关的配置,<br>并且它提供了一个默认的抽象实现WebSecurityConfigurerAdapter,<br>它主要提供了3个方面的配置:</p>
+<ul>
+<li>WebSecurityConfigurerAdapter#configure(WebSecurity), 对FilterChainProxy进行配置</li>
+<li>WebSecurityConfigurerAdapter#configure(HttpSecurity), 对SecurityFilterChain进行配置</li>
+<li>WebSecurityConfigurerAdapter#configure(AuthenticationManagerBuilder), 对认证相关进行配置</li>
+</ul>
+<h2 id="核心的过滤器介绍"><a href="#核心的过滤器介绍" class="headerlink" title="核心的过滤器介绍"></a>核心的过滤器介绍</h2><p>每个SecurityFilterChain中都包含多个过滤器(Filter),<br>下面是一般默认加载的Filter.</p>
+<p><img src="/2021/01/spring-security/architecture/chain-default-filters.png"></p>
+<h3 id="SecurityContextPersistenceFilter"><a href="#SecurityContextPersistenceFilter" class="headerlink" title="SecurityContextPersistenceFilter"></a>SecurityContextPersistenceFilter</h3><p>检查当前请求是否有相关的session存在, 如果存在, 则获取保存的SecurityContext;<br>不存在, 则创建新的SecurityContext.</p>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="303px" preserveAspectRatio="none" style="width:1705px;height:303px;" version="1.1" viewBox="0 0 1705 303" width="1705px" zoomAndPan="magnify"><defs><filter height="300%" id="f1bh393b2hhpjf" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[86b30c3e0fe779331a576db045bd0856]
+class SecurityContext--><rect codeLine="1" fill="#FEFECE" filter="url(#f1bh393b2hhpjf)" height="48" id="SecurityContext" style="stroke:#A80036;stroke-width:1.5;" width="129" x="552.5" y="241"/><ellipse cx="567.5" cy="257" fill="#B4A7E5" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M568.4531,253.7813 L570.1719,253.7813 C570.5625,253.7813 570.75,253.75 570.875,253.6719 C571.1406,253.5156 571.2813,253.2344 571.2813,252.9375 C571.2813,252.6719 571.1719,252.4063 570.9375,252.2344 C570.7656,252.125 570.625,252.0938 570.1719,252.0938 L565.0313,252.0938 C564.5938,252.0938 564.4688,252.1094 564.3125,252.2031 C564.0625,252.3594 563.9063,252.6563 563.9063,252.9375 C563.9063,253.2188 564.0469,253.4688 564.2656,253.6406 C564.4219,253.75 564.6094,253.7813 565.0313,253.7813 L566.75,253.7813 L566.75,260.2969 L565.0313,260.2969 C564.5938,260.2969 564.4688,260.3125 564.3125,260.4219 C564.0625,260.5781 563.9063,260.8594 563.9063,261.1563 C563.9063,261.4063 564.0469,261.6719 564.2656,261.8281 C564.4219,261.9531 564.625,262 565.0313,262 L570.1719,262 C570.9219,262 571.2813,261.7188 571.2813,261.1563 C571.2813,260.875 571.1719,260.625 570.9375,260.4531 C570.7656,260.3281 570.625,260.2969 570.1719,260.2969 L568.4531,260.2969 L568.4531,253.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing" textLength="97" x="581.5" y="261.1543">SecurityContext</text><line style="stroke:#A80036;stroke-width:1.5;" x1="553.5" x2="680.5" y1="273" y2="273"/><line style="stroke:#A80036;stroke-width:1.5;" x1="553.5" x2="680.5" y1="281" y2="281"/><!--MD5=[9a99cb9a334c3f5f64071e0b1ceb1139]
+class SecurityContextRepository--><rect codeLine="3" fill="#FEFECE" filter="url(#f1bh393b2hhpjf)" height="48" id="SecurityContextRepository" style="stroke:#A80036;stroke-width:1.5;" width="192" x="295" y="116"/><ellipse cx="310" cy="132" fill="#B4A7E5" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M310.9531,128.7813 L312.6719,128.7813 C313.0625,128.7813 313.25,128.75 313.375,128.6719 C313.6406,128.5156 313.7813,128.2344 313.7813,127.9375 C313.7813,127.6719 313.6719,127.4063 313.4375,127.2344 C313.2656,127.125 313.125,127.0938 312.6719,127.0938 L307.5313,127.0938 C307.0938,127.0938 306.9688,127.1094 306.8125,127.2031 C306.5625,127.3594 306.4063,127.6563 306.4063,127.9375 C306.4063,128.2188 306.5469,128.4688 306.7656,128.6406 C306.9219,128.75 307.1094,128.7813 307.5313,128.7813 L309.25,128.7813 L309.25,135.2969 L307.5313,135.2969 C307.0938,135.2969 306.9688,135.3125 306.8125,135.4219 C306.5625,135.5781 306.4063,135.8594 306.4063,136.1563 C306.4063,136.4063 306.5469,136.6719 306.7656,136.8281 C306.9219,136.9531 307.125,137 307.5313,137 L312.6719,137 C313.4219,137 313.7813,136.7188 313.7813,136.1563 C313.7813,135.875 313.6719,135.625 313.4375,135.4531 C313.2656,135.3281 313.125,135.2969 312.6719,135.2969 L310.9531,135.2969 L310.9531,128.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing" textLength="160" x="324" y="136.1543">SecurityContextRepository</text><line style="stroke:#A80036;stroke-width:1.5;" x1="296" x2="486" y1="148" y2="148"/><line style="stroke:#A80036;stroke-width:1.5;" x1="296" x2="486" y1="156" y2="156"/><!--MD5=[c0e9df09858c93831bec50f6f100df88]
+class HttpSessionSecurityContextRepository--><rect codeLine="4" fill="#FEFECE" filter="url(#f1bh393b2hhpjf)" height="48" id="HttpSessionSecurityContextRepository" style="stroke:#A80036;stroke-width:1.5;" width="265" x="252.5" y="241"/><ellipse cx="267.5" cy="257" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M269.8438,252.6719 C268.9063,252.2344 268.3125,252.0938 267.4375,252.0938 C264.8125,252.0938 262.8125,254.1719 262.8125,256.8906 L262.8125,258.0156 C262.8125,260.5938 264.9219,262.4844 267.8125,262.4844 C269.0313,262.4844 270.1875,262.1875 270.9375,261.6406 C271.5156,261.2344 271.8438,260.7813 271.8438,260.3906 C271.8438,259.9375 271.4531,259.5469 270.9844,259.5469 C270.7656,259.5469 270.5625,259.625 270.375,259.8125 C269.9219,260.2969 269.9219,260.2969 269.7344,260.3906 C269.3125,260.6563 268.625,260.7813 267.8594,260.7813 C265.8125,260.7813 264.5156,259.6875 264.5156,257.9844 L264.5156,256.8906 C264.5156,255.1094 265.7656,253.7969 267.5,253.7969 C268.0781,253.7969 268.6875,253.9531 269.1563,254.2031 C269.6406,254.4844 269.8125,254.7031 269.9063,255.1094 C269.9688,255.5156 270,255.6406 270.1406,255.7656 C270.2813,255.9063 270.5156,256.0156 270.7344,256.0156 C271,256.0156 271.2656,255.875 271.4375,255.6563 C271.5469,255.5 271.5781,255.3125 271.5781,254.8906 L271.5781,253.4688 C271.5781,253.0313 271.5625,252.9063 271.4688,252.75 C271.3125,252.4844 271.0313,252.3438 270.7344,252.3438 C270.4375,252.3438 270.2344,252.4375 270.0156,252.75 L269.8438,252.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="233" x="281.5" y="261.1543">HttpSessionSecurityContextRepository</text><line style="stroke:#A80036;stroke-width:1.5;" x1="253.5" x2="516.5" y1="273" y2="273"/><line style="stroke:#A80036;stroke-width:1.5;" x1="253.5" x2="516.5" y1="281" y2="281"/><path d="M6,127.5 L6,152.6328 A0,0 0 0 0 6,152.6328 L260,152.6328 A0,0 0 0 0 260,152.6328 L260,145.5 L294.97,140 L260,137.5 L260,137.5 L250,127.5 L6,127.5 A0,0 0 0 0 6,127.5 " fill="#FBFB77" filter="url(#f1bh393b2hhpjf)" style="stroke:#A80036;stroke-width:1.0;"/><path d="M250,127.5 L250,137.5 L260,137.5 L250,127.5 " fill="#FBFB77" style="stroke:#A80036;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="233" x="12" y="144.5669">通过http session关联SecurityContext</text><!--MD5=[434a86a25993eeeea880c43cffc3083d]
+class SecurityContextHolder--><rect codeLine="11" fill="#FEFECE" filter="url(#f1bh393b2hhpjf)" height="48" id="SecurityContextHolder" style="stroke:#A80036;stroke-width:1.5;" width="168" x="885" y="7"/><ellipse cx="900" cy="23" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M902.3438,18.6719 C901.4063,18.2344 900.8125,18.0938 899.9375,18.0938 C897.3125,18.0938 895.3125,20.1719 895.3125,22.8906 L895.3125,24.0156 C895.3125,26.5938 897.4219,28.4844 900.3125,28.4844 C901.5313,28.4844 902.6875,28.1875 903.4375,27.6406 C904.0156,27.2344 904.3438,26.7813 904.3438,26.3906 C904.3438,25.9375 903.9531,25.5469 903.4844,25.5469 C903.2656,25.5469 903.0625,25.625 902.875,25.8125 C902.4219,26.2969 902.4219,26.2969 902.2344,26.3906 C901.8125,26.6563 901.125,26.7813 900.3594,26.7813 C898.3125,26.7813 897.0156,25.6875 897.0156,23.9844 L897.0156,22.8906 C897.0156,21.1094 898.2656,19.7969 900,19.7969 C900.5781,19.7969 901.1875,19.9531 901.6563,20.2031 C902.1406,20.4844 902.3125,20.7031 902.4063,21.1094 C902.4688,21.5156 902.5,21.6406 902.6406,21.7656 C902.7813,21.9063 903.0156,22.0156 903.2344,22.0156 C903.5,22.0156 903.7656,21.875 903.9375,21.6563 C904.0469,21.5 904.0781,21.3125 904.0781,20.8906 L904.0781,19.4688 C904.0781,19.0313 904.0625,18.9063 903.9688,18.75 C903.8125,18.4844 903.5313,18.3438 903.2344,18.3438 C902.9375,18.3438 902.7344,18.4375 902.5156,18.75 L902.3438,18.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="136" x="914" y="27.1543">SecurityContextHolder</text><line style="stroke:#A80036;stroke-width:1.5;" x1="886" x2="1052" y1="39" y2="39"/><line style="stroke:#A80036;stroke-width:1.5;" x1="886" x2="1052" y1="47" y2="47"/><path d="M532,127.5 L532,152.6328 L786,152.6328 L786,137.5 L776,127.5 L532,127.5 " fill="#FBFB77" filter="url(#f1bh393b2hhpjf)" style="stroke:#A80036;stroke-width:1.0;"/><path d="M776,127.5 L776,137.5 L786,137.5 L776,127.5 " fill="#FBFB77" style="stroke:#A80036;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="233" x="538" y="144.5669">对当前请求的SecurityContext进行代理</text><!--MD5=[be780c5fb7e3c3d02d75cf2b549e3215]
+class SecurityContextHolderStrategy--><rect codeLine="16" fill="#FEFECE" filter="url(#f1bh393b2hhpjf)" height="48" id="SecurityContextHolderStrategy" style="stroke:#A80036;stroke-width:1.5;" width="220" x="1055" y="116"/><ellipse cx="1070" cy="132" fill="#B4A7E5" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M1070.9531,128.7813 L1072.6719,128.7813 C1073.0625,128.7813 1073.25,128.75 1073.375,128.6719 C1073.6406,128.5156 1073.7813,128.2344 1073.7813,127.9375 C1073.7813,127.6719 1073.6719,127.4063 1073.4375,127.2344 C1073.2656,127.125 1073.125,127.0938 1072.6719,127.0938 L1067.5313,127.0938 C1067.0938,127.0938 1066.9688,127.1094 1066.8125,127.2031 C1066.5625,127.3594 1066.4063,127.6563 1066.4063,127.9375 C1066.4063,128.2188 1066.5469,128.4688 1066.7656,128.6406 C1066.9219,128.75 1067.1094,128.7813 1067.5313,128.7813 L1069.25,128.7813 L1069.25,135.2969 L1067.5313,135.2969 C1067.0938,135.2969 1066.9688,135.3125 1066.8125,135.4219 C1066.5625,135.5781 1066.4063,135.8594 1066.4063,136.1563 C1066.4063,136.4063 1066.5469,136.6719 1066.7656,136.8281 C1066.9219,136.9531 1067.125,137 1067.5313,137 L1072.6719,137 C1073.4219,137 1073.7813,136.7188 1073.7813,136.1563 C1073.7813,135.875 1073.6719,135.625 1073.4375,135.4531 C1073.2656,135.3281 1073.125,135.2969 1072.6719,135.2969 L1070.9531,135.2969 L1070.9531,128.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing" textLength="188" x="1084" y="136.1543">SecurityContextHolderStrategy</text><line style="stroke:#A80036;stroke-width:1.5;" x1="1056" x2="1274" y1="148" y2="148"/><line style="stroke:#A80036;stroke-width:1.5;" x1="1056" x2="1274" y1="156" y2="156"/><path d="M826.5,120 L826.5,160.2656 A0,0 0 0 0 826.5,160.2656 L1019.5,160.2656 A0,0 0 0 0 1019.5,160.2656 L1019.5,144 L1054.75,140 L1019.5,136 L1019.5,130 L1009.5,120 L826.5,120 A0,0 0 0 0 826.5,120 " fill="#FBFB77" filter="url(#f1bh393b2hhpjf)" style="stroke:#A80036;stroke-width:1.0;"/><path d="M1009.5,120 L1009.5,130 L1019.5,130 L1009.5,120 " fill="#FBFB77" style="stroke:#A80036;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="172" x="832.5" y="137.0669">SecurityContext的存储策略,</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="117" x="832.5" y="152.1997">默认为ThreadLocal</text><!--MD5=[7a03ac347b7eb35ecfc2fc99aff3260a]
+class GlobalSecurityContextHolderStrategy--><rect codeLine="21" fill="#FEFECE" filter="url(#f1bh393b2hhpjf)" height="48" id="GlobalSecurityContextHolderStrategy" style="stroke:#A80036;stroke-width:1.5;" width="257" x="716.5" y="241"/><ellipse cx="731.5" cy="257" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M733.8438,252.6719 C732.9063,252.2344 732.3125,252.0938 731.4375,252.0938 C728.8125,252.0938 726.8125,254.1719 726.8125,256.8906 L726.8125,258.0156 C726.8125,260.5938 728.9219,262.4844 731.8125,262.4844 C733.0313,262.4844 734.1875,262.1875 734.9375,261.6406 C735.5156,261.2344 735.8438,260.7813 735.8438,260.3906 C735.8438,259.9375 735.4531,259.5469 734.9844,259.5469 C734.7656,259.5469 734.5625,259.625 734.375,259.8125 C733.9219,260.2969 733.9219,260.2969 733.7344,260.3906 C733.3125,260.6563 732.625,260.7813 731.8594,260.7813 C729.8125,260.7813 728.5156,259.6875 728.5156,257.9844 L728.5156,256.8906 C728.5156,255.1094 729.7656,253.7969 731.5,253.7969 C732.0781,253.7969 732.6875,253.9531 733.1563,254.2031 C733.6406,254.4844 733.8125,254.7031 733.9063,255.1094 C733.9688,255.5156 734,255.6406 734.1406,255.7656 C734.2813,255.9063 734.5156,256.0156 734.7344,256.0156 C735,256.0156 735.2656,255.875 735.4375,255.6563 C735.5469,255.5 735.5781,255.3125 735.5781,254.8906 L735.5781,253.4688 C735.5781,253.0313 735.5625,252.9063 735.4688,252.75 C735.3125,252.4844 735.0313,252.3438 734.7344,252.3438 C734.4375,252.3438 734.2344,252.4375 734.0156,252.75 L733.8438,252.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="225" x="745.5" y="261.1543">GlobalSecurityContextHolderStrategy</text><line style="stroke:#A80036;stroke-width:1.5;" x1="717.5" x2="972.5" y1="273" y2="273"/><line style="stroke:#A80036;stroke-width:1.5;" x1="717.5" x2="972.5" y1="281" y2="281"/><!--MD5=[032766fa7dbad1ac191509830aade588]
+class InheritableThreadLocalSecurityContextHolderStrategy--><rect codeLine="22" fill="#FEFECE" filter="url(#f1bh393b2hhpjf)" height="48" id="InheritableThreadLocalSecurityContextHolderStrategy" style="stroke:#A80036;stroke-width:1.5;" width="355" x="1008.5" y="241"/><ellipse cx="1023.5" cy="257" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M1025.8438,252.6719 C1024.9063,252.2344 1024.3125,252.0938 1023.4375,252.0938 C1020.8125,252.0938 1018.8125,254.1719 1018.8125,256.8906 L1018.8125,258.0156 C1018.8125,260.5938 1020.9219,262.4844 1023.8125,262.4844 C1025.0313,262.4844 1026.1875,262.1875 1026.9375,261.6406 C1027.5156,261.2344 1027.8438,260.7813 1027.8438,260.3906 C1027.8438,259.9375 1027.4531,259.5469 1026.9844,259.5469 C1026.7656,259.5469 1026.5625,259.625 1026.375,259.8125 C1025.9219,260.2969 1025.9219,260.2969 1025.7344,260.3906 C1025.3125,260.6563 1024.625,260.7813 1023.8594,260.7813 C1021.8125,260.7813 1020.5156,259.6875 1020.5156,257.9844 L1020.5156,256.8906 C1020.5156,255.1094 1021.7656,253.7969 1023.5,253.7969 C1024.0781,253.7969 1024.6875,253.9531 1025.1563,254.2031 C1025.6406,254.4844 1025.8125,254.7031 1025.9063,255.1094 C1025.9688,255.5156 1026,255.6406 1026.1406,255.7656 C1026.2813,255.9063 1026.5156,256.0156 1026.7344,256.0156 C1027,256.0156 1027.2656,255.875 1027.4375,255.6563 C1027.5469,255.5 1027.5781,255.3125 1027.5781,254.8906 L1027.5781,253.4688 C1027.5781,253.0313 1027.5625,252.9063 1027.4688,252.75 C1027.3125,252.4844 1027.0313,252.3438 1026.7344,252.3438 C1026.4375,252.3438 1026.2344,252.4375 1026.0156,252.75 L1025.8438,252.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="323" x="1037.5" y="261.1543">InheritableThreadLocalSecurityContextHolderStrategy</text><line style="stroke:#A80036;stroke-width:1.5;" x1="1009.5" x2="1362.5" y1="273" y2="273"/><line style="stroke:#A80036;stroke-width:1.5;" x1="1009.5" x2="1362.5" y1="281" y2="281"/><!--MD5=[bcc8d52e431d3d51980519b26057fde1]
+class ThreadLocalSecurityContextHolderStrategy--><rect codeLine="23" fill="#FEFECE" filter="url(#f1bh393b2hhpjf)" height="48" id="ThreadLocalSecurityContextHolderStrategy" style="stroke:#A80036;stroke-width:1.5;" width="292" x="1399" y="241"/><ellipse cx="1414" cy="257" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M1416.3438,252.6719 C1415.4063,252.2344 1414.8125,252.0938 1413.9375,252.0938 C1411.3125,252.0938 1409.3125,254.1719 1409.3125,256.8906 L1409.3125,258.0156 C1409.3125,260.5938 1411.4219,262.4844 1414.3125,262.4844 C1415.5313,262.4844 1416.6875,262.1875 1417.4375,261.6406 C1418.0156,261.2344 1418.3438,260.7813 1418.3438,260.3906 C1418.3438,259.9375 1417.9531,259.5469 1417.4844,259.5469 C1417.2656,259.5469 1417.0625,259.625 1416.875,259.8125 C1416.4219,260.2969 1416.4219,260.2969 1416.2344,260.3906 C1415.8125,260.6563 1415.125,260.7813 1414.3594,260.7813 C1412.3125,260.7813 1411.0156,259.6875 1411.0156,257.9844 L1411.0156,256.8906 C1411.0156,255.1094 1412.2656,253.7969 1414,253.7969 C1414.5781,253.7969 1415.1875,253.9531 1415.6563,254.2031 C1416.1406,254.4844 1416.3125,254.7031 1416.4063,255.1094 C1416.4688,255.5156 1416.5,255.6406 1416.6406,255.7656 C1416.7813,255.9063 1417.0156,256.0156 1417.2344,256.0156 C1417.5,256.0156 1417.7656,255.875 1417.9375,255.6563 C1418.0469,255.5 1418.0781,255.3125 1418.0781,254.8906 L1418.0781,253.4688 C1418.0781,253.0313 1418.0625,252.9063 1417.9688,252.75 C1417.8125,252.4844 1417.5313,252.3438 1417.2344,252.3438 C1416.9375,252.3438 1416.7344,252.4375 1416.5156,252.75 L1416.3438,252.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="260" x="1428" y="261.1543">ThreadLocalSecurityContextHolderStrategy</text><line style="stroke:#A80036;stroke-width:1.5;" x1="1400" x2="1690" y1="273" y2="273"/><line style="stroke:#A80036;stroke-width:1.5;" x1="1400" x2="1690" y1="281" y2="281"/><!--MD5=[71892c67b0ff1cb845f0194e61e60f2e]
+reverse link SecurityContextRepository to HttpSessionSecurityContextRepository--><path d="M388.894,184.172 C387.961,203.2934 386.902,225.0159 386.123,240.9684 " fill="none" id="SecurityContextRepository-backto-HttpSessionSecurityContextRepository" style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="381.905,183.771,389.871,164.135,395.889,184.453,381.905,183.771" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[37d07bce3f1802e02386dbd6d9427d34]
+link SecurityContextRepository to SecurityContext--><path codeLine="9" d="M444.0492,169.8712 C444.0492,169.8712 527.375,215.2217 563.037,234.6309 " fill="none" id="SecurityContextRepository-SecurityContext" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#A80036" points="574.682,240.9684,568.689,233.1528,570.2903,238.5783,564.8648,240.1796,574.682,240.9684" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="570.2903" x2="563.263" y1="238.5783" y2="234.7539"/><polygon fill="#A80036" points="433.509,164.135,436.867,170.5165,444.0492,169.8712,440.6912,163.4897,433.509,164.135" style="stroke:#A80036;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="26" x="519" y="207.0669">管理</text><!--MD5=[ae56cfd077aaad477c47b1c82d5b65bc]
+link SecurityContextHolder to M1--><path codeLine="13" d="M902.116,55.086 C837.505,77.387 742.306,110.246 692.369,127.482 " fill="none" id="SecurityContextHolder-M1" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[ebbb7c37604a30d39e2aeb3096bbea59]
+link M1 to SecurityContext--><path codeLine="14" d="M654.973,152.794 C648.478,171.813 635.515,209.7769 626.555,236.0181 " fill="none" id="M1-to-SecurityContext" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#A80036" points="624.931,240.7743,631.6244,233.5494,626.5465,236.0425,624.0534,230.9646,624.931,240.7743" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[128144d96a9bd0bc9663f6c4a818020c]
+reverse link SecurityContextHolderStrategy to GlobalSecurityContextHolderStrategy--><path d="M1085.83,171.431 C1029.87,192.9412 956.017,221.328 904.92,240.9684 " fill="none" id="SecurityContextHolderStrategy-backto-GlobalSecurityContextHolderStrategy" style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="1083.63,164.777,1104.81,164.135,1088.65,177.845,1083.63,164.777" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[03364836ee6754ac724b9d3313278467]
+reverse link SecurityContextHolderStrategy to InheritableThreadLocalSecurityContextHolderStrategy--><path d="M1172.32,183.864 C1175.6,203.0596 1179.33,224.9301 1182.07,240.9684 " fill="none" id="SecurityContextHolderStrategy-backto-InheritableThreadLocalSecurityContextHolderStrategy" style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="1165.42,185.028,1168.95,164.135,1179.22,182.672,1165.42,185.028" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[5eac4ed8ac12a7e818699eb5d1847ef6]
+reverse link SecurityContextHolderStrategy to ThreadLocalSecurityContextHolderStrategy--><path d="M1255.55,170.31 C1322.4,191.9469 1412.11,220.9849 1473.85,240.9684 " fill="none" id="SecurityContextHolderStrategy-backto-ThreadLocalSecurityContextHolderStrategy" style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="1253.35,176.954,1236.48,164.135,1257.66,163.635,1253.35,176.954" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[c2c61623dd30c7705779b8791b568f97]
+link SecurityContextHolder to SecurityContextHolderStrategy--><path codeLine="24" d="M1011.53,55.217 C1044.4,73.165 1089.7,97.892 1122.55,115.828 " fill="none" id="SecurityContextHolder-SecurityContextHolderStrategy" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[e17b25f3f5a728e5cd4fc8e3be0783d1]
+@startuml
+interface SecurityContext
+
+interface SecurityContextRepository
+class HttpSessionSecurityContextRepository implements SecurityContextRepository
+note left
+通过http session关联SecurityContext
+end note
+
+SecurityContextRepository *- -> SecurityContext: 管理
+
+class SecurityContextHolder
+note "对当前请求的SecurityContext进行代理" as M1
+SecurityContextHolder - - M1
+M1 - -> SecurityContext
+
+interface SecurityContextHolderStrategy
+note left
+SecurityContext的存储策略,
+默认为ThreadLocal
+end note
+class GlobalSecurityContextHolderStrategy implements SecurityContextHolderStrategy
+class InheritableThreadLocalSecurityContextHolderStrategy implements SecurityContextHolderStrategy
+class ThreadLocalSecurityContextHolderStrategy implements SecurityContextHolderStrategy
+SecurityContextHolder - - SecurityContextHolderStrategy
+@enduml
+
+PlantUML version 1.2021.2beta9(Unknown compile time)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
+
+<p>在请求处理的过程中, 可以通过SecurityContextHolder来获取SecurityContext,<br>SecurityContext中包含了Authentication信息.</p>
+<p><img src="/2021/01/spring-security/architecture/SecurityContext.png"></p>
+<p>SecurityContextHolder默认将SecurityContext保存在ThreadLocal中</p>
+<h3 id="LogoutFilter"><a href="#LogoutFilter" class="headerlink" title="LogoutFilter"></a>LogoutFilter</h3><p>处理用户的登出请求, 通过LogoutHandler实例对相关的数据进行清理,<br>成功清理完成后调用LogoutSuccessHandler</p>
+<h3 id="AuthenticationFilter"><a href="#AuthenticationFilter" class="headerlink" title="AuthenticationFilter"></a>AuthenticationFilter</h3><p>Authentication描述登录的认证输入信息,<br>通过校验认证输入信息, 得到认证成功后的Authentication信息.<br>认证成功后的Authentication会被保存在SecurityContext中.</p>
+<p>详情会在认证章节进行讨论.</p>
+<h3 id="SessionManagementFilter"><a href="#SessionManagementFilter" class="headerlink" title="SessionManagementFilter"></a>SessionManagementFilter</h3><p>对刚刚认证通过的用户进行session校验, 主要针对同时登录数之类的检查.</p>
+<p>详情会在Session章节进行讨论.</p>
+<h3 id="ExceptionTranslationFilter"><a href="#ExceptionTranslationFilter" class="headerlink" title="ExceptionTranslationFilter"></a>ExceptionTranslationFilter</h3><p>Spring Security中的全局异常处理,<br>用于对ExceptionTranslationFilter之后的所有Filter产生的<br>AccessDeniedException和AuthenticationException进行捕获处理.</p>
+<p><img src="/2021/01/spring-security/architecture/spring-security-excepton-handle.png"></p>
+<h3 id="FilterSecurityInterceptor"><a href="#FilterSecurityInterceptor" class="headerlink" title="FilterSecurityInterceptor"></a>FilterSecurityInterceptor</h3><p>根据<strong>在SecurityFilterChain中预先配置</strong>的鉴权信息, 对当前请求进行校验.</p>
+<p><img src="/2021/01/spring-security/architecture/filtersecurityinterceptor.png"></p>
+<p>详情会在认证章节进行讨论.</p>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://spring.io/guides/topicals/spring-security-architecture">Spring Security Architecture</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.spring.io/spring-security/site/docs/current/reference/html5/">Spring Security Reference</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+      
+
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>Amos
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://amos.s2u2m.com/2021/01/spring-security/architecture/" title="Spring Security --- Architecture">https://amos.s2u2m.com/2021/01/spring-security/architecture/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-Hans" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/2021/02/spring-security/authentication/" rel="next" title="Spring Security --- Authentication">
+      Spring Security --- Authentication <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%8CSpring%E7%9A%84%E9%9B%86%E6%88%90"><span class="nav-number">1.</span> <span class="nav-text">同Spring的集成</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%87%E6%BB%A4%E5%99%A8%E9%93%BE%E7%9A%84%E8%AE%BE%E8%AE%A1"><span class="nav-number">2.</span> <span class="nav-text">过滤器链的设计</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%8E%E6%A0%B7%E9%85%8D%E7%BD%AE%E8%BF%87%E6%BB%A4%E5%99%A8%E9%93%BE"><span class="nav-number">3.</span> <span class="nav-text">怎样配置过滤器链</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E7%9A%84%E8%BF%87%E6%BB%A4%E5%99%A8%E4%BB%8B%E7%BB%8D"><span class="nav-number">4.</span> <span class="nav-text">核心的过滤器介绍</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#SecurityContextPersistenceFilter"><span class="nav-number">4.1.</span> <span class="nav-text">SecurityContextPersistenceFilter</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LogoutFilter"><span class="nav-number">4.2.</span> <span class="nav-text">LogoutFilter</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#AuthenticationFilter"><span class="nav-number">4.3.</span> <span class="nav-text">AuthenticationFilter</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SessionManagementFilter"><span class="nav-number">4.4.</span> <span class="nav-text">SessionManagementFilter</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ExceptionTranslationFilter"><span class="nav-number">4.5.</span> <span class="nav-text">ExceptionTranslationFilter</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#FilterSecurityInterceptor"><span class="nav-number">4.6.</span> <span class="nav-text">FilterSecurityInterceptor</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Amos"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">Amos</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="mailto:xiayy860612@126.com" title="E-Mail → mailto:xiayy860612@126.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/xiayy860612" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;xiayy860612" rel="noopener" target="_blank"><i class="fa fa-github fa-fw"></i>GitHub</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-Hans" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">蜀ICP备18013492号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">s2u2m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">7k</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('https://unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'YnmrykAQHQwGzUR77I61DkKN-9Nh9j0Va',
+      appKey     : '4TzKa97Pz2JTg81B8o5l77mO',
+      placeholder: "一起来聊一聊呗",
+      avatar     : 'retro',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : true,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>
