@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"amos.s2u2m.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="了解传统CI&#x2F;CD流程中的各个环节">
+<meta property="og:type" content="article">
+<meta property="og:title" content="传统的CI&#x2F;CD流程概述">
+<meta property="og:url" content="https://amos.s2u2m.com/2018/11/CI-CD/traditional-workflow/index.html">
+<meta property="og:site_name" content="观澜">
+<meta property="og:description" content="了解传统CI&#x2F;CD流程中的各个环节">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2018-11-04T12:15:30.000Z">
+<meta property="article:modified_time" content="2021-12-24T05:38:15.767Z">
+<meta property="article:author" content="Amos">
+<meta property="article:tag" content="CI&#x2F;CD">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://amos.s2u2m.com/2018/11/CI-CD/traditional-workflow/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>传统的CI/CD流程概述 | 观澜</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">观澜</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">行到水穷处，坐看云起时</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://amos.s2u2m.com/2018/11/CI-CD/traditional-workflow/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="Amos">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="观澜">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          传统的CI/CD流程概述
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-11-04 20:15:30" itemprop="dateCreated datePublished" datetime="2018-11-04T20:15:30+08:00">2018-11-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-12-24 13:38:15" itemprop="dateModified" datetime="2021-12-24T13:38:15+08:00">2021-12-24</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/CI-CD/" itemprop="url" rel="index"><span itemprop="name">CI/CD</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2018/11/CI-CD/traditional-workflow/" class="post-meta-item leancloud_visitors" data-flag-title="传统的CI/CD流程概述" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2018/11/CI-CD/traditional-workflow/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2018/11/CI-CD/traditional-workflow/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>1.5k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>1 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <ul>
+<li>了解传统CI/CD流程中的各个环节</li>
+</ul>
+<a id="more"></a>
+
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="752px" preserveAspectRatio="none" style="width:1672px;height:752px;background:#FFFFFF;" version="1.1" viewBox="0 0 1672 752" width="1672px" zoomAndPan="magnify"><defs/><g><rect height="26.2969" style="stroke:#00000000;stroke-width:1.0;fill:none;" width="223" x="720.5" y="10"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="213" x="725.5" y="27.9951">traditional CI/CD workflow</text><rect height="46.2656" style="stroke:#000000;stroke-width:1.5;fill:none;" width="753.5" x="901.5" y="608.3203"/><line style="stroke:#181818;stroke-width:0.5;fill:none;stroke-dasharray:5.0,5.0;" x1="22" x2="22" y1="118.5938" y2="671.5859"/><line style="stroke:#181818;stroke-width:0.5;fill:none;stroke-dasharray:5.0,5.0;" x1="151" x2="151" y1="118.5938" y2="671.5859"/><line style="stroke:#181818;stroke-width:0.5;fill:none;stroke-dasharray:5.0,5.0;" x1="321" x2="321" y1="118.5938" y2="671.5859"/><line style="stroke:#181818;stroke-width:0.5;fill:none;stroke-dasharray:5.0,5.0;" x1="621.5" x2="621.5" y1="118.5938" y2="671.5859"/><line style="stroke:#181818;stroke-width:0.5;fill:none;stroke-dasharray:5.0,5.0;" x1="1003.5" x2="1003.5" y1="118.5938" y2="671.5859"/><line style="stroke:#181818;stroke-width:0.5;fill:none;stroke-dasharray:5.0,5.0;" x1="1417" x2="1417" y1="118.5938" y2="671.5859"/><line style="stroke:#181818;stroke-width:0.5;fill:none;stroke-dasharray:5.0,5.0;" x1="1578" x2="1578" y1="118.5938" y2="671.5859"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="28" x="5" y="115.292">Dev</text><ellipse cx="22" cy="50.7969" fill="#E2E2F0" rx="8" ry="8" style="stroke:#181818;stroke-width:0.5;"/><path d="M22,58.7969 L22,85.7969 M9,66.7969 L35,66.7969 M22,85.7969 L9,100.7969 M22,85.7969 L35,100.7969 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="28" x="5" y="683.5811">Dev</text><ellipse cx="22" cy="695.3828" fill="#E2E2F0" rx="8" ry="8" style="stroke:#181818;stroke-width:0.5;"/><path d="M22,703.3828 L22,730.3828 M9,711.3828 L35,711.3828 M22,730.3828 L9,745.3828 M22,730.3828 L35,745.3828 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="146" x="78" y="87.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="132" x="85" y="107.292">Source Repository</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="146" x="78" y="670.5859"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="132" x="85" y="690.5811">Source Repository</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="175" x="234" y="87.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="161" x="241" y="107.292">Continious Integration</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="175" x="234" y="670.5859"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="161" x="241" y="690.5811">Continious Integration</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="148" x="547.5" y="87.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="134" x="554.5" y="107.292">Deploy Repository</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="148" x="547.5" y="670.5859"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="134" x="554.5" y="690.5811">Deploy Repository</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="184" x="911.5" y="87.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="170" x="918.5" y="107.292">Continious Deployment</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="184" x="911.5" y="670.5859"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="170" x="918.5" y="690.5811">Continious Deployment</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="169" x="1333" y="87.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="155" x="1340" y="107.292">Release Test Machine</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="169" x="1333" y="670.5859"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="155" x="1340" y="690.5811">Release Test Machine</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="133" x="1512" y="87.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="119" x="1519" y="107.292">Release Machine</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="133" x="1512" y="670.5859"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="119" x="1519" y="690.5811">Release Machine</text><rect fill="#EEEEEE" height="3" style="stroke:#EEEEEE;stroke-width:1.0;" width="1665" x="0" y="149.1602"/><line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1665" y1="149.1602" y2="149.1602"/><line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1665" y1="152.1602" y2="152.1602"/><rect fill="#EEEEEE" height="23.1328" style="stroke:#000000;stroke-width:2.0;" width="114" x="775.5" y="138.5938"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="100" x="781.5" y="154.6606">Development</text><polygon fill="#181818" points="139,188.8594,149,192.8594,139,196.8594,143,192.8594" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="22" x2="145" y1="192.8594" y2="192.8594"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="105" x="29" y="187.7935">Commit sources</text><rect fill="#EEEEEE" height="3" style="stroke:#EEEEEE;stroke-width:1.0;" width="1665" x="0" y="221.4258"/><line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1665" y1="221.4258" y2="221.4258"/><line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1665" y1="224.4258" y2="224.4258"/><rect fill="#EEEEEE" height="23.1328" style="stroke:#000000;stroke-width:2.0;" width="213" x="726" y="210.8594"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="199" x="732" y="226.9263">CI: test &amp; Build &amp; Package</text><polygon fill="#181818" points="162,261.125,152,265.125,162,269.125,158,265.125" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="156" x2="320.5" y1="265.125" y2="265.125"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="76" x="168" y="260.0591">pull sources</text><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="321.5" x2="363.5" y1="294.2578" y2="294.2578"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="363.5" x2="363.5" y1="294.2578" y2="307.2578"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="322.5" x2="363.5" y1="307.2578" y2="307.2578"/><polygon fill="#181818" points="332.5,303.2578,322.5,307.2578,332.5,311.2578,328.5,307.2578" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="286" x="328.5" y="289.1919">run test for sources to make sure it's correct</text><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="321.5" x2="363.5" y1="336.3906" y2="336.3906"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="363.5" x2="363.5" y1="336.3906" y2="349.3906"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="322.5" x2="363.5" y1="349.3906" y2="349.3906"/><polygon fill="#181818" points="332.5,345.3906,322.5,349.3906,332.5,353.3906,328.5,349.3906" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="282" x="328.5" y="331.3247">update build config for specific environment</text><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="321.5" x2="363.5" y1="378.5234" y2="378.5234"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="363.5" x2="363.5" y1="378.5234" y2="391.5234"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="322.5" x2="363.5" y1="391.5234" y2="391.5234"/><polygon fill="#181818" points="332.5,387.5234,322.5,391.5234,332.5,395.5234,328.5,391.5234" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="168" x="328.5" y="373.4575">make deployable package</text><polygon fill="#181818" points="609.5,416.6563,619.5,420.6563,609.5,424.6563,613.5,420.6563" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="321.5" x2="615.5" y1="420.6563" y2="420.6563"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="141" x="328.5" y="415.5903">Upload to deploy repo</text><rect fill="#EEEEEE" height="3" style="stroke:#EEEEEE;stroke-width:1.0;" width="1665" x="0" y="449.2227"/><line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1665" y1="449.2227" y2="449.2227"/><line style="stroke:#000000;stroke-width:1.0;" x1="0" x2="1665" y1="452.2227" y2="452.2227"/><rect fill="#EEEEEE" height="23.1328" style="stroke:#000000;stroke-width:2.0;" width="145" x="760" y="438.6563"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="131" x="766" y="454.7231">CD: Deploy &amp; Run</text><polygon fill="#181818" points="632.5,488.9219,622.5,492.9219,632.5,496.9219,628.5,492.9219" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="626.5" x2="1002.5" y1="492.9219" y2="492.9219"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="358" x="638.5" y="487.856">pull package for specific environment in specific version</text><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1003.5" x2="1045.5" y1="522.0547" y2="522.0547"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1045.5" x2="1045.5" y1="522.0547" y2="535.0547"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1004.5" x2="1045.5" y1="535.0547" y2="535.0547"/><polygon fill="#181818" points="1014.5,531.0547,1004.5,535.0547,1014.5,539.0547,1010.5,535.0547" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="316" x="1010.5" y="516.9888">update external infrastructure config for package</text><polygon fill="#181818" points="1405.5,560.1875,1415.5,564.1875,1405.5,568.1875,1409.5,564.1875" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1003.5" x2="1411.5" y1="564.1875" y2="564.1875"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="244" x="1010.5" y="559.1216">run package with infrastructure config</text><polygon fill="#181818" points="1405.5,589.3203,1415.5,593.3203,1405.5,597.3203,1409.5,593.3203" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1003.5" x2="1411.5" y1="593.3203" y2="593.3203"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="390" x="1010.5" y="588.2544">run test for running package, make sure features are correct</text><path d="M901.5,608.3203 L967.5,608.3203 L967.5,615.4531 L957.5,625.4531 L901.5,625.4531 L901.5,608.3203 " fill="#EEEEEE" style="stroke:#000000;stroke-width:1.5;"/><rect fill="none" height="46.2656" style="stroke:#000000;stroke-width:1.5;" width="753.5" x="901.5" y="608.3203"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacing" textLength="21" x="916.5" y="621.3872">alt</text><text fill="#000000" font-family="sans-serif" font-size="11" font-weight="bold" lengthAdjust="spacing" textLength="73" x="982.5" y="620.5308">[no errors]</text><polygon fill="#181818" points="1566.5,642.5859,1576.5,646.5859,1566.5,650.5859,1570.5,646.5859" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="1003.5" x2="1572.5" y1="646.5859" y2="646.5859"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="244" x="1010.5" y="641.52">run package with infrastructure config</text><!--MD5=[497113daf594bd3b58e39e3561c9ed2b]
+@startuml
+title traditional CI/CD workflow
+actor Dev
+participant "Source Repository" as SrcRepo
+participant "Continious Integration" as CI
+participant "Deploy Repository" as DeployRepo
+participant "Continious Deployment" as CD
+participant "Release Test Machine" as RTM
+participant "Release Machine" as RM
+
+==Development==
+Dev - -> SrcRepo: Commit sources
+
+==CI: test & Build & Package==
+CI - -> SrcRepo: pull sources
+CI - -> CI: run test for sources to make sure it's correct
+CI - -> CI: update build config for specific environment
+CI - -> CI: make deployable package
+CI - -> DeployRepo: Upload to deploy repo
+
+==CD: Deploy & Run==
+CD - -> DeployRepo: pull package for specific environment in specific version
+CD - -> CD: update external infrastructure config for package
+CD - -> RTM: run package with infrastructure config
+CD - -> RTM: run test for running package, make sure features are correct
+alt no errors
+CD - -> RM: run package with infrastructure config
+end
+@enduml
+
+PlantUML version 1.2022.2(Sat Mar 05 16:30:19 UTC 2022)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
+
+<h2 id="CI"><a href="#CI" class="headerlink" title="CI"></a>CI</h2><p>CI的目的在于保证生成<strong>可用的</strong>包, 即能够满足以下的要求:</p>
+<ul>
+<li>能够<strong>正确</strong>的生成包, 即没有任何编译错误</li>
+<li>包针对具体的环境具有<strong>通用性</strong>, 即针对具体环境,<br>不需要对功能配置进行更新的情况下任意部署</li>
+<li>提供当前<strong>版本要求的所有功能</strong></li>
+<li>通过<strong>测试</strong>验证</li>
+</ul>
+<h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><p>CI阶段的测试针对的是<strong>包</strong>的<strong>自动化测试</strong>, 一般包含:</p>
+<ul>
+<li>Unit Test</li>
+<li>Integration Test</li>
+</ul>
+<p>CI阶段的测试用来验证该版本的修改是否对原有功能造成影响, 甚至产生错误.</p>
+<h3 id="功能配置的更新"><a href="#功能配置的更新" class="headerlink" title="功能配置的更新"></a>功能配置的更新</h3><p>CI阶段的配置更新用于保证提供版本要求的所有功能, 主要涉及以下几个方面:</p>
+<ul>
+<li>包的版本设置</li>
+<li>相关功能的开启和关闭</li>
+<li>相同版本不同环境的功能策略的配置</li>
+</ul>
+<p>该阶段的配置涉及的都是和包的功能切身相关的配置, 不包括外部服务以及基础设施的配置.</p>
+<p>如果工程本身支持多环境的配置, 则可在那里进行分别配置,<br>在CI阶段只要指定相应的环境, 然后进行打包即可.</p>
+<h2 id="CD"><a href="#CD" class="headerlink" title="CD"></a>CD</h2><p>CD阶段的目标是将包部署到相应的机器上, 并正确运行起来.</p>
+<h2 id="基础设施配置的更新"><a href="#基础设施配置的更新" class="headerlink" title="基础设施配置的更新"></a>基础设施配置的更新</h2><p>CD阶段的配置更新涉及以下的几个方面:</p>
+<ul>
+<li>服务所依赖的基础设施的配置<ul>
+<li>LoadBalance(nginx, …)</li>
+<li>Database(MySQL, …)</li>
+<li>Cache(redis, …)</li>
+</ul>
+</li>
+<li>依赖服务的相关配置</li>
+<li>外部服务的相关配置</li>
+</ul>
+<p>这块的配置往往取决于整体的架构设计.</p>
+<p>由于部署环境的多变性, 所以这部分配置必须可以在部署阶段, 根据具体的环境进行配置.</p>
+<p>往往同一个<strong>可用区</strong>的基础设施的配置是相同的.</p>
+<h2 id="可扩展的自定义配置"><a href="#可扩展的自定义配置" class="headerlink" title="可扩展的自定义配置"></a>可扩展的自定义配置</h2><p>在基础配置的基础之上, 根据具体的环境对配置进行自定义.</p>
+<p><strong>TODO</strong></p>
+<h2 id="测试-1"><a href="#测试-1" class="headerlink" title="测试"></a>测试</h2><p>CD阶段的测试往往是<strong>端到端</strong>的<strong>自动化测试</strong>, 一般包含:</p>
+<ul>
+<li>功能测试</li>
+<li>压力测试</li>
+</ul>
+<p>这部分的测试所针对的测试环境往往和正式环境一致</p>
+<h2 id="关于项目的配置"><a href="#关于项目的配置" class="headerlink" title="关于项目的配置"></a>关于项目的配置</h2><ul>
+<li>静态配置<ul>
+<li>服务初始化时就要加载的功能配置, 往往加载后不会变化,<br>往往在项目中或CI阶段配置</li>
+<li>CD阶段外部环境相关的配置, 在CD阶段进行配置</li>
+</ul>
+</li>
+<li>动态配置<ul>
+<li>运行时可进行切换的功能配置, 在存储(DB, Cache)中配置, 可在运行时更新</li>
+</ul>
+</li>
+</ul>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://book.douban.com/subject/10769596/">持续集成: 软件质量改进和风险降低之道</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+      
+
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>Amos
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://amos.s2u2m.com/2018/11/CI-CD/traditional-workflow/" title="传统的CI&#x2F;CD流程概述">https://amos.s2u2m.com/2018/11/CI-CD/traditional-workflow/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-Hans" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/CI-CD/" rel="tag"># CI/CD</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/08/test/test-strategy/" rel="prev" title="浅谈服务级的测试策略">
+      <i class="fa fa-chevron-left"></i> 浅谈服务级的测试策略
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/08/big-data/airflow/airflow-introduction/" rel="next" title="Airflow介绍">
+      Airflow介绍 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#CI"><span class="nav-number">1.</span> <span class="nav-text">CI</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95"><span class="nav-number">1.1.</span> <span class="nav-text">测试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%9F%E8%83%BD%E9%85%8D%E7%BD%AE%E7%9A%84%E6%9B%B4%E6%96%B0"><span class="nav-number">1.2.</span> <span class="nav-text">功能配置的更新</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CD"><span class="nav-number">2.</span> <span class="nav-text">CD</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9F%BA%E7%A1%80%E8%AE%BE%E6%96%BD%E9%85%8D%E7%BD%AE%E7%9A%84%E6%9B%B4%E6%96%B0"><span class="nav-number">3.</span> <span class="nav-text">基础设施配置的更新</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%AF%E6%89%A9%E5%B1%95%E7%9A%84%E8%87%AA%E5%AE%9A%E4%B9%89%E9%85%8D%E7%BD%AE"><span class="nav-number">4.</span> <span class="nav-text">可扩展的自定义配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95-1"><span class="nav-number">5.</span> <span class="nav-text">测试</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E4%BA%8E%E9%A1%B9%E7%9B%AE%E7%9A%84%E9%85%8D%E7%BD%AE"><span class="nav-number">6.</span> <span class="nav-text">关于项目的配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Reference"><span class="nav-number">7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Amos"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">Amos</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="mailto:xiayy860612@126.com" title="E-Mail → mailto:xiayy860612@126.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/xiayy860612" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;xiayy860612" rel="noopener" target="_blank"><i class="fa fa-github fa-fw"></i>GitHub</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-Hans" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">蜀ICP备18013492号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">s2u2m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">33k</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('https://unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'YnmrykAQHQwGzUR77I61DkKN-9Nh9j0Va',
+      appKey     : '4TzKa97Pz2JTg81B8o5l77mO',
+      placeholder: "一起来聊一聊呗",
+      avatar     : 'retro',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : true,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

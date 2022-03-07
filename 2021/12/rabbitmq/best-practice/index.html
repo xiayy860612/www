@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"amos.s2u2m.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="快速熟悉RabbitMQ的元素, 以及开发相关的最佳实践总结. Demo">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RabbitMQ 开发实践">
+<meta property="og:url" content="https://amos.s2u2m.com/2021/12/rabbitmq/best-practice/index.html">
+<meta property="og:site_name" content="观澜">
+<meta property="og:description" content="快速熟悉RabbitMQ的元素, 以及开发相关的最佳实践总结. Demo">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-12-23T13:00:15.758Z">
+<meta property="article:modified_time" content="2021-12-23T13:00:15.758Z">
+<meta property="article:author" content="Amos">
+<meta property="article:tag" content="MQ">
+<meta property="article:tag" content="RabbitMQ">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://amos.s2u2m.com/2021/12/rabbitmq/best-practice/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>RabbitMQ 开发实践 | 观澜</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">观澜</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">行到水穷处，坐看云起时</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://amos.s2u2m.com/2021/12/rabbitmq/best-practice/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="Amos">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="观澜">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          RabbitMQ 开发实践
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-12-23 21:00:15" itemprop="dateCreated datePublished" datetime="2021-12-23T21:00:15+08:00">2021-12-23</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/RabbitMQ/" itemprop="url" rel="index"><span itemprop="name">RabbitMQ</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/12/rabbitmq/best-practice/" class="post-meta-item leancloud_visitors" data-flag-title="RabbitMQ 开发实践" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2021/12/rabbitmq/best-practice/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/12/rabbitmq/best-practice/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>3.2k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>3 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>快速熟悉RabbitMQ的元素, 以及开发相关的最佳实践总结.</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/xiayy860612/study/tree/release/rabbitmq/mq/rabbitmq/rabbitmq-practice">Demo</a></p>
+<a id="more"></a>
+
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="490px" preserveAspectRatio="none" style="width:156px;height:490px;background:#FFFFFF;" version="1.1" viewBox="0 0 156 490" width="156px" zoomAndPan="magnify"><defs/><g><!--MD5=[56e484d7730c16735b991f559d809855]
+cluster Broker--><g id="cluster_Broker"><rect height="202" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1.0;fill:none;" width="135" x="7" y="144.5"/><path d="M70,144.5 L70,153.7969 L60,163.7969 L7,163.7969 " fill="none" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="53" x="10" y="158.4951">Broker</text></g><!--MD5=[fd29c16a61755d2f0d64abb16841689f]
+entity Exchange--><g id="elem_Exchange"><ellipse cx="58" cy="195.5" fill="#F1F1F1" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="54,183.5,60,178.5,58,183.5,60,188.5,54,183.5" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="69" x="23.5" y="224.4951">Exchange</text></g><!--MD5=[9762e67b79b719797c568dcdd43c32f7]
+entity Queue--><g id="elem_Queue"><path d="M30.5,304.5 L85.5,304.5 C90.5,304.5 90.5,317.6484 90.5,317.6484 C90.5,317.6484 90.5,330.7969 85.5,330.7969 L30.5,330.7969 C25.5,330.7969 25.5,317.6484 25.5,317.6484 C25.5,317.6484 25.5,304.5 30.5,304.5 " fill="#F1F1F1" style="stroke:#181818;stroke-width:0.5;"/><path d="M85.5,304.5 C80.5,304.5 80.5,317.6484 80.5,317.6484 C80.5,330.7969 85.5,330.7969 85.5,330.7969 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="45" x="30.5" y="322.4951">Queue</text></g><!--MD5=[b9060e1352b009711fbb9730f967b58f]
+entity Publisher--><g id="elem_Publisher"><ellipse cx="58" cy="14" fill="#F1F1F1" rx="8" ry="8" style="stroke:#181818;stroke-width:0.5;"/><path d="M58,22 L58,49 M45,30 L71,30 M58,49 L45,64 M58,49 L71,64 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="66" x="25" y="78.4951">Publisher</text></g><!--MD5=[4d65782647d64e21a92b473b2db819be]
+entity Consumer--><g id="elem_Consumer"><ellipse cx="58" cy="418" fill="#F1F1F1" rx="8" ry="8" style="stroke:#181818;stroke-width:0.5;"/><path d="M58,426 L58,453 M45,434 L71,434 M58,453 L45,468 M58,453 L71,468 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="72" x="22" y="482.4951">Consumer</text></g><!--MD5=[ec0bc6194014de8722040e3d7398696c]
+link Publisher to Exchange--><g id="link_Publisher_Exchange"><path d="M58,81.544 C58,109.933 58,148.506 58,174.39 " fill="none" id="Publisher-to-Exchange" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="58,179.391,62,170.391,58,174.391,54,170.391,58,179.391" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="63" x="59" y="124.5669">send msg</text></g><!--MD5=[925a1ff948043f059fc1cc49ee959e06]
+link Exchange to Queue--><g id="link_Exchange_Queue"><path d="M58,227.706 C58,249.025 58,280.133 58,299.305 " fill="none" id="Exchange-to-Queue" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="58,304.378,62,295.378,58,299.378,54,295.378,58,304.378" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="66" x="59" y="270.5669">route msg</text></g><!--MD5=[28a3b4ef112e063d12b360875d46ff94]
+link Queue to Consumer--><g id="link_Queue_Consumer"><path d="M58,336.232 C58,353.75 58,381.202 58,404.3323 " fill="none" id="Queue-Consumer" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="58,409.4999,62,400.4999,58,404.4999,54,400.4999,58,409.4999" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="58,330.773,54,339.773,58,335.773,62,339.773,58,330.773" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="89" x="59" y="375.5669">push/pull msg</text></g><!--MD5=[4b285eb93048fd86d6244a71f51e1ef7]
+@startuml
+actor Publisher
+actor Consumer
+frame Broker {
+    control Exchange
+    queue Queue
+}
+
+Publisher - -> Exchange: send msg
+Exchange - -> Queue: route msg
+Queue <- -> Consumer: push/pull msg
+@enduml
+
+PlantUML version 1.2022.2(Sat Mar 05 16:30:19 UTC 2022)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
+
+<h2 id="声明Exchange和Queue"><a href="#声明Exchange和Queue" class="headerlink" title="声明Exchange和Queue"></a>声明Exchange和Queue</h2><p>Exchange负责对消息的路由, 而Queue负责对消息的存储.</p>
+<h3 id="Exchange"><a href="#Exchange" class="headerlink" title="Exchange"></a>Exchange</h3><p>Exchange主要有以下几种路由方式:</p>
+<ul>
+<li>fanout, 分发到<strong>所有绑定</strong>的Queue中</li>
+<li>direct, 只分发到<strong>路由键完全匹配</strong>的Queue中</li>
+<li>topic, 分发到和<strong>路由键匹配</strong>的Queue中</li>
+</ul>
+<p>Exchange的常用属性:</p>
+<ul>
+<li>durable, 对于长期使用的交换器设置为true, 保证服务重启后仍然存在.</li>
+<li>auto delete, 对于长期使用的交换器设置为false</li>
+<li>internal, 用于Broker内部的路由, 对于同客户端连接的交换器设置为false, AE可设置为true.</li>
+</ul>
+<h3 id="Queue"><a href="#Queue" class="headerlink" title="Queue"></a>Queue</h3><p>交换器的使用并不真正消耗服务器的性能,<br>但队列会, 所以需要更加关注队列的设计,<br>需要对队列的流量, 内存占用以及网卡占用要有一个清晰的评估,<br>预估其平均值和峰值, 以便合理分配硬件资源.</p>
+<p>Queue的主要属性:</p>
+<ul>
+<li>durable, 设置为true, 则服务重启后队列信息仍然存在;<br>配合消息的持久化, 可以保证服务重启后消息不丢失.</li>
+<li>exclusive, true则仅对声明它的连接可见, 断开时自动删除;<br>一般情况下设置为false</li>
+<li>auto delete, 一般设置为false</li>
+<li>队列中消息的TTL, 通过x-message-ttl来设置,<br>最终消息的TTL=min(队列中消息的TTL, 消息设置的TTL),<br>消息过期后则变为死信(Dead Message)</li>
+</ul>
+<p>当一个队列有多个消费者时, 队列中的消息会被平均分摊(Round-Robin, 即轮询)<br>给多个消费者进行处理, 而不是每个消费者都收到所有的消息并处理.</p>
+<p>通过路由键(Route Key)将Exchange和Queue进行绑定.</p>
+<p>Queue的应用:</p>
+<ul>
+<li>死信队列, 需要配合死信交换器(DLX), 当消息过期后会被路由到死信队列</li>
+<li>延迟队列, 通过<strong>死信队列+消息的TTL</strong>来实现</li>
+<li>优先级队列</li>
+<li>RPC队列</li>
+</ul>
+<h3 id="备用交换器-AE-Alternate-Exchange"><a href="#备用交换器-AE-Alternate-Exchange" class="headerlink" title="备用交换器(AE, Alternate Exchange)"></a>备用交换器(AE, Alternate Exchange)</h3><p>为了防止消息丢失, 一般建议配置AE,<br>当交换器无法路由消息到指定的队列时, 会将消息路由到AE,<br>由AE保存到与它绑定的队列中,<br>之后在修复后, 通过工具将这些丢失的消息重新入队.</p>
+<h3 id="基本模板"><a href="#基本模板" class="headerlink" title="基本模板"></a>基本模板</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// AE声明</span></span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.AE, BuiltinExchangeType.FANOUT,</span><br><span class="line">    <span class="keyword">false</span>, <span class="keyword">false</span>, <span class="keyword">true</span>, <span class="keyword">null</span>);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.AE_QUEUE,</span><br><span class="line">    <span class="keyword">true</span>, <span class="keyword">false</span>, <span class="keyword">false</span>, <span class="keyword">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.AE_QUEUE, RabbitMQConfig.AE, <span class="string">&quot;&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Exchange和Queue声明</span></span><br><span class="line">Map&lt;String, Object&gt; args = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">args.put(<span class="string">&quot;alternate-exchange&quot;</span>, RabbitMQConfig.AE);</span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.EX, BuiltinExchangeType.DIRECT,</span><br><span class="line">    <span class="keyword">true</span>, <span class="keyword">false</span>, <span class="keyword">false</span>, args);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.EX_QUEUE,</span><br><span class="line">    <span class="keyword">true</span>, <span class="keyword">false</span>, <span class="keyword">false</span>, <span class="keyword">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.EX_QUEUE, RabbitMQConfig.EX, </span><br><span class="line">    RabbitMQConfig.EX_QUEUE_ROUTE_KEY);</span><br></pre></td></tr></table></figure>
+<h3 id="Message"><a href="#Message" class="headerlink" title="Message"></a>Message</h3><p>生产者创建的消息分为两部分:</p>
+<ul>
+<li>消息标签, 包含路由相关的信息</li>
+<li>消息体, 消息的内容, 可以被Queue保存</li>
+</ul>
+<p>消息的常用属性:</p>
+<ul>
+<li>durable, 通过设置deliverMode为2, 可实现消息的持久化;<br>对于可靠性/重要性不是那么高的消息不采用持久化处理, 以提高系统的吞吐量</li>
+<li>消息的TTL, 通过设置expiration参数</li>
+</ul>
+<h3 id="Connect-amp-amp-Channel"><a href="#Connect-amp-amp-Channel" class="headerlink" title="Connect &amp;&amp; Channel"></a>Connect &amp;&amp; Channel</h3><p>客户端需要和RabbitMQ建立TCP Connection, 建立后会创建AMQP信道(Channel),<br>并被指派一个唯一的ID.<br>Channel是建立在Connection上的虚拟连接, 用于处理AMQP指令.</p>
+<p>建立/销毁TCP连接是非常大的开销, 高峰时, 性能瓶颈也就随之出现.<br>所以RabbitMQ采用类似NIO的做法, 对TCP连接进行复用.</p>
+<p>建议客户端采用连接池, 将Channel均摊到池中的Connection上;<br>每个线程持有一个Channel.</p>
+<p>为了当发生阻塞时可以在阻止生产者的同时, 又不影响消费者的运行,<br>建议生产者和消费者的逻辑使用不同的Connection.</p>
+<h2 id="实现Publisher"><a href="#实现Publisher" class="headerlink" title="实现Publisher"></a>实现Publisher</h2><p>为了避免发送方的消息丢失, RabbitMQ提供了以下几种机制:</p>
+<ul>
+<li>发送消息时设置mandatory, 当交换器无法找到复合条件的队列时, 通过Basic.Return将消息返回给生产者;<br>如果交换器存在AE, 则mandatory失效.</li>
+<li>事务机制, txSelect/txCommit/txRollback, 每次只能处理一条消息,<br>在消息发送后会<strong>阻塞</strong>发送端, 等待RabbitMQ的回应,<br>回应提交成功, 则表明消息已经到达RabbitMQ;<br>如果发生任何异常, 发送端可以捕获异常并进行回滚;<br>它<strong>严重降低了RabbitMQ的消息吞吐量</strong>.</li>
+<li>发送方确认机制, confirmSelect该模式下, 发布的消息都会被指派唯一ID,<br>消息到达匹配队列后, RabbitMQ会发送Basic.Ack并携带消息的唯一ID, 使发送方知道消息已经正确到达;<br>如果内部发生错误, 则会发送Basic.Nack告知发送方.</li>
+</ul>
+<p>推荐使用<strong>异步的发送方确认机制</strong>的方式来批量发送消息.</p>
+<h2 id="实现Consumer"><a href="#实现Consumer" class="headerlink" title="实现Consumer"></a>实现Consumer</h2><p>消费端有两种消费模式:</p>
+<ul>
+<li>Push模式, RabbitMQ主动向订阅的消费者推送消息, 适用于吞吐量大的情况;<br>不同的订阅消费者采用唯一标签(consumerTag)来区分.</li>
+<li>Pull模式, 消费者从RabbitMQ拉取消息, 适用于吞吐量少的情况</li>
+</ul>
+<p>为了保证消息从队列可靠的到达消费者, RabbitMQ提供了消息确认机制(Message Acknowledge).<br>通过设置auto ack为false, 让消费者有足够的时间处理消息,<br>处理完毕后再显式的发送Basic.Ack给RabbitMQ,<br>然后RabbitMQ才从内存/磁盘中移除消息(实际上是先打上删除标记, 之后再删除).<br>如果设置为true, 则RabbitMQ发送消息后就会将其从内存/磁盘中移除.</p>
+<p>RabbitMQ队列中的消息分为两个部分:</p>
+<ul>
+<li>Ready, 等待投递给消费者的消息</li>
+<li>Unacked, 已经投递给消费者, 但还没有收到确认信号的消息</li>
+</ul>
+<p>如果一直没有收到消费者的确认信号, 并且消费者断开了连接,<br>RabbitMQ则会安排该消息重新进入队列, 等待投递给下一个消费者,<br>确保消息被正确的消费.</p>
+<p>RabbitMQ判断此消息是否重新投递给消费者的唯一依据是消费该消息的消费者连接是否断开,<br>因为RabbitMQ允许消费者消费一条消息的时间可以很久.</p>
+<p>通过Basic.Qos来对消费者端的吞吐量进行控制,</p>
+<ul>
+<li>global为false模式时, 针对每个消费者进行限制</li>
+<li>global为true模式时, 针对一个Channle中所有的消费者做限制</li>
+</ul>
+<p>如果同时设置了两种模式, 则同时生效,<br>即对信道中的每一个消费者做限制, 也对信道中的总数做限制.<br>一般需要根据节点的性能进行配置.</p>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://book.douban.com/subject/27591386/">RabbitMQ实战指南</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.rabbitmq.com/getstarted.html">RabbitMQ Tutorials</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+      
+
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>Amos
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://amos.s2u2m.com/2021/12/rabbitmq/best-practice/" title="RabbitMQ 开发实践">https://amos.s2u2m.com/2021/12/rabbitmq/best-practice/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-Hans" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/MQ/" rel="tag"># MQ</a>
+              <a href="/tags/RabbitMQ/" rel="tag"># RabbitMQ</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/08/spring-security/authorization/" rel="prev" title="Spring Security --- Authorization">
+      <i class="fa fa-chevron-left"></i> Spring Security --- Authorization
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/03/spring/spring-mvc/" rel="next" title="Spring MVC RESTfull请求处理流程">
+      Spring MVC RESTfull请求处理流程 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A3%B0%E6%98%8EExchange%E5%92%8CQueue"><span class="nav-number">1.</span> <span class="nav-text">声明Exchange和Queue</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Exchange"><span class="nav-number">1.1.</span> <span class="nav-text">Exchange</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Queue"><span class="nav-number">1.2.</span> <span class="nav-text">Queue</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%87%E7%94%A8%E4%BA%A4%E6%8D%A2%E5%99%A8-AE-Alternate-Exchange"><span class="nav-number">1.3.</span> <span class="nav-text">备用交换器(AE, Alternate Exchange)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E6%A8%A1%E6%9D%BF"><span class="nav-number">1.4.</span> <span class="nav-text">基本模板</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Message"><span class="nav-number">1.5.</span> <span class="nav-text">Message</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Connect-amp-amp-Channel"><span class="nav-number">1.6.</span> <span class="nav-text">Connect &amp;&amp; Channel</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0Publisher"><span class="nav-number">2.</span> <span class="nav-text">实现Publisher</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0Consumer"><span class="nav-number">3.</span> <span class="nav-text">实现Consumer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Reference"><span class="nav-number">4.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Amos"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">Amos</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="mailto:xiayy860612@126.com" title="E-Mail → mailto:xiayy860612@126.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/xiayy860612" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;xiayy860612" rel="noopener" target="_blank"><i class="fa fa-github fa-fw"></i>GitHub</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-Hans" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">蜀ICP备18013492号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">s2u2m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">33k</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('https://unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'YnmrykAQHQwGzUR77I61DkKN-9Nh9j0Va',
+      appKey     : '4TzKa97Pz2JTg81B8o5l77mO',
+      placeholder: "一起来聊一聊呗",
+      avatar     : 'retro',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : true,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

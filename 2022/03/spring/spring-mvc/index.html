@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"amos.s2u2m.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="开发环境  org.springframework:spring-webmvc:5.3.10 org.springframework.boot:spring-boot:2.5.5">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring MVC RESTfull请求处理流程">
+<meta property="og:url" content="https://amos.s2u2m.com/2022/03/spring/spring-mvc/index.html">
+<meta property="og:site_name" content="观澜">
+<meta property="og:description" content="开发环境  org.springframework:spring-webmvc:5.3.10 org.springframework.boot:spring-boot:2.5.5">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-03-07T00:51:59.889Z">
+<meta property="article:modified_time" content="2022-03-07T00:53:02.546Z">
+<meta property="article:author" content="Amos">
+<meta property="article:tag" content="Spring">
+<meta property="article:tag" content="Spring MVC">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://amos.s2u2m.com/2022/03/spring/spring-mvc/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Spring MVC RESTfull请求处理流程 | 观澜</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">观澜</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">行到水穷处，坐看云起时</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://amos.s2u2m.com/2022/03/spring/spring-mvc/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="Amos">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="观澜">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Spring MVC RESTfull请求处理流程
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2022-03-07 08:51:59 / 修改时间：08:53:02" itemprop="dateCreated datePublished" datetime="2022-03-07T08:51:59+08:00">2022-03-07</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spring-MVC/" itemprop="url" rel="index"><span itemprop="name">Spring MVC</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/03/spring/spring-mvc/" class="post-meta-item leancloud_visitors" data-flag-title="Spring MVC RESTfull请求处理流程" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2022/03/spring/spring-mvc/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/03/spring/spring-mvc/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>5.9k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>5 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>开发环境</p>
+<ul>
+<li>org.springframework:spring-webmvc:5.3.10</li>
+<li>org.springframework.boot:spring-boot:2.5.5</li>
+</ul>
+<a id="more"></a>
+
+<h2 id="核心处理流程"><a href="#核心处理流程" class="headerlink" title="核心处理流程"></a>核心处理流程</h2><?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="463px" preserveAspectRatio="none" style="width:1246px;height:463px;background:#FFFFFF;" version="1.1" viewBox="0 0 1246 463" width="1246px" zoomAndPan="magnify"><defs/><g><rect fill="#FFFFFF" height="335.1953" style="stroke:#181818;stroke-width:1.0;" width="10" x="329.5" y="75.4297"/><rect fill="#FFFFFF" height="69.2656" style="stroke:#181818;stroke-width:1.0;" width="10" x="334.5" y="291.2266"/><rect fill="#FFFFFF" height="14" style="stroke:#181818;stroke-width:1.0;" width="10" x="630.5" y="167.8281"/><rect fill="#FFFFFF" height="14" style="stroke:#181818;stroke-width:1.0;" width="10" x="630.5" y="240.0938"/><rect fill="#FFFFFF" height="14" style="stroke:#181818;stroke-width:1.0;" width="10" x="630.5" y="396.625"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="334" x2="334" y1="36.2969" y2="428.625"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="635.5" x2="635.5" y1="36.2969" y2="428.625"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="799.5" x2="799.5" y1="36.2969" y2="428.625"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="975.5" x2="975.5" y1="36.2969" y2="428.625"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="1163.5" x2="1163.5" y1="36.2969" y2="428.625"/><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="145" x="262" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="131" x="269" y="24.9951">DispatcherServlet</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="145" x="262" y="427.625"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="131" x="269" y="447.6201">DispatcherServlet</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="180" x="545.5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="166" x="552.5" y="24.9951">HandlerExecutionChain</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="180" x="545.5" y="427.625"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="166" x="552.5" y="447.6201">HandlerExecutionChain</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="128" x="735.5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="114" x="742.5" y="24.9951">HandlerAdapter</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="128" x="735.5" y="427.625"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="114" x="742.5" y="447.6201">HandlerAdapter</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="204" x="873.5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="190" x="880.5" y="24.9951">HandlerExceptionResolver</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="204" x="873.5" y="427.625"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="190" x="880.5" y="447.6201">HandlerExceptionResolver</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="153" x="1087.5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="139" x="1094.5" y="24.9951">HandlerInterceptor</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="153" x="1087.5" y="427.625"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="139" x="1094.5" y="447.6201">HandlerInterceptor</text><rect fill="#FFFFFF" height="335.1953" style="stroke:#181818;stroke-width:1.0;" width="10" x="329.5" y="75.4297"/><rect fill="#FFFFFF" height="69.2656" style="stroke:#181818;stroke-width:1.0;" width="10" x="334.5" y="291.2266"/><rect fill="#FFFFFF" height="14" style="stroke:#181818;stroke-width:1.0;" width="10" x="630.5" y="167.8281"/><rect fill="#FFFFFF" height="14" style="stroke:#181818;stroke-width:1.0;" width="10" x="630.5" y="240.0938"/><rect fill="#FFFFFF" height="14" style="stroke:#181818;stroke-width:1.0;" width="10" x="630.5" y="396.625"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="334.5" x2="381.5" y1="62.4297" y2="62.4297"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="381.5" x2="381.5" y1="62.4297" y2="75.4297"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="340.5" x2="381.5" y1="75.4297" y2="75.4297"/><polygon fill="#181818" points="350.5,71.4297,340.5,75.4297,350.5,79.4297,346.5,75.4297" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="72" x="346.5" y="57.3638">doDispatch</text><polygon fill="#181818" points="623.5,105.5625,633.5,109.5625,623.5,113.5625,627.5,109.5625" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="339.5" x2="629.5" y1="109.5625" y2="109.5625"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="136" x="346.5" y="104.4966">handler = getHandler</text><polygon fill="#181818" points="787.5,134.6953,797.5,138.6953,787.5,142.6953,791.5,138.6953" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="339.5" x2="793.5" y1="138.6953" y2="138.6953"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="247" x="346.5" y="133.6294">adapter = getHandlerAdapter(handler)</text><polygon fill="#181818" points="618.5,163.8281,628.5,167.8281,618.5,171.8281,622.5,167.8281" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="339.5" x2="624.5" y1="167.8281" y2="167.8281"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="100" x="346.5" y="162.7622">applyPreHandle</text><polygon fill="#181818" points="1152,177.8281,1162,181.8281,1152,185.8281,1156,181.8281" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="635.5" x2="1158" y1="181.8281" y2="181.8281"/><polygon fill="#181818" points="787.5,206.9609,797.5,210.9609,787.5,214.9609,791.5,210.9609" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="339.5" x2="793.5" y1="210.9609" y2="210.9609"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="314" x="346.5" y="205.895">modelView = handle(request, response, handler)</text><polygon fill="#181818" points="618.5,236.0938,628.5,240.0938,618.5,244.0938,622.5,240.0938" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="339.5" x2="624.5" y1="240.0938" y2="240.0938"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="107" x="346.5" y="235.0278">applyPostHandle</text><polygon fill="#181818" points="1152,250.0938,1162,254.0938,1152,258.0938,1156,254.0938" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="635.5" x2="1158" y1="254.0938" y2="254.0938"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="339.5" x2="386.5" y1="278.2266" y2="278.2266"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="386.5" x2="386.5" y1="278.2266" y2="291.2266"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="345.5" x2="386.5" y1="291.2266" y2="291.2266"/><polygon fill="#181818" points="355.5,287.2266,345.5,291.2266,355.5,295.2266,351.5,291.2266" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="247" x="351.5" y="273.1606">processDispatchResult(modelView, ...)</text><polygon fill="#181818" points="963.5,321.3594,973.5,325.3594,963.5,329.3594,967.5,325.3594" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="344.5" x2="969.5" y1="325.3594" y2="325.3594"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="270" x="351.5" y="320.2935">modelAndView = resolveException(ex, ...)</text><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="344.5" x2="386.5" y1="359.4922" y2="359.4922"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="386.5" x2="386.5" y1="359.4922" y2="372.4922"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="339.5" x2="386.5" y1="372.4922" y2="372.4922"/><polygon fill="#181818" points="349.5,368.4922,339.5,372.4922,349.5,376.4922,345.5,372.4922" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="272" x="351.5" y="354.4263">render(modelAndView, request, response)</text><path d="M5,341.8594 L5,366.8594 L325,366.8594 L325,351.8594 L315,341.8594 L5,341.8594 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><path d="M315,341.8594 L315,351.8594 L325,351.8594 L315,341.8594 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="299" x="11" y="358.9263">对ModelAndView进行渲染或者Exception进行处理</text><polygon fill="#181818" points="618.5,392.625,628.5,396.625,618.5,400.625,622.5,396.625" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="339.5" x2="624.5" y1="396.625" y2="396.625"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="147" x="346.5" y="391.5591">triggerAfterCompletion</text><polygon fill="#181818" points="1152,406.625,1162,410.625,1152,414.625,1156,410.625" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="635.5" x2="1158" y1="410.625" y2="410.625"/><!--MD5=[01e734d4d0df82c6daa7c51ba0a9904f]
+@startuml
+participant DS as "DispatcherServlet"
+participant HEC as "HandlerExecutionChain"
+participant HA as "HandlerAdapter"
+participant ER as "HandlerExceptionResolver"
+participant HI as "HandlerInterceptor"
+
+
+DS - -> DS: doDispatch
+activate DS
+DS - -> HEC: handler = getHandler
+DS - -> HA: adapter = getHandlerAdapter(handler)
+DS - -> HEC: applyPreHandle
+activate HEC
+HEC - -> HI
+deactivate HEC
+DS - -> HA: modelView = handle(request, response, handler)
+DS - -> HEC: applyPostHandle
+activate HEC
+HEC - -> HI
+deactivate HEC
+DS - -> DS: processDispatchResult(modelView, ...)
+activate DS
+DS - -> ER: modelAndView = resolveException(ex, ...)
+DS - -> DS: render(modelAndView, request, response)
+deactivate DS
+note left
+对ModelAndView进行渲染或者Exception进行处理
+endnote
+DS - -> HEC: triggerAfterCompletion
+activate HEC
+HEC - -> HI
+deactivate HEC
+deactivate DS
+@enduml
+
+PlantUML version 1.2022.2(Sat Mar 05 16:30:19 UTC 2022)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
+
+<p>入口为<code>DispatcherServlet.doDispatch</code>，<br>大致分为几个部分：</p>
+<ol>
+<li>请求Handler的获取</li>
+<li>调用Handler处理请求</li>
+<li>使用Interceptor对请求进行拦截</li>
+<li>对异常进行处理</li>
+</ol>
+<p>Spring MVC中的各种相关配置可参考<code>WebMvcAutoConfigurationAdapter</code>.<br>通过定义一个或者多个<code>WebMvcConfigurer</code>来扩展Spring MVC中的配置</p>
+<h2 id="获取Handler"><a href="#获取Handler" class="headerlink" title="获取Handler"></a>获取Handler</h2><?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="470px" preserveAspectRatio="none" style="width:1864px;height:470px;background:#FFFFFF;" version="1.1" viewBox="0 0 1864 470" width="1864px" zoomAndPan="magnify"><defs/><g><!--MD5=[e72d5bcb5f4d649d57518e519f102538]
+class RequestCondition--><g id="elem_RequestCondition"><rect codeLine="1" fill="#F1F1F1" height="48" id="RequestCondition" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="158" x="1166" y="415"/><ellipse cx="1181" cy="431" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1181.9531,427.7813 L1183.6719,427.7813 C1184.0625,427.7813 1184.25,427.75 1184.375,427.6719 C1184.6406,427.5156 1184.7813,427.2344 1184.7813,426.9375 C1184.7813,426.6719 1184.6719,426.4063 1184.4375,426.2344 C1184.2656,426.125 1184.125,426.0938 1183.6719,426.0938 L1178.5313,426.0938 C1178.0938,426.0938 1177.9688,426.1094 1177.8125,426.2031 C1177.5625,426.3594 1177.4063,426.6563 1177.4063,426.9375 C1177.4063,427.2188 1177.5469,427.4688 1177.7656,427.6406 C1177.9219,427.75 1178.1094,427.7813 1178.5313,427.7813 L1180.25,427.7813 L1180.25,434.2969 L1178.5313,434.2969 C1178.0938,434.2969 1177.9688,434.3125 1177.8125,434.4219 C1177.5625,434.5781 1177.4063,434.8594 1177.4063,435.1563 C1177.4063,435.4063 1177.5469,435.6719 1177.7656,435.8281 C1177.9219,435.9531 1178.125,436 1178.5313,436 L1183.6719,436 C1184.4219,436 1184.7813,435.7188 1184.7813,435.1563 C1184.7813,434.875 1184.6719,434.625 1184.4375,434.4531 C1184.2656,434.3281 1184.125,434.2969 1183.6719,434.2969 L1181.9531,434.2969 L1181.9531,427.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="126" x="1195" y="435.8467">RequestCondition</text><line style="stroke:#181818;stroke-width:0.5;" x1="1167" x2="1323" y1="447" y2="447"/><line style="stroke:#181818;stroke-width:0.5;" x1="1167" x2="1323" y1="455" y2="455"/></g><!--MD5=[b6a55dbd034fa365d3fcc2561ad900e6]
+class RequestMappingInfo--><g id="elem_RequestMappingInfo"><rect codeLine="2" fill="#F1F1F1" height="80.5938" id="RequestMappingInfo" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="588" x="951" y="273"/><ellipse cx="1166.25" cy="289" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1168.5938,284.6719 C1167.6563,284.2344 1167.0625,284.0938 1166.1875,284.0938 C1163.5625,284.0938 1161.5625,286.1719 1161.5625,288.8906 L1161.5625,290.0156 C1161.5625,292.5938 1163.6719,294.4844 1166.5625,294.4844 C1167.7813,294.4844 1168.9375,294.1875 1169.6875,293.6406 C1170.2656,293.2344 1170.5938,292.7813 1170.5938,292.3906 C1170.5938,291.9375 1170.2031,291.5469 1169.7344,291.5469 C1169.5156,291.5469 1169.3125,291.625 1169.125,291.8125 C1168.6719,292.2969 1168.6719,292.2969 1168.4844,292.3906 C1168.0625,292.6563 1167.375,292.7813 1166.6094,292.7813 C1164.5625,292.7813 1163.2656,291.6875 1163.2656,289.9844 L1163.2656,288.8906 C1163.2656,287.1094 1164.5156,285.7969 1166.25,285.7969 C1166.8281,285.7969 1167.4375,285.9531 1167.9063,286.2031 C1168.3906,286.4844 1168.5625,286.7031 1168.6563,287.1094 C1168.7188,287.5156 1168.75,287.6406 1168.8906,287.7656 C1169.0313,287.9063 1169.2656,288.0156 1169.4844,288.0156 C1169.75,288.0156 1170.0156,287.875 1170.1875,287.6563 C1170.2969,287.5 1170.3281,287.3125 1170.3281,286.8906 L1170.3281,285.4688 C1170.3281,285.0313 1170.3125,284.9063 1170.2188,284.75 C1170.0625,284.4844 1169.7813,284.3438 1169.4844,284.3438 C1169.1875,284.3438 1168.9844,284.4375 1168.7656,284.75 L1168.5938,284.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="149" x="1186.75" y="293.8467">RequestMappingInfo</text><line style="stroke:#181818;stroke-width:0.5;" x1="952" x2="1538" y1="305" y2="305"/><line style="stroke:#181818;stroke-width:0.5;" x1="952" x2="1538" y1="313" y2="313"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="576" x="957" y="329.9951">public RequestMappingInfo getMatchingCondition(HttpServletRequest request)</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="569" x="957" y="346.292">public int compareTo(RequestMappingInfo other, HttpServletRequest request)</text></g><!--MD5=[d65c55f7a2ef8cbd6d0ccab92e97509e]
+class HandlerMapping--><g id="elem_HandlerMapping"><rect codeLine="8" fill="#F1F1F1" height="64.2969" id="HandlerMapping" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="481" x="338.5" y="7"/><ellipse cx="515.75" cy="23" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M516.7031,19.7813 L518.4219,19.7813 C518.8125,19.7813 519,19.75 519.125,19.6719 C519.3906,19.5156 519.5313,19.2344 519.5313,18.9375 C519.5313,18.6719 519.4219,18.4063 519.1875,18.2344 C519.0156,18.125 518.875,18.0938 518.4219,18.0938 L513.2813,18.0938 C512.8438,18.0938 512.7188,18.1094 512.5625,18.2031 C512.3125,18.3594 512.1563,18.6563 512.1563,18.9375 C512.1563,19.2188 512.2969,19.4688 512.5156,19.6406 C512.6719,19.75 512.8594,19.7813 513.2813,19.7813 L515,19.7813 L515,26.2969 L513.2813,26.2969 C512.8438,26.2969 512.7188,26.3125 512.5625,26.4219 C512.3125,26.5781 512.1563,26.8594 512.1563,27.1563 C512.1563,27.4063 512.2969,27.6719 512.5156,27.8281 C512.6719,27.9531 512.875,28 513.2813,28 L518.4219,28 C519.1719,28 519.5313,27.7188 519.5313,27.1563 C519.5313,26.875 519.4219,26.625 519.1875,26.4531 C519.0156,26.3281 518.875,26.2969 518.4219,26.2969 L516.7031,26.2969 L516.7031,19.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="118" x="536.25" y="27.8467">HandlerMapping</text><line style="stroke:#181818;stroke-width:0.5;" x1="339.5" x2="818.5" y1="39" y2="39"/><line style="stroke:#181818;stroke-width:0.5;" x1="339.5" x2="818.5" y1="47" y2="47"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="469" x="344.5" y="63.9951">HandlerExecutionChain getHandler(HttpServletRequest request);</text></g><!--MD5=[1be383b504710a326997c5ba2e833ccf]
+class AbstractHandlerMapping--><g id="elem_AbstractHandlerMapping"><rect codeLine="12" fill="#F1F1F1" height="64.2969" id="AbstractHandlerMapping" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="563" x="297.5" y="132"/><ellipse cx="486.25" cy="148" fill="#A9DCDF" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M488.3281,149.8125 L488.7188,150.7969 L488.3281,150.7969 C487.875,150.7969 487.7656,150.8125 487.6094,150.9219 C487.3594,151.0781 487.2031,151.3594 487.2031,151.6563 C487.2031,151.9219 487.3438,152.1719 487.5625,152.3281 C487.7031,152.4531 487.9063,152.5 488.3281,152.5 L490.6875,152.5 C491.0469,152.5 491.2656,152.4688 491.4063,152.375 C491.6563,152.2344 491.8125,151.9375 491.8125,151.6563 C491.8125,151.375 491.6719,151.125 491.4531,150.9688 C491.2813,150.8281 491.125,150.7969 490.6563,150.7969 L487.2656,142.5938 L483.5938,142.5938 C483.1406,142.5938 483.0156,142.6094 482.8594,142.7031 C482.6094,142.875 482.4531,143.1563 482.4531,143.4375 C482.4531,143.7188 482.5938,143.9688 482.8125,144.1406 C482.9844,144.25 483.1563,144.2813 483.5938,144.2813 L484.6719,144.2813 L482.0313,150.7969 C481.6094,150.7969 481.4531,150.8125 481.2969,150.9219 C481.0469,151.0781 480.8906,151.3594 480.8906,151.6563 C480.8906,152.2188 481.2656,152.5 482.0156,152.5 L484.2813,152.5 C484.6406,152.5 484.8594,152.4688 484.9844,152.375 C485.25,152.2344 485.3906,151.9375 485.3906,151.6563 C485.3906,151.375 485.2656,151.125 485.0469,150.9531 C484.875,150.8281 484.7344,150.7969 484.2813,150.7969 L483.8906,150.7969 L484.2813,149.8125 L488.3281,149.8125 Z M487.625,148.1094 L484.9531,148.1094 L486.2969,144.8438 L487.625,148.1094 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="177" x="506.75" y="152.8467">AbstractHandlerMapping</text><line style="stroke:#181818;stroke-width:0.5;" x1="298.5" x2="859.5" y1="164" y2="164"/><line style="stroke:#181818;stroke-width:0.5;" x1="298.5" x2="859.5" y1="172" y2="172"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="551" x="303.5" y="188.9951">protected abstract Object getHandlerInternal(HttpServletRequest request);</text></g><!--MD5=[395f68888fe4fcea0bba78bdc0109261]
+class AbstractHandlerMethodMapping--><g id="elem_AbstractHandlerMethodMapping"><rect codeLine="15" fill="#F1F1F1" height="64.2969" id="AbstractHandlerMethodMapping" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="625" x="266.5" y="281.5"/><ellipse cx="454.25" cy="297.5" fill="#A9DCDF" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M456.3281,299.3125 L456.7188,300.2969 L456.3281,300.2969 C455.875,300.2969 455.7656,300.3125 455.6094,300.4219 C455.3594,300.5781 455.2031,300.8594 455.2031,301.1563 C455.2031,301.4219 455.3438,301.6719 455.5625,301.8281 C455.7031,301.9531 455.9063,302 456.3281,302 L458.6875,302 C459.0469,302 459.2656,301.9688 459.4063,301.875 C459.6563,301.7344 459.8125,301.4375 459.8125,301.1563 C459.8125,300.875 459.6719,300.625 459.4531,300.4688 C459.2813,300.3281 459.125,300.2969 458.6563,300.2969 L455.2656,292.0938 L451.5938,292.0938 C451.1406,292.0938 451.0156,292.1094 450.8594,292.2031 C450.6094,292.375 450.4531,292.6563 450.4531,292.9375 C450.4531,293.2188 450.5938,293.4688 450.8125,293.6406 C450.9844,293.75 451.1563,293.7813 451.5938,293.7813 L452.6719,293.7813 L450.0313,300.2969 C449.6094,300.2969 449.4531,300.3125 449.2969,300.4219 C449.0469,300.5781 448.8906,300.8594 448.8906,301.1563 C448.8906,301.7188 449.2656,302 450.0156,302 L452.2813,302 C452.6406,302 452.8594,301.9688 452.9844,301.875 C453.25,301.7344 453.3906,301.4375 453.3906,301.1563 C453.3906,300.875 453.2656,300.625 453.0469,300.4531 C452.875,300.3281 452.7344,300.2969 452.2813,300.2969 L451.8906,300.2969 L452.2813,299.3125 L456.3281,299.3125 Z M455.625,297.6094 L452.9531,297.6094 L454.2969,294.3438 L455.625,297.6094 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="230" x="474.75" y="302.3467">AbstractHandlerMethodMapping</text><rect fill="#FFFFFF" height="15.9688" style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" width="9" x="885.5" y="278.5"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing" textLength="7" x="886.5" y="290.6387">T</text><line style="stroke:#181818;stroke-width:0.5;" x1="267.5" x2="890.5" y1="313.5" y2="313.5"/><line style="stroke:#181818;stroke-width:0.5;" x1="267.5" x2="890.5" y1="321.5" y2="321.5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="613" x="272.5" y="338.4951">protected abstract T getMatchingMapping(T mapping, HttpServletRequest request);</text></g><!--MD5=[def6b000f92da18b7ae05d3810212c72]
+class RequestMappingHandlerMapping--><g id="elem_RequestMappingHandlerMapping"><rect codeLine="20" fill="#F1F1F1" height="48" id="RequestMappingHandlerMapping" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="270" x="99" y="415"/><ellipse cx="114" cy="431" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M116.3438,426.6719 C115.4063,426.2344 114.8125,426.0938 113.9375,426.0938 C111.3125,426.0938 109.3125,428.1719 109.3125,430.8906 L109.3125,432.0156 C109.3125,434.5938 111.4219,436.4844 114.3125,436.4844 C115.5313,436.4844 116.6875,436.1875 117.4375,435.6406 C118.0156,435.2344 118.3438,434.7813 118.3438,434.3906 C118.3438,433.9375 117.9531,433.5469 117.4844,433.5469 C117.2656,433.5469 117.0625,433.625 116.875,433.8125 C116.4219,434.2969 116.4219,434.2969 116.2344,434.3906 C115.8125,434.6563 115.125,434.7813 114.3594,434.7813 C112.3125,434.7813 111.0156,433.6875 111.0156,431.9844 L111.0156,430.8906 C111.0156,429.1094 112.2656,427.7969 114,427.7969 C114.5781,427.7969 115.1875,427.9531 115.6563,428.2031 C116.1406,428.4844 116.3125,428.7031 116.4063,429.1094 C116.4688,429.5156 116.5,429.6406 116.6406,429.7656 C116.7813,429.9063 117.0156,430.0156 117.2344,430.0156 C117.5,430.0156 117.7656,429.875 117.9375,429.6563 C118.0469,429.5 118.0781,429.3125 118.0781,428.8906 L118.0781,427.4688 C118.0781,427.0313 118.0625,426.9063 117.9688,426.75 C117.8125,426.4844 117.5313,426.3438 117.2344,426.3438 C116.9375,426.3438 116.7344,426.4375 116.5156,426.75 L116.3438,426.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="238" x="128" y="435.8467">RequestMappingHandlerMapping</text><line style="stroke:#181818;stroke-width:0.5;" x1="100" x2="368" y1="447" y2="447"/><line style="stroke:#181818;stroke-width:0.5;" x1="100" x2="368" y1="455" y2="455"/></g><!--MD5=[7124be8c614d08d4479808f506f238bd]
+class MatchableHandlerMapping--><g id="elem_MatchableHandlerMapping"><rect fill="#F1F1F1" height="48" id="MatchableHandlerMapping" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="224" x="7" y="289.5"/><ellipse cx="22" cy="305.5" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M22.9531,302.2813 L24.6719,302.2813 C25.0625,302.2813 25.25,302.25 25.375,302.1719 C25.6406,302.0156 25.7813,301.7344 25.7813,301.4375 C25.7813,301.1719 25.6719,300.9063 25.4375,300.7344 C25.2656,300.625 25.125,300.5938 24.6719,300.5938 L19.5313,300.5938 C19.0938,300.5938 18.9688,300.6094 18.8125,300.7031 C18.5625,300.8594 18.4063,301.1563 18.4063,301.4375 C18.4063,301.7188 18.5469,301.9688 18.7656,302.1406 C18.9219,302.25 19.1094,302.2813 19.5313,302.2813 L21.25,302.2813 L21.25,308.7969 L19.5313,308.7969 C19.0938,308.7969 18.9688,308.8125 18.8125,308.9219 C18.5625,309.0781 18.4063,309.3594 18.4063,309.6563 C18.4063,309.9063 18.5469,310.1719 18.7656,310.3281 C18.9219,310.4531 19.125,310.5 19.5313,310.5 L24.6719,310.5 C25.4219,310.5 25.7813,310.2188 25.7813,309.6563 C25.7813,309.375 25.6719,309.125 25.4375,308.9531 C25.2656,308.8281 25.125,308.7969 24.6719,308.7969 L22.9531,308.7969 L22.9531,302.2813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="192" x="36" y="310.3467">MatchableHandlerMapping</text><line style="stroke:#181818;stroke-width:0.5;" x1="8" x2="230" y1="321.5" y2="321.5"/><line style="stroke:#181818;stroke-width:0.5;" x1="8" x2="230" y1="329.5" y2="329.5"/></g><!--MD5=[24d463dbc3bbb0274502c953bad0fc61]
+class RequestMapping--><g id="elem_RequestMapping"><rect codeLine="22" fill="#F1F1F1" height="48" id="RequestMapping" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="153" x="1558.5" y="140"/><ellipse cx="1573.5" cy="156" fill="#E3664A" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1574.4219,153.25 C1572.5156,153.3906 1571.2031,154.5781 1571.2031,156.1563 C1571.2031,157.5625 1572.4063,158.7813 1573.8594,158.7813 C1574.0156,158.7813 1574.1563,158.7656 1574.4219,158.7188 L1574.4219,158.7813 L1575.2188,158.7813 C1575.8438,158.7813 1576.1563,158.5625 1576.1563,158.0781 C1576.1563,157.7969 1576.0313,157.6094 1575.7656,157.4844 L1575.7656,152.7031 C1575.7656,150.8125 1574.4531,149.4531 1572.6094,149.4531 C1570.4063,149.4531 1568.7969,151.5781 1568.7969,154.5156 L1568.7969,157.375 C1568.7969,158.625 1569.0781,159.8438 1569.5938,160.7656 C1570.3125,162.0156 1571.2344,162.5781 1572.6406,162.5781 C1574.25,162.5781 1575.6406,161.9219 1575.6406,161.125 C1575.6406,160.7344 1575.3438,160.4219 1574.9688,160.4219 C1574.7656,160.4219 1574.6719,160.4688 1574.4375,160.7188 C1574.1094,161.0469 1573.4375,161.2656 1572.6875,161.2656 C1571.9375,161.2656 1571.4063,161 1571,160.4063 C1570.4219,159.6094 1570.1406,158.5625 1570.1406,157.2656 L1570.1406,154.6094 C1570.1406,152.4375 1571.2031,150.7969 1572.6406,150.7969 C1573.6875,150.7969 1574.4219,151.5781 1574.4219,152.7031 L1574.4219,153.25 Z M1574.4219,157.3594 C1574.1875,157.4063 1574.0938,157.4063 1573.9844,157.4063 C1573.1563,157.4063 1572.5469,156.875 1572.5469,156.1719 C1572.5469,155.3438 1573.2969,154.7344 1574.4219,154.625 L1574.4219,157.3594 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="121" x="1587.5" y="160.8467">RequestMapping</text><line style="stroke:#181818;stroke-width:0.5;" x1="1559.5" x2="1710.5" y1="172" y2="172"/><line style="stroke:#181818;stroke-width:0.5;" x1="1559.5" x2="1710.5" y1="180" y2="180"/></g><!--MD5=[d9360598d9a975f3396a9e215d4b0397]
+class GetMapping--><g id="elem_GetMapping"><rect codeLine="23" fill="#F1F1F1" height="48" id="GetMapping" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="121" x="1574.5" y="289.5"/><ellipse cx="1589.5" cy="305.5" fill="#E3664A" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1590.4219,302.75 C1588.5156,302.8906 1587.2031,304.0781 1587.2031,305.6563 C1587.2031,307.0625 1588.4063,308.2813 1589.8594,308.2813 C1590.0156,308.2813 1590.1563,308.2656 1590.4219,308.2188 L1590.4219,308.2813 L1591.2188,308.2813 C1591.8438,308.2813 1592.1563,308.0625 1592.1563,307.5781 C1592.1563,307.2969 1592.0313,307.1094 1591.7656,306.9844 L1591.7656,302.2031 C1591.7656,300.3125 1590.4531,298.9531 1588.6094,298.9531 C1586.4063,298.9531 1584.7969,301.0781 1584.7969,304.0156 L1584.7969,306.875 C1584.7969,308.125 1585.0781,309.3438 1585.5938,310.2656 C1586.3125,311.5156 1587.2344,312.0781 1588.6406,312.0781 C1590.25,312.0781 1591.6406,311.4219 1591.6406,310.625 C1591.6406,310.2344 1591.3438,309.9219 1590.9688,309.9219 C1590.7656,309.9219 1590.6719,309.9688 1590.4375,310.2188 C1590.1094,310.5469 1589.4375,310.7656 1588.6875,310.7656 C1587.9375,310.7656 1587.4063,310.5 1587,309.9063 C1586.4219,309.1094 1586.1406,308.0625 1586.1406,306.7656 L1586.1406,304.1094 C1586.1406,301.9375 1587.2031,300.2969 1588.6406,300.2969 C1589.6875,300.2969 1590.4219,301.0781 1590.4219,302.2031 L1590.4219,302.75 Z M1590.4219,306.8594 C1590.1875,306.9063 1590.0938,306.9063 1589.9844,306.9063 C1589.1563,306.9063 1588.5469,306.375 1588.5469,305.6719 C1588.5469,304.8438 1589.2969,304.2344 1590.4219,304.125 L1590.4219,306.8594 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="89" x="1603.5" y="310.3467">GetMapping</text><line style="stroke:#181818;stroke-width:0.5;" x1="1575.5" x2="1694.5" y1="321.5" y2="321.5"/><line style="stroke:#181818;stroke-width:0.5;" x1="1575.5" x2="1694.5" y1="329.5" y2="329.5"/></g><!--MD5=[81ec404a25ab0d2c5d2b039b4644a73f]
+class PostMapping--><g id="elem_PostMapping"><rect codeLine="25" fill="#F1F1F1" height="48" id="PostMapping" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="126" x="1731" y="289.5"/><ellipse cx="1746" cy="305.5" fill="#E3664A" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1746.9219,302.75 C1745.0156,302.8906 1743.7031,304.0781 1743.7031,305.6563 C1743.7031,307.0625 1744.9063,308.2813 1746.3594,308.2813 C1746.5156,308.2813 1746.6563,308.2656 1746.9219,308.2188 L1746.9219,308.2813 L1747.7188,308.2813 C1748.3438,308.2813 1748.6563,308.0625 1748.6563,307.5781 C1748.6563,307.2969 1748.5313,307.1094 1748.2656,306.9844 L1748.2656,302.2031 C1748.2656,300.3125 1746.9531,298.9531 1745.1094,298.9531 C1742.9063,298.9531 1741.2969,301.0781 1741.2969,304.0156 L1741.2969,306.875 C1741.2969,308.125 1741.5781,309.3438 1742.0938,310.2656 C1742.8125,311.5156 1743.7344,312.0781 1745.1406,312.0781 C1746.75,312.0781 1748.1406,311.4219 1748.1406,310.625 C1748.1406,310.2344 1747.8438,309.9219 1747.4688,309.9219 C1747.2656,309.9219 1747.1719,309.9688 1746.9375,310.2188 C1746.6094,310.5469 1745.9375,310.7656 1745.1875,310.7656 C1744.4375,310.7656 1743.9063,310.5 1743.5,309.9063 C1742.9219,309.1094 1742.6406,308.0625 1742.6406,306.7656 L1742.6406,304.1094 C1742.6406,301.9375 1743.7031,300.2969 1745.1406,300.2969 C1746.1875,300.2969 1746.9219,301.0781 1746.9219,302.2031 L1746.9219,302.75 Z M1746.9219,306.8594 C1746.6875,306.9063 1746.5938,306.9063 1746.4844,306.9063 C1745.6563,306.9063 1745.0469,306.375 1745.0469,305.6719 C1745.0469,304.8438 1745.7969,304.2344 1746.9219,304.125 L1746.9219,306.8594 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="94" x="1760" y="310.3467">PostMapping</text><line style="stroke:#181818;stroke-width:0.5;" x1="1732" x2="1856" y1="321.5" y2="321.5"/><line style="stroke:#181818;stroke-width:0.5;" x1="1732" x2="1856" y1="329.5" y2="329.5"/></g><!--MD5=[e47cbefee6d807553ba699a88bb4d86e]
+link RequestMappingInfo to RequestCondition--><g id="link_RequestMappingInfo_RequestCondition"><path codeLine="6" d="M1245,366.256 C1245,366.256 1245,390.8594 1245,401.6083 " fill="none" id="RequestMappingInfo-RequestCondition" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="1245,414.8838,1249,405.8838,1245,409.8838,1241,405.8838,1245,414.8838" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="1245" x2="1245" y1="409.8838" y2="401.8838"/><polygon fill="#181818" points="1245,354.256,1241,360.256,1245,366.256,1249,360.256,1245,354.256" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="8" x="1236.3875" y="373.7534">1</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="7" x="1237.1031" y="403.8661">*</text></g><!--MD5=[619e1798febf98d6e2bf319d6c92d0bc]
+reverse link HandlerMapping to AbstractHandlerMapping--><g id="link_HandlerMapping_AbstractHandlerMapping"><path d="M579,91.143 C579,105.005 579,119.591 579,131.972 " fill="none" id="HandlerMapping-backto-AbstractHandlerMapping" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="572,91.038,579,71.038,586,91.038,572,91.038" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[d888382aaaadfcaa69ee53034ae9562c]
+reverse link AbstractHandlerMapping to AbstractHandlerMethodMapping--><g id="link_AbstractHandlerMapping_AbstractHandlerMethodMapping"><path d="M579,216.601 C579,238.159 579,262.5 579,281.264 " fill="none" id="AbstractHandlerMapping-backto-AbstractHandlerMethodMapping" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="none" points="572,216.281,579,196.281,586,216.281,572,216.281" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[0b0ae275a97aad66fe1c58f0361cc3ad]
+link AbstractHandlerMethodMapping to RequestMappingInfo--><g id="link_AbstractHandlerMethodMapping_RequestMappingInfo"><path codeLine="18" d="M891.524,313.5 C909.596,313.5 927.749,313.5 945.768,313.5 " fill="none" id="AbstractHandlerMethodMapping-to-RequestMappingInfo" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="#181818" points="950.847,313.5,941.847,309.5,945.847,313.5,941.847,317.5,950.847,313.5" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="23" x="909.75" y="306.5669">use</text></g><!--MD5=[b16aa33827680880518e4071692c4e1c]
+reverse link AbstractHandlerMethodMapping to RequestMappingHandlerMapping--><g id="link_AbstractHandlerMethodMapping_RequestMappingHandlerMapping"><path d="M473.485,352.271 C416.299,372.7423 347.485,397.3757 298.325,414.9737 " fill="none" id="AbstractHandlerMethodMapping-backto-RequestMappingHandlerMapping" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="none" points="471.198,345.655,492.387,345.505,475.917,358.836,471.198,345.655" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[76bbc17320ebc7594b7eab608237a93a]
+reverse link MatchableHandlerMapping to RequestMappingHandlerMapping--><g id="link_MatchableHandlerMapping_RequestMappingHandlerMapping"><path d="M154.529,352.655 C173.484,373.0113 196.188,397.3935 212.466,414.8748 " fill="none" id="MatchableHandlerMapping-backto-RequestMappingHandlerMapping" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="149.137,357.137,140.631,337.729,159.383,347.596,149.137,357.137" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[4982b858b011e801f7eee28a700097b8]
+reverse link RequestMapping to GetMapping--><g id="link_RequestMapping_GetMapping"><path codeLine="24" d="M1635,208.37 C1635,234.782 1635,267.494 1635,289.128 " fill="none" id="RequestMapping-backto-GetMapping" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="none" points="1628,208.047,1635,188.047,1642,208.047,1628,208.047" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[9f3a3814b57cc86af3a4a7422a3e1d71]
+reverse link RequestMapping to PostMapping--><g id="link_RequestMapping_PostMapping"><path codeLine="26" d="M1674.7,201.826 C1704.29,229.275 1743.79,265.921 1769.07,289.372 " fill="none" id="RequestMapping-backto-PostMapping" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="none" points="1669.75,206.781,1659.84,188.047,1679.27,196.517,1669.75,206.781" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[9ce589bd74c7933f711f96432ebeb8a9]
+link RequestMapping to RequestMappingInfo--><g id="link_RequestMapping_RequestMappingInfo"><path codeLine="28" d="M1574.06,188.047 C1515.48,210.202 1425.62,244.189 1354.59,271.051 " fill="none" id="RequestMapping-to-RequestMappingInfo" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="1349.51,272.973,1359.3433,273.526,1354.1859,271.2021,1356.5098,266.0446,1349.51,272.973" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="58" x="1464" y="239.0669">generate</text></g><!--MD5=[5e8e30b4d359070f632162c8270a2c4b]
+@startuml
+interface RequestCondition
+class RequestMappingInfo {
+  public RequestMappingInfo getMatchingCondition(HttpServletRequest request)
+  public int compareTo(RequestMappingInfo other, HttpServletRequest request)
+}
+RequestMappingInfo "1" *- -> "*" RequestCondition
+
+interface HandlerMapping {
+  HandlerExecutionChain getHandler(HttpServletRequest request);
+}
+
+abstract class AbstractHandlerMapping implements HandlerMapping {
+  protected abstract Object getHandlerInternal(HttpServletRequest request);
+}
+abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMapping {
+  protected abstract T getMatchingMapping(T mapping, HttpServletRequest request);
+}
+AbstractHandlerMethodMapping .right.> RequestMappingInfo: use
+
+class RequestMappingHandlerMapping extends AbstractHandlerMethodMapping implements MatchableHandlerMapping 
+
+annotation RequestMapping
+annotation GetMapping
+RequestMapping <|- - GetMapping
+annotation PostMapping
+RequestMapping <|- - PostMapping
+
+RequestMapping - -> RequestMappingInfo: generate
+@enduml
+
+PlantUML version 1.2022.2(Sat Mar 05 16:30:19 UTC 2022)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
+
+<p>通过**<em>@RequestMapping**</em>注解定义方法Handler的匹配要求，<br>生成对应的<code>RequestMappingInfo</code>和多个<code>RequestCondition</code>，<br>用于请求匹配, 匹配成功后调用对应的方法Handler。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RequestMapping(value = &quot;/&#123;ping&#125;&quot;, method = RequestMethod.GET)</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">getPingPong</span><span class="params">(<span class="meta">@PathVariable</span> String ping)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> ping;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@GetMapping(value = &quot;/&#123;ping&#125;&quot;, params = &quot;ex=1&quot;)</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">getPingPongEx</span><span class="params">(<span class="meta">@PathVariable</span> String ping)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> ping + <span class="string">&quot; Ex&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>DispatcherServlet::getHandler</code>用于获取请求处理链<code>HandlerExecutionChain</code>，<br>通过比较<code>RequestMappingInfo</code>和<code>RequestCondition</code>，查找最匹配的方法Handler。<br>定义的<code>RequestCondition</code>越多，则方法Handler的针对性越强；反之，则方法Handler越通用。</p>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="247px" preserveAspectRatio="none" style="width:550px;height:247px;background:#FFFFFF;" version="1.1" viewBox="0 0 550 247" width="550px" zoomAndPan="magnify"><defs/><g><rect fill="#FFFFFF" height="111.3984" style="stroke:#181818;stroke-width:1.0;" width="10" x="124.5" y="75.4297"/><rect fill="#FFFFFF" height="34.1328" style="stroke:#181818;stroke-width:1.0;" width="10" x="129.5" y="117.5625"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="129" x2="129" y1="36.2969" y2="211.8281"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="462" x2="462" y1="36.2969" y2="211.8281"/><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="249" x="5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="235" x="12" y="24.9951">AbstractHandlerMethodMapping</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="249" x="5" y="210.8281"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="235" x="12" y="230.8232">AbstractHandlerMethodMapping</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="163" x="381" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="149" x="388" y="24.9951">RequestMappingInfo</text><rect fill="#E2E2F0" height="30.2969" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="163" x="381" y="210.8281"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="149" x="388" y="230.8232">RequestMappingInfo</text><rect fill="#FFFFFF" height="111.3984" style="stroke:#181818;stroke-width:1.0;" width="10" x="124.5" y="75.4297"/><rect fill="#FFFFFF" height="34.1328" style="stroke:#181818;stroke-width:1.0;" width="10" x="129.5" y="117.5625"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="129.5" x2="176.5" y1="62.4297" y2="62.4297"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="176.5" x2="176.5" y1="62.4297" y2="75.4297"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="135.5" x2="176.5" y1="75.4297" y2="75.4297"/><polygon fill="#181818" points="145.5,71.4297,135.5,75.4297,145.5,79.4297,141.5,75.4297" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="138" x="141.5" y="57.3638">lookupHandlerMethod</text><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="134.5" x2="181.5" y1="104.5625" y2="104.5625"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="181.5" x2="181.5" y1="104.5625" y2="117.5625"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="140.5" x2="181.5" y1="117.5625" y2="117.5625"/><polygon fill="#181818" points="150.5,113.5625,140.5,117.5625,150.5,121.5625,146.5,117.5625" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="263" x="146.5" y="99.4966">addMatchingMappings, 获取匹配的Handler</text><polygon fill="#181818" points="450.5,147.6953,460.5,151.6953,450.5,155.6953,454.5,151.6953" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="134.5" x2="456.5" y1="151.6953" y2="151.6953"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="138" x="141.5" y="146.6294">getMatchingCondition</text><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="134.5" x2="176.5" y1="185.8281" y2="185.8281"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="176.5" x2="176.5" y1="185.8281" y2="198.8281"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="129.5" x2="176.5" y1="198.8281" y2="198.8281"/><polygon fill="#181818" points="139.5,194.8281,129.5,198.8281,139.5,202.8281,135.5,198.8281" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="309" x="141.5" y="180.7622">SortAndGetBestMatch，从多个匹配中选取最佳匹配</text><!--MD5=[c4e054cac55cce0b81dcb0e3919bed5f]
+@startuml
+participant AHMM as "AbstractHandlerMethodMapping"
+participant RMI as "RequestMappingInfo"
+
+AHMM - -> AHMM: lookupHandlerMethod
+activate AHMM
+AHMM - -> AHMM: addMatchingMappings, 获取匹配的Handler
+activate AHMM
+AHMM - -> RMI: getMatchingCondition
+deactivate AHMM
+AHMM - -> AHMM: SortAndGetBestMatch，从多个匹配中选取最佳匹配
+deactivate AHMM
+@enduml
+
+PlantUML version 1.2022.2(Sat Mar 05 16:30:19 UTC 2022)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
+
+<h2 id="通过Handler处理请求"><a href="#通过Handler处理请求" class="headerlink" title="通过Handler处理请求"></a>通过Handler处理请求</h2><p><code>HandlerAdapter.handle</code>主要做以下几件事：</p>
+<ul>
+<li><code>HandlerMethodArgumentResolver</code>, 对输入参数进行解析</li>
+<li>调用handler对请求进行处理</li>
+<li><code>HandlerMethodReturnValueHandler</code>，对返回进行处理</li>
+</ul>
+<h3 id="基于String输入的参数解析"><a href="#基于String输入的参数解析" class="headerlink" title="基于String输入的参数解析"></a>基于String输入的参数解析</h3><p>通过<code>AbstractNamedValueMethodArgumentResolver</code>对基于String输入的参数进行解析</p>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="482px" preserveAspectRatio="none" style="width:2834px;height:482px;background:#FFFFFF;" version="1.1" viewBox="0 0 2834 482" width="2834px" zoomAndPan="magnify"><defs/><g><!--MD5=[f1da82a4635eabdee4fbfc24180e3445]
+cluster Converters--><g id="cluster_Converters"><path d="M1076,235 L1165,235 A3.75,3.75 0 0 1 1167.5,237.5 L1174.5,257.2969 L2825,257.2969 A2.5,2.5 0 0 1 2827.5,259.7969 L2827.5,472.5 A2.5,2.5 0 0 1 2825,475 L1076,475 A2.5,2.5 0 0 1 1073.5,472.5 L1073.5,237.5 A2.5,2.5 0 0 1 1076,235 " style="stroke:#000000;stroke-width:1.5;fill:none;"/><line style="stroke:#000000;stroke-width:1.5;fill:none;" x1="1073.5" x2="1174.5" y1="257.2969" y2="257.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="88" x="1077.5" y="249.9951">Converters</text></g><!--MD5=[a5e1efb41a8b1b75d642f72b85eed865]
+class GenericConverter--><g id="elem_GenericConverter"><rect codeLine="2" fill="#F1F1F1" height="64.2969" id="GenericConverter" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="726" x="2077.5" y="278"/><ellipse cx="2372.75" cy="294" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M2373.7031,290.7813 L2375.4219,290.7813 C2375.8125,290.7813 2376,290.75 2376.125,290.6719 C2376.3906,290.5156 2376.5313,290.2344 2376.5313,289.9375 C2376.5313,289.6719 2376.4219,289.4063 2376.1875,289.2344 C2376.0156,289.125 2375.875,289.0938 2375.4219,289.0938 L2370.2813,289.0938 C2369.8438,289.0938 2369.7188,289.1094 2369.5625,289.2031 C2369.3125,289.3594 2369.1563,289.6563 2369.1563,289.9375 C2369.1563,290.2188 2369.2969,290.4688 2369.5156,290.6406 C2369.6719,290.75 2369.8594,290.7813 2370.2813,290.7813 L2372,290.7813 L2372,297.2969 L2370.2813,297.2969 C2369.8438,297.2969 2369.7188,297.3125 2369.5625,297.4219 C2369.3125,297.5781 2369.1563,297.8594 2369.1563,298.1563 C2369.1563,298.4063 2369.2969,298.6719 2369.5156,298.8281 C2369.6719,298.9531 2369.875,299 2370.2813,299 L2375.4219,299 C2376.1719,299 2376.5313,298.7188 2376.5313,298.1563 C2376.5313,297.875 2376.4219,297.625 2376.1875,297.4531 C2376.0156,297.3281 2375.875,297.2969 2375.4219,297.2969 L2373.7031,297.2969 L2373.7031,290.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="127" x="2393.25" y="298.8467">GenericConverter</text><line style="stroke:#181818;stroke-width:0.5;" x1="2078.5" x2="2802.5" y1="310" y2="310"/><line style="stroke:#181818;stroke-width:0.5;" x1="2078.5" x2="2802.5" y1="318" y2="318"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="714" x="2083.5" y="334.9951">Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType);</text></g><!--MD5=[0ebf3a0931d150882cc1e7ba90c00938]
+class Converter--><g id="elem_Converter"><rect codeLine="5" fill="#F1F1F1" height="64.2969" id="Converter" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="156" x="1886.5" y="278"/><ellipse cx="1913.2" cy="294" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1914.1531,290.7813 L1915.8719,290.7813 C1916.2625,290.7813 1916.45,290.75 1916.575,290.6719 C1916.8406,290.5156 1916.9813,290.2344 1916.9813,289.9375 C1916.9813,289.6719 1916.8719,289.4063 1916.6375,289.2344 C1916.4656,289.125 1916.325,289.0938 1915.8719,289.0938 L1910.7313,289.0938 C1910.2938,289.0938 1910.1688,289.1094 1910.0125,289.2031 C1909.7625,289.3594 1909.6063,289.6563 1909.6063,289.9375 C1909.6063,290.2188 1909.7469,290.4688 1909.9656,290.6406 C1910.1219,290.75 1910.3094,290.7813 1910.7313,290.7813 L1912.45,290.7813 L1912.45,297.2969 L1910.7313,297.2969 C1910.2938,297.2969 1910.1688,297.3125 1910.0125,297.4219 C1909.7625,297.5781 1909.6063,297.8594 1909.6063,298.1563 C1909.6063,298.4063 1909.7469,298.6719 1909.9656,298.8281 C1910.1219,298.9531 1910.325,299 1910.7313,299 L1915.8719,299 C1916.6219,299 1916.9813,298.7188 1916.9813,298.1563 C1916.9813,297.875 1916.8719,297.625 1916.6375,297.4531 C1916.4656,297.3281 1916.325,297.2969 1915.8719,297.2969 L1914.1531,297.2969 L1914.1531,290.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="71" x="1929.8" y="298.8467">Converter</text><rect fill="#FFFFFF" height="15.9688" style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" width="25" x="2020.5" y="275"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing" textLength="23" x="2021.5" y="287.1387">S, T</text><line style="stroke:#181818;stroke-width:0.5;" x1="1887.5" x2="2041.5" y1="310" y2="310"/><line style="stroke:#181818;stroke-width:0.5;" x1="1887.5" x2="2041.5" y1="318" y2="318"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="144" x="1892.5" y="334.9951">T convert(S source);</text></g><!--MD5=[69f2f3ad3645114d26612368d508f737]
+class Printer--><g id="elem_Printer"><rect codeLine="8" fill="#F1F1F1" height="64.2969" id="Printer" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="271" x="1580" y="278"/><ellipse cx="1682.25" cy="294" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1683.2031,290.7813 L1684.9219,290.7813 C1685.3125,290.7813 1685.5,290.75 1685.625,290.6719 C1685.8906,290.5156 1686.0313,290.2344 1686.0313,289.9375 C1686.0313,289.6719 1685.9219,289.4063 1685.6875,289.2344 C1685.5156,289.125 1685.375,289.0938 1684.9219,289.0938 L1679.7813,289.0938 C1679.3438,289.0938 1679.2188,289.1094 1679.0625,289.2031 C1678.8125,289.3594 1678.6563,289.6563 1678.6563,289.9375 C1678.6563,290.2188 1678.7969,290.4688 1679.0156,290.6406 C1679.1719,290.75 1679.3594,290.7813 1679.7813,290.7813 L1681.5,290.7813 L1681.5,297.2969 L1679.7813,297.2969 C1679.3438,297.2969 1679.2188,297.3125 1679.0625,297.4219 C1678.8125,297.5781 1678.6563,297.8594 1678.6563,298.1563 C1678.6563,298.4063 1678.7969,298.6719 1679.0156,298.8281 C1679.1719,298.9531 1679.375,299 1679.7813,299 L1684.9219,299 C1685.6719,299 1686.0313,298.7188 1686.0313,298.1563 C1686.0313,297.875 1685.9219,297.625 1685.6875,297.4531 C1685.5156,297.3281 1685.375,297.2969 1684.9219,297.2969 L1683.2031,297.2969 L1683.2031,290.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="47" x="1702.75" y="298.8467">Printer</text><rect fill="#FFFFFF" height="15.9688" style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" width="9" x="1845" y="275"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing" textLength="7" x="1846" y="287.1387">T</text><line style="stroke:#181818;stroke-width:0.5;" x1="1581" x2="1850" y1="310" y2="310"/><line style="stroke:#181818;stroke-width:0.5;" x1="1581" x2="1850" y1="318" y2="318"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="259" x="1586" y="334.9951">String print(T object, Locale locale);</text></g><!--MD5=[628cc5a2753cca06eb1ffef55c386535]
+class Parser--><g id="elem_Parser"><rect codeLine="11" fill="#F1F1F1" height="64.2969" id="Parser" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="428" x="1116.5" y="278"/><ellipse cx="1298.25" cy="294" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1299.2031,290.7813 L1300.9219,290.7813 C1301.3125,290.7813 1301.5,290.75 1301.625,290.6719 C1301.8906,290.5156 1302.0313,290.2344 1302.0313,289.9375 C1302.0313,289.6719 1301.9219,289.4063 1301.6875,289.2344 C1301.5156,289.125 1301.375,289.0938 1300.9219,289.0938 L1295.7813,289.0938 C1295.3438,289.0938 1295.2188,289.1094 1295.0625,289.2031 C1294.8125,289.3594 1294.6563,289.6563 1294.6563,289.9375 C1294.6563,290.2188 1294.7969,290.4688 1295.0156,290.6406 C1295.1719,290.75 1295.3594,290.7813 1295.7813,290.7813 L1297.5,290.7813 L1297.5,297.2969 L1295.7813,297.2969 C1295.3438,297.2969 1295.2188,297.3125 1295.0625,297.4219 C1294.8125,297.5781 1294.6563,297.8594 1294.6563,298.1563 C1294.6563,298.4063 1294.7969,298.6719 1295.0156,298.8281 C1295.1719,298.9531 1295.375,299 1295.7813,299 L1300.9219,299 C1301.6719,299 1302.0313,298.7188 1302.0313,298.1563 C1302.0313,297.875 1301.9219,297.625 1301.6875,297.4531 C1301.5156,297.3281 1301.375,297.2969 1300.9219,297.2969 L1299.2031,297.2969 L1299.2031,290.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="45" x="1318.75" y="298.8467">Parser</text><rect fill="#FFFFFF" height="15.9688" style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" width="9" x="1538.5" y="275"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing" textLength="7" x="1539.5" y="287.1387">T</text><line style="stroke:#181818;stroke-width:0.5;" x1="1117.5" x2="1543.5" y1="310" y2="310"/><line style="stroke:#181818;stroke-width:0.5;" x1="1117.5" x2="1543.5" y1="318" y2="318"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="416" x="1122.5" y="334.9951">T parse(String text, Locale locale) throws ParseException;</text></g><!--MD5=[421e83b89ab430df872815c38880533e]
+class Formatter--><g id="elem_Formatter"><rect codeLine="15" fill="#F1F1F1" height="48" id="Formatter" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="114" x="1465.5" y="403"/><ellipse cx="1480.5" cy="419" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1481.4531,415.7813 L1483.1719,415.7813 C1483.5625,415.7813 1483.75,415.75 1483.875,415.6719 C1484.1406,415.5156 1484.2813,415.2344 1484.2813,414.9375 C1484.2813,414.6719 1484.1719,414.4063 1483.9375,414.2344 C1483.7656,414.125 1483.625,414.0938 1483.1719,414.0938 L1478.0313,414.0938 C1477.5938,414.0938 1477.4688,414.1094 1477.3125,414.2031 C1477.0625,414.3594 1476.9063,414.6563 1476.9063,414.9375 C1476.9063,415.2188 1477.0469,415.4688 1477.2656,415.6406 C1477.4219,415.75 1477.6094,415.7813 1478.0313,415.7813 L1479.75,415.7813 L1479.75,422.2969 L1478.0313,422.2969 C1477.5938,422.2969 1477.4688,422.3125 1477.3125,422.4219 C1477.0625,422.5781 1476.9063,422.8594 1476.9063,423.1563 C1476.9063,423.4063 1477.0469,423.6719 1477.2656,423.8281 C1477.4219,423.9531 1477.625,424 1478.0313,424 L1483.1719,424 C1483.9219,424 1484.2813,423.7188 1484.2813,423.1563 C1484.2813,422.875 1484.1719,422.625 1483.9375,422.4531 C1483.7656,422.3281 1483.625,422.2969 1483.1719,422.2969 L1481.4531,422.2969 L1481.4531,415.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="71" x="1494.5" y="423.8467">Formatter</text><rect fill="#FFFFFF" height="15.9688" style="stroke:#000000;stroke-width:1.0;stroke-dasharray:2.0,2.0;" width="9" x="1573.5" y="400"/><text fill="#000000" font-family="sans-serif" font-size="12" font-style="italic" lengthAdjust="spacing" textLength="7" x="1574.5" y="412.1387">T</text><line style="stroke:#181818;stroke-width:0.5;" x1="1466.5" x2="1578.5" y1="435" y2="435"/><line style="stroke:#181818;stroke-width:0.5;" x1="1466.5" x2="1578.5" y1="443" y2="443"/></g><!--MD5=[1ef6ff702038bb2a7c524a79ff57aceb]
+class AbstractNamedValueMethodArgumentResolver--><g id="elem_AbstractNamedValueMethodArgumentResolver"><rect codeLine="18" fill="#F1F1F1" height="48" id="AbstractNamedValueMethodArgumentResolver" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="369" x="528" y="116"/><ellipse cx="543" cy="132" fill="#A9DCDF" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M545.0781,133.8125 L545.4688,134.7969 L545.0781,134.7969 C544.625,134.7969 544.5156,134.8125 544.3594,134.9219 C544.1094,135.0781 543.9531,135.3594 543.9531,135.6563 C543.9531,135.9219 544.0938,136.1719 544.3125,136.3281 C544.4531,136.4531 544.6563,136.5 545.0781,136.5 L547.4375,136.5 C547.7969,136.5 548.0156,136.4688 548.1563,136.375 C548.4063,136.2344 548.5625,135.9375 548.5625,135.6563 C548.5625,135.375 548.4219,135.125 548.2031,134.9688 C548.0313,134.8281 547.875,134.7969 547.4063,134.7969 L544.0156,126.5938 L540.3438,126.5938 C539.8906,126.5938 539.7656,126.6094 539.6094,126.7031 C539.3594,126.875 539.2031,127.1563 539.2031,127.4375 C539.2031,127.7188 539.3438,127.9688 539.5625,128.1406 C539.7344,128.25 539.9063,128.2813 540.3438,128.2813 L541.4219,128.2813 L538.7813,134.7969 C538.3594,134.7969 538.2031,134.8125 538.0469,134.9219 C537.7969,135.0781 537.6406,135.3594 537.6406,135.6563 C537.6406,136.2188 538.0156,136.5 538.7656,136.5 L541.0313,136.5 C541.3906,136.5 541.6094,136.4688 541.7344,136.375 C542,136.2344 542.1406,135.9375 542.1406,135.6563 C542.1406,135.375 542.0156,135.125 541.7969,134.9531 C541.625,134.8281 541.4844,134.7969 541.0313,134.7969 L540.6406,134.7969 L541.0313,133.8125 L545.0781,133.8125 Z M544.375,132.1094 L541.7031,132.1094 L543.0469,128.8438 L544.375,132.1094 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="337" x="557" y="136.8467">AbstractNamedValueMethodArgumentResolver</text><line style="stroke:#181818;stroke-width:0.5;" x1="529" x2="896" y1="148" y2="148"/><line style="stroke:#181818;stroke-width:0.5;" x1="529" x2="896" y1="156" y2="156"/></g><!--MD5=[b38238462848835b2e145e9cc1dad52a]
+class HandlerMethodArgumentResolver--><g id="elem_HandlerMethodArgumentResolver"><rect fill="#F1F1F1" height="48" id="HandlerMethodArgumentResolver" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="275" x="575" y="7"/><ellipse cx="590" cy="23" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M590.9531,19.7813 L592.6719,19.7813 C593.0625,19.7813 593.25,19.75 593.375,19.6719 C593.6406,19.5156 593.7813,19.2344 593.7813,18.9375 C593.7813,18.6719 593.6719,18.4063 593.4375,18.2344 C593.2656,18.125 593.125,18.0938 592.6719,18.0938 L587.5313,18.0938 C587.0938,18.0938 586.9688,18.1094 586.8125,18.2031 C586.5625,18.3594 586.4063,18.6563 586.4063,18.9375 C586.4063,19.2188 586.5469,19.4688 586.7656,19.6406 C586.9219,19.75 587.1094,19.7813 587.5313,19.7813 L589.25,19.7813 L589.25,26.2969 L587.5313,26.2969 C587.0938,26.2969 586.9688,26.3125 586.8125,26.4219 C586.5625,26.5781 586.4063,26.8594 586.4063,27.1563 C586.4063,27.4063 586.5469,27.6719 586.7656,27.8281 C586.9219,27.9531 587.125,28 587.5313,28 L592.6719,28 C593.4219,28 593.7813,27.7188 593.7813,27.1563 C593.7813,26.875 593.6719,26.625 593.4375,26.4531 C593.2656,26.3281 593.125,26.2969 592.6719,26.2969 L590.9531,26.2969 L590.9531,19.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="243" x="604" y="27.8467">HandlerMethodArgumentResolver</text><line style="stroke:#181818;stroke-width:0.5;" x1="576" x2="849" y1="39" y2="39"/><line style="stroke:#181818;stroke-width:0.5;" x1="576" x2="849" y1="47" y2="47"/></g><!--MD5=[b502ff35c519d753d2666e8cc5092f03]
+class RequestHeaderMethodArgumentResolver--><g id="elem_RequestHeaderMethodArgumentResolver"><rect codeLine="21" fill="#F1F1F1" height="48" id="RequestHeaderMethodArgumentResolver" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="331" x="7" y="286"/><ellipse cx="22" cy="302" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M24.3438,297.6719 C23.4063,297.2344 22.8125,297.0938 21.9375,297.0938 C19.3125,297.0938 17.3125,299.1719 17.3125,301.8906 L17.3125,303.0156 C17.3125,305.5938 19.4219,307.4844 22.3125,307.4844 C23.5313,307.4844 24.6875,307.1875 25.4375,306.6406 C26.0156,306.2344 26.3438,305.7813 26.3438,305.3906 C26.3438,304.9375 25.9531,304.5469 25.4844,304.5469 C25.2656,304.5469 25.0625,304.625 24.875,304.8125 C24.4219,305.2969 24.4219,305.2969 24.2344,305.3906 C23.8125,305.6563 23.125,305.7813 22.3594,305.7813 C20.3125,305.7813 19.0156,304.6875 19.0156,302.9844 L19.0156,301.8906 C19.0156,300.1094 20.2656,298.7969 22,298.7969 C22.5781,298.7969 23.1875,298.9531 23.6563,299.2031 C24.1406,299.4844 24.3125,299.7031 24.4063,300.1094 C24.4688,300.5156 24.5,300.6406 24.6406,300.7656 C24.7813,300.9063 25.0156,301.0156 25.2344,301.0156 C25.5,301.0156 25.7656,300.875 25.9375,300.6563 C26.0469,300.5 26.0781,300.3125 26.0781,299.8906 L26.0781,298.4688 C26.0781,298.0313 26.0625,297.9063 25.9688,297.75 C25.8125,297.4844 25.5313,297.3438 25.2344,297.3438 C24.9375,297.3438 24.7344,297.4375 24.5156,297.75 L24.3438,297.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="299" x="36" y="306.8467">RequestHeaderMethodArgumentResolver</text><line style="stroke:#181818;stroke-width:0.5;" x1="8" x2="337" y1="318" y2="318"/><line style="stroke:#181818;stroke-width:0.5;" x1="8" x2="337" y1="326" y2="326"/></g><!--MD5=[ee0ad4f0c2466166b43f75cb79433c5c]
+class RequestParamMethodArgumentResolver--><g id="elem_RequestParamMethodArgumentResolver"><rect codeLine="22" fill="#F1F1F1" height="48" id="RequestParamMethodArgumentResolver" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="325" x="373" y="286"/><ellipse cx="388" cy="302" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M390.3438,297.6719 C389.4063,297.2344 388.8125,297.0938 387.9375,297.0938 C385.3125,297.0938 383.3125,299.1719 383.3125,301.8906 L383.3125,303.0156 C383.3125,305.5938 385.4219,307.4844 388.3125,307.4844 C389.5313,307.4844 390.6875,307.1875 391.4375,306.6406 C392.0156,306.2344 392.3438,305.7813 392.3438,305.3906 C392.3438,304.9375 391.9531,304.5469 391.4844,304.5469 C391.2656,304.5469 391.0625,304.625 390.875,304.8125 C390.4219,305.2969 390.4219,305.2969 390.2344,305.3906 C389.8125,305.6563 389.125,305.7813 388.3594,305.7813 C386.3125,305.7813 385.0156,304.6875 385.0156,302.9844 L385.0156,301.8906 C385.0156,300.1094 386.2656,298.7969 388,298.7969 C388.5781,298.7969 389.1875,298.9531 389.6563,299.2031 C390.1406,299.4844 390.3125,299.7031 390.4063,300.1094 C390.4688,300.5156 390.5,300.6406 390.6406,300.7656 C390.7813,300.9063 391.0156,301.0156 391.2344,301.0156 C391.5,301.0156 391.7656,300.875 391.9375,300.6563 C392.0469,300.5 392.0781,300.3125 392.0781,299.8906 L392.0781,298.4688 C392.0781,298.0313 392.0625,297.9063 391.9688,297.75 C391.8125,297.4844 391.5313,297.3438 391.2344,297.3438 C390.9375,297.3438 390.7344,297.4375 390.5156,297.75 L390.3438,297.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="293" x="402" y="306.8467">RequestParamMethodArgumentResolver</text><line style="stroke:#181818;stroke-width:0.5;" x1="374" x2="697" y1="318" y2="318"/><line style="stroke:#181818;stroke-width:0.5;" x1="374" x2="697" y1="326" y2="326"/></g><!--MD5=[dd7c5ef057e3b4909acb0bce3bc133b6]
+class PathVariableMethodArgumentResolver--><g id="elem_PathVariableMethodArgumentResolver"><rect codeLine="23" fill="#F1F1F1" height="48" id="PathVariableMethodArgumentResolver" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="313" x="733" y="286"/><ellipse cx="748" cy="302" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M750.3438,297.6719 C749.4063,297.2344 748.8125,297.0938 747.9375,297.0938 C745.3125,297.0938 743.3125,299.1719 743.3125,301.8906 L743.3125,303.0156 C743.3125,305.5938 745.4219,307.4844 748.3125,307.4844 C749.5313,307.4844 750.6875,307.1875 751.4375,306.6406 C752.0156,306.2344 752.3438,305.7813 752.3438,305.3906 C752.3438,304.9375 751.9531,304.5469 751.4844,304.5469 C751.2656,304.5469 751.0625,304.625 750.875,304.8125 C750.4219,305.2969 750.4219,305.2969 750.2344,305.3906 C749.8125,305.6563 749.125,305.7813 748.3594,305.7813 C746.3125,305.7813 745.0156,304.6875 745.0156,302.9844 L745.0156,301.8906 C745.0156,300.1094 746.2656,298.7969 748,298.7969 C748.5781,298.7969 749.1875,298.9531 749.6563,299.2031 C750.1406,299.4844 750.3125,299.7031 750.4063,300.1094 C750.4688,300.5156 750.5,300.6406 750.6406,300.7656 C750.7813,300.9063 751.0156,301.0156 751.2344,301.0156 C751.5,301.0156 751.7656,300.875 751.9375,300.6563 C752.0469,300.5 752.0781,300.3125 752.0781,299.8906 L752.0781,298.4688 C752.0781,298.0313 752.0625,297.9063 751.9688,297.75 C751.8125,297.4844 751.5313,297.3438 751.2344,297.3438 C750.9375,297.3438 750.7344,297.4375 750.5156,297.75 L750.3438,297.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="281" x="762" y="306.8467">PathVariableMethodArgumentResolver</text><line style="stroke:#181818;stroke-width:0.5;" x1="734" x2="1045" y1="318" y2="318"/><line style="stroke:#181818;stroke-width:0.5;" x1="734" x2="1045" y1="326" y2="326"/></g><!--MD5=[aef03ce12ce517cf796635164b8545b3]
+reverse link Printer to Formatter--><g id="link_Printer_Formatter"><path d="M1646.05,352.381 C1617.52,369.381 1585.56,388.424 1561.3,402.8836 " fill="none" id="Printer-backto-Formatter" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="none" points="1642.51,346.345,1663.27,342.121,1649.67,358.372,1642.51,346.345" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[35de41f9898cd2eb6dfcc2ad7b205497]
+reverse link Parser to Formatter--><g id="link_Parser_Formatter"><path d="M1399.99,352.622 C1428.27,369.56 1459.88,388.493 1483.91,402.8836 " fill="none" id="Parser-backto-Formatter" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="none" points="1396.02,358.403,1382.46,342.121,1403.21,346.392,1396.02,358.403" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[5ecae0d47b0e6c61b8fac7bbcc9773c4]
+reverse link HandlerMethodArgumentResolver to AbstractNamedValueMethodArgumentResolver--><g id="link_HandlerMethodArgumentResolver_AbstractNamedValueMethodArgumentResolver"><path d="M712.5,75.578 C712.5,89.362 712.5,104.057 712.5,115.828 " fill="none" id="HandlerMethodArgumentResolver-backto-AbstractNamedValueMethodArgumentResolver" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="705.5,75.217,712.5,55.217,719.5,75.217,705.5,75.217" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[c3bc5aa4b2f447f49e30e3241ac583c7]
+link AbstractNamedValueMethodArgumentResolver to Converters--><g id="link_AbstractNamedValueMethodArgumentResolver_Converters"><path codeLine="19" d="M897.045,163.48 C968.491,175.887 1038.99,193.964 1063.5,219 C1067.0113,222.5868 1069.9309,226.6535 1072.3515,231.0277 C1072.9566,232.1213 1073.5306,233.2341 1074.0747,234.3634 C1074.1428,234.5046 1074.2103,234.646 1074.2774,234.7877 " fill="none" id="AbstractNamedValueMethodArgumentResolver-to-Converters" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="#181818" points="1074.2774,234.7877,1074.0403,224.9417,1072.1373,230.2688,1066.8102,228.3658,1074.2774,234.7877" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="23" x="1052.5" y="207.0669">use</text></g><!--MD5=[b941df6570803fb7ac10ac628d615327]
+reverse link AbstractNamedValueMethodArgumentResolver to RequestHeaderMethodArgumentResolver--><g id="link_AbstractNamedValueMethodArgumentResolver_RequestHeaderMethodArgumentResolver"><path d="M549.85,167.91 C488.073,180.363 417.649,197.289 355.5,219 C304.194,236.923 248.621,265.711 212.344,285.889 " fill="none" id="AbstractNamedValueMethodArgumentResolver-backto-RequestHeaderMethodArgumentResolver" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="none" points="548.607,161.02,569.582,164.023,551.312,174.756,548.607,161.02" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[e7e82f5f12f7cde2333fb421749772a8]
+reverse link AbstractNamedValueMethodArgumentResolver to RequestParamMethodArgumentResolver--><g id="link_AbstractNamedValueMethodArgumentResolver_RequestParamMethodArgumentResolver"><path d="M673.529,177.99 C638.908,210.85 589.371,257.868 560.015,285.731 " fill="none" id="AbstractNamedValueMethodArgumentResolver-backto-RequestParamMethodArgumentResolver" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="none" points="668.935,172.699,688.26,164.007,678.573,182.853,668.935,172.699" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[06c894191efa89a483df0ed233bfc813]
+reverse link AbstractNamedValueMethodArgumentResolver to PathVariableMethodArgumentResolver--><g id="link_AbstractNamedValueMethodArgumentResolver_PathVariableMethodArgumentResolver"><path d="M751.471,177.99 C786.092,210.85 835.629,257.868 864.985,285.731 " fill="none" id="AbstractNamedValueMethodArgumentResolver-backto-PathVariableMethodArgumentResolver" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="none" points="746.427,182.853,736.74,164.007,756.065,172.699,746.427,182.853" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[6347752055920d6c591cb4cddf189c65]
+@startuml
+package Converters {
+interface GenericConverter {
+  Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType);
+}
+interface Converter<S, T> {
+  T convert(S source);
+}
+interface Printer<T> {
+  String print(T object, Locale locale);
+}
+interface Parser<T> {
+  T parse(String text, Locale locale) throws ParseException;
+}
+
+interface Formatter<T> extends Printer, Parser
+}
+
+abstract class AbstractNamedValueMethodArgumentResolver implements HandlerMethodArgumentResolver
+AbstractNamedValueMethodArgumentResolver ..> Converters: use
+
+class RequestHeaderMethodArgumentResolver extends AbstractNamedValueMethodArgumentResolver
+class RequestParamMethodArgumentResolver extends AbstractNamedValueMethodArgumentResolver
+class PathVariableMethodArgumentResolver extends AbstractNamedValueMethodArgumentResolver
+@enduml
+
+PlantUML version 1.2022.2(Sat Mar 05 16:30:19 UTC 2022)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
+
+<p>通过定义Converters中的bean，就可以在启动时<br>通过<code>WebMvcAutoConfigurationAdapter#addFormatters</code>添加进来，<br>用于AbstractNamedValueMethodArgumentResolver的输入类型转换。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Money.java</span></span><br><span class="line"><span class="meta">@Getter</span></span><br><span class="line"><span class="meta">@Setter</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Money</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> String currency = <span class="string">&quot;CNY&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> String value;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">toString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> currency + <span class="string">&quot; &quot;</span> + value;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// MoneyFormatter.java</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MoneyFormatter</span> <span class="keyword">implements</span> <span class="title">Formatter</span>&lt;<span class="title">Money</span>&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Money <span class="title">parse</span><span class="params">(String text, Locale locale)</span> <span class="keyword">throws</span> ParseException </span>&#123;</span><br><span class="line">        String[] input = text.split(<span class="string">&quot; &quot;</span>);</span><br><span class="line">        Money money = <span class="keyword">new</span> Money();</span><br><span class="line">        <span class="keyword">if</span> (input.length == <span class="number">1</span>) &#123;</span><br><span class="line">            money.setValue(input[<span class="number">0</span>]);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            money.setCurrency(input[<span class="number">0</span>]);</span><br><span class="line">            money.setValue(input[<span class="number">1</span>]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> money;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">print</span><span class="params">(Money object, Locale locale)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> object.getCurrency()</span><br><span class="line">                + <span class="string">&quot; &quot;</span> + object.getValue();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// IndexController.java</span></span><br><span class="line"><span class="meta">@GetMapping(value = &quot;/price&quot;)</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Money <span class="title">price</span><span class="params">(<span class="meta">@RequestParam</span> Money money)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> money;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="针对Body的输入和输出处理"><a href="#针对Body的输入和输出处理" class="headerlink" title="针对Body的输入和输出处理"></a>针对Body的输入和输出处理</h3><?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="436px" preserveAspectRatio="none" style="width:1489px;height:436px;background:#FFFFFF;" version="1.1" viewBox="0 0 1489 436" width="1489px" zoomAndPan="magnify"><defs/><g><!--MD5=[1d91eed7819057781ce772eca6975836]
+cluster Input--><g id="cluster_Input"><path d="M236,6 L280,6 A3.75,3.75 0 0 1 282.5,8.5 L289.5,28.2969 L1078,28.2969 A2.5,2.5 0 0 1 1080.5,30.7969 L1080.5,210.5 A2.5,2.5 0 0 1 1078,213 L236,213 A2.5,2.5 0 0 1 233.5,210.5 L233.5,8.5 A2.5,2.5 0 0 1 236,6 " style="stroke:#000000;stroke-width:1.5;fill:none;"/><line style="stroke:#000000;stroke-width:1.5;fill:none;" x1="233.5" x2="289.5" y1="28.2969" y2="28.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="43" x="237.5" y="20.9951">Input</text></g><!--MD5=[43acc1a5bbd009f26b899c423c01b543]
+cluster Output--><g id="cluster_Output"><path d="M1107,114 L1166,114 A3.75,3.75 0 0 1 1168.5,116.5 L1175.5,136.2969 L1480,136.2969 A2.5,2.5 0 0 1 1482.5,138.7969 L1482.5,426.5 A2.5,2.5 0 0 1 1480,429 L1107,429 A2.5,2.5 0 0 1 1104.5,426.5 L1104.5,116.5 A2.5,2.5 0 0 1 1107,114 " style="stroke:#000000;stroke-width:1.5;fill:none;"/><line style="stroke:#000000;stroke-width:1.5;fill:none;" x1="1104.5" x2="1175.5" y1="136.2969" y2="136.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="58" x="1108.5" y="128.9951">Output</text></g><!--MD5=[b38238462848835b2e145e9cc1dad52a]
+class HandlerMethodArgumentResolver--><g id="elem_HandlerMethodArgumentResolver"><rect codeLine="2" fill="#F1F1F1" height="48" id="HandlerMethodArgumentResolver" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="275" x="529" y="41"/><ellipse cx="544" cy="57" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M544.9531,53.7813 L546.6719,53.7813 C547.0625,53.7813 547.25,53.75 547.375,53.6719 C547.6406,53.5156 547.7813,53.2344 547.7813,52.9375 C547.7813,52.6719 547.6719,52.4063 547.4375,52.2344 C547.2656,52.125 547.125,52.0938 546.6719,52.0938 L541.5313,52.0938 C541.0938,52.0938 540.9688,52.1094 540.8125,52.2031 C540.5625,52.3594 540.4063,52.6563 540.4063,52.9375 C540.4063,53.2188 540.5469,53.4688 540.7656,53.6406 C540.9219,53.75 541.1094,53.7813 541.5313,53.7813 L543.25,53.7813 L543.25,60.2969 L541.5313,60.2969 C541.0938,60.2969 540.9688,60.3125 540.8125,60.4219 C540.5625,60.5781 540.4063,60.8594 540.4063,61.1563 C540.4063,61.4063 540.5469,61.6719 540.7656,61.8281 C540.9219,61.9531 541.125,62 541.5313,62 L546.6719,62 C547.4219,62 547.7813,61.7188 547.7813,61.1563 C547.7813,60.875 547.6719,60.625 547.4375,60.4531 C547.2656,60.3281 547.125,60.2969 546.6719,60.2969 L544.9531,60.2969 L544.9531,53.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="243" x="558" y="61.8467">HandlerMethodArgumentResolver</text><line style="stroke:#181818;stroke-width:0.5;" x1="530" x2="803" y1="73" y2="73"/><line style="stroke:#181818;stroke-width:0.5;" x1="530" x2="803" y1="81" y2="81"/></g><!--MD5=[9e6cbd34aaa92a22d4752322fbdd4b18]
+class AbstractMessageConverterMethodArgumentResolver--><g id="elem_AbstractMessageConverterMethodArgumentResolver"><rect codeLine="4" fill="#F1F1F1" height="48" id="AbstractMessageConverterMethodArgumentResolver" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="410" x="249.5" y="149"/><ellipse cx="264.5" cy="165" fill="#A9DCDF" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M266.5781,166.8125 L266.9688,167.7969 L266.5781,167.7969 C266.125,167.7969 266.0156,167.8125 265.8594,167.9219 C265.6094,168.0781 265.4531,168.3594 265.4531,168.6563 C265.4531,168.9219 265.5938,169.1719 265.8125,169.3281 C265.9531,169.4531 266.1563,169.5 266.5781,169.5 L268.9375,169.5 C269.2969,169.5 269.5156,169.4688 269.6563,169.375 C269.9063,169.2344 270.0625,168.9375 270.0625,168.6563 C270.0625,168.375 269.9219,168.125 269.7031,167.9688 C269.5313,167.8281 269.375,167.7969 268.9063,167.7969 L265.5156,159.5938 L261.8438,159.5938 C261.3906,159.5938 261.2656,159.6094 261.1094,159.7031 C260.8594,159.875 260.7031,160.1563 260.7031,160.4375 C260.7031,160.7188 260.8438,160.9688 261.0625,161.1406 C261.2344,161.25 261.4063,161.2813 261.8438,161.2813 L262.9219,161.2813 L260.2813,167.7969 C259.8594,167.7969 259.7031,167.8125 259.5469,167.9219 C259.2969,168.0781 259.1406,168.3594 259.1406,168.6563 C259.1406,169.2188 259.5156,169.5 260.2656,169.5 L262.5313,169.5 C262.8906,169.5 263.1094,169.4688 263.2344,169.375 C263.5,169.2344 263.6406,168.9375 263.6406,168.6563 C263.6406,168.375 263.5156,168.125 263.2969,167.9531 C263.125,167.8281 262.9844,167.7969 262.5313,167.7969 L262.1406,167.7969 L262.5313,166.8125 L266.5781,166.8125 Z M265.875,165.1094 L263.2031,165.1094 L264.5469,161.8438 L265.875,165.1094 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="378" x="278.5" y="169.8467">AbstractMessageConverterMethodArgumentResolver</text><line style="stroke:#181818;stroke-width:0.5;" x1="250.5" x2="658.5" y1="181" y2="181"/><line style="stroke:#181818;stroke-width:0.5;" x1="250.5" x2="658.5" y1="189" y2="189"/></g><!--MD5=[1ef6ff702038bb2a7c524a79ff57aceb]
+class AbstractNamedValueMethodArgumentResolver--><g id="elem_AbstractNamedValueMethodArgumentResolver"><rect codeLine="6" fill="#F1F1F1" height="48" id="AbstractNamedValueMethodArgumentResolver" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="369" x="695" y="149"/><ellipse cx="710" cy="165" fill="#A9DCDF" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M712.0781,166.8125 L712.4688,167.7969 L712.0781,167.7969 C711.625,167.7969 711.5156,167.8125 711.3594,167.9219 C711.1094,168.0781 710.9531,168.3594 710.9531,168.6563 C710.9531,168.9219 711.0938,169.1719 711.3125,169.3281 C711.4531,169.4531 711.6563,169.5 712.0781,169.5 L714.4375,169.5 C714.7969,169.5 715.0156,169.4688 715.1563,169.375 C715.4063,169.2344 715.5625,168.9375 715.5625,168.6563 C715.5625,168.375 715.4219,168.125 715.2031,167.9688 C715.0313,167.8281 714.875,167.7969 714.4063,167.7969 L711.0156,159.5938 L707.3438,159.5938 C706.8906,159.5938 706.7656,159.6094 706.6094,159.7031 C706.3594,159.875 706.2031,160.1563 706.2031,160.4375 C706.2031,160.7188 706.3438,160.9688 706.5625,161.1406 C706.7344,161.25 706.9063,161.2813 707.3438,161.2813 L708.4219,161.2813 L705.7813,167.7969 C705.3594,167.7969 705.2031,167.8125 705.0469,167.9219 C704.7969,168.0781 704.6406,168.3594 704.6406,168.6563 C704.6406,169.2188 705.0156,169.5 705.7656,169.5 L708.0313,169.5 C708.3906,169.5 708.6094,169.4688 708.7344,169.375 C709,169.2344 709.1406,168.9375 709.1406,168.6563 C709.1406,168.375 709.0156,168.125 708.7969,167.9531 C708.625,167.8281 708.4844,167.7969 708.0313,167.7969 L707.6406,167.7969 L708.0313,166.8125 L712.0781,166.8125 Z M711.375,165.1094 L708.7031,165.1094 L710.0469,161.8438 L711.375,165.1094 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="337" x="724" y="169.8467">AbstractNamedValueMethodArgumentResolver</text><line style="stroke:#181818;stroke-width:0.5;" x1="696" x2="1063" y1="181" y2="181"/><line style="stroke:#181818;stroke-width:0.5;" x1="696" x2="1063" y1="189" y2="189"/></g><!--MD5=[989566589a9c564ba80ecf0041ebadd3]
+class HandlerMethodReturnValueHandler--><g id="elem_HandlerMethodReturnValueHandler"><rect codeLine="10" fill="#F1F1F1" height="48" id="HandlerMethodReturnValueHandler" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="288" x="1149.5" y="149"/><ellipse cx="1164.5" cy="165" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1165.4531,161.7813 L1167.1719,161.7813 C1167.5625,161.7813 1167.75,161.75 1167.875,161.6719 C1168.1406,161.5156 1168.2813,161.2344 1168.2813,160.9375 C1168.2813,160.6719 1168.1719,160.4063 1167.9375,160.2344 C1167.7656,160.125 1167.625,160.0938 1167.1719,160.0938 L1162.0313,160.0938 C1161.5938,160.0938 1161.4688,160.1094 1161.3125,160.2031 C1161.0625,160.3594 1160.9063,160.6563 1160.9063,160.9375 C1160.9063,161.2188 1161.0469,161.4688 1161.2656,161.6406 C1161.4219,161.75 1161.6094,161.7813 1162.0313,161.7813 L1163.75,161.7813 L1163.75,168.2969 L1162.0313,168.2969 C1161.5938,168.2969 1161.4688,168.3125 1161.3125,168.4219 C1161.0625,168.5781 1160.9063,168.8594 1160.9063,169.1563 C1160.9063,169.4063 1161.0469,169.6719 1161.2656,169.8281 C1161.4219,169.9531 1161.625,170 1162.0313,170 L1167.1719,170 C1167.9219,170 1168.2813,169.7188 1168.2813,169.1563 C1168.2813,168.875 1168.1719,168.625 1167.9375,168.4531 C1167.7656,168.3281 1167.625,168.2969 1167.1719,168.2969 L1165.4531,168.2969 L1165.4531,161.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="256" x="1178.5" y="169.8467">HandlerMethodReturnValueHandler</text><line style="stroke:#181818;stroke-width:0.5;" x1="1150.5" x2="1436.5" y1="181" y2="181"/><line style="stroke:#181818;stroke-width:0.5;" x1="1150.5" x2="1436.5" y1="189" y2="189"/></g><!--MD5=[00818b6899d5d590ad91477e40170472]
+class AbstractMessageConverterMethodProcessor--><g id="elem_AbstractMessageConverterMethodProcessor"><rect codeLine="11" fill="#F1F1F1" height="48" id="AbstractMessageConverterMethodProcessor" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="346" x="1120.5" y="257"/><ellipse cx="1135.5" cy="273" fill="#A9DCDF" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1137.5781,274.8125 L1137.9688,275.7969 L1137.5781,275.7969 C1137.125,275.7969 1137.0156,275.8125 1136.8594,275.9219 C1136.6094,276.0781 1136.4531,276.3594 1136.4531,276.6563 C1136.4531,276.9219 1136.5938,277.1719 1136.8125,277.3281 C1136.9531,277.4531 1137.1563,277.5 1137.5781,277.5 L1139.9375,277.5 C1140.2969,277.5 1140.5156,277.4688 1140.6563,277.375 C1140.9063,277.2344 1141.0625,276.9375 1141.0625,276.6563 C1141.0625,276.375 1140.9219,276.125 1140.7031,275.9688 C1140.5313,275.8281 1140.375,275.7969 1139.9063,275.7969 L1136.5156,267.5938 L1132.8438,267.5938 C1132.3906,267.5938 1132.2656,267.6094 1132.1094,267.7031 C1131.8594,267.875 1131.7031,268.1563 1131.7031,268.4375 C1131.7031,268.7188 1131.8438,268.9688 1132.0625,269.1406 C1132.2344,269.25 1132.4063,269.2813 1132.8438,269.2813 L1133.9219,269.2813 L1131.2813,275.7969 C1130.8594,275.7969 1130.7031,275.8125 1130.5469,275.9219 C1130.2969,276.0781 1130.1406,276.3594 1130.1406,276.6563 C1130.1406,277.2188 1130.5156,277.5 1131.2656,277.5 L1133.5313,277.5 C1133.8906,277.5 1134.1094,277.4688 1134.2344,277.375 C1134.5,277.2344 1134.6406,276.9375 1134.6406,276.6563 C1134.6406,276.375 1134.5156,276.125 1134.2969,275.9531 C1134.125,275.8281 1133.9844,275.7969 1133.5313,275.7969 L1133.1406,275.7969 L1133.5313,274.8125 L1137.5781,274.8125 Z M1136.875,273.1094 L1134.2031,273.1094 L1135.5469,269.8438 L1136.875,273.1094 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="314" x="1149.5" y="277.8467">AbstractMessageConverterMethodProcessor</text><line style="stroke:#181818;stroke-width:0.5;" x1="1121.5" x2="1465.5" y1="289" y2="289"/><line style="stroke:#181818;stroke-width:0.5;" x1="1121.5" x2="1465.5" y1="297" y2="297"/></g><!--MD5=[35896e4a33bd6e56d3657a43ccfbbf83]
+class RequestResponseBodyMethodProcessor--><g id="elem_RequestResponseBodyMethodProcessor"><rect codeLine="12" fill="#F1F1F1" height="48" id="RequestResponseBodyMethodProcessor" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="322" x="1132.5" y="365"/><ellipse cx="1147.5" cy="381" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1149.8438,376.6719 C1148.9063,376.2344 1148.3125,376.0938 1147.4375,376.0938 C1144.8125,376.0938 1142.8125,378.1719 1142.8125,380.8906 L1142.8125,382.0156 C1142.8125,384.5938 1144.9219,386.4844 1147.8125,386.4844 C1149.0313,386.4844 1150.1875,386.1875 1150.9375,385.6406 C1151.5156,385.2344 1151.8438,384.7813 1151.8438,384.3906 C1151.8438,383.9375 1151.4531,383.5469 1150.9844,383.5469 C1150.7656,383.5469 1150.5625,383.625 1150.375,383.8125 C1149.9219,384.2969 1149.9219,384.2969 1149.7344,384.3906 C1149.3125,384.6563 1148.625,384.7813 1147.8594,384.7813 C1145.8125,384.7813 1144.5156,383.6875 1144.5156,381.9844 L1144.5156,380.8906 C1144.5156,379.1094 1145.7656,377.7969 1147.5,377.7969 C1148.0781,377.7969 1148.6875,377.9531 1149.1563,378.2031 C1149.6406,378.4844 1149.8125,378.7031 1149.9063,379.1094 C1149.9688,379.5156 1150,379.6406 1150.1406,379.7656 C1150.2813,379.9063 1150.5156,380.0156 1150.7344,380.0156 C1151,380.0156 1151.2656,379.875 1151.4375,379.6563 C1151.5469,379.5 1151.5781,379.3125 1151.5781,378.8906 L1151.5781,377.4688 C1151.5781,377.0313 1151.5625,376.9063 1151.4688,376.75 C1151.3125,376.4844 1151.0313,376.3438 1150.7344,376.3438 C1150.4375,376.3438 1150.2344,376.4375 1150.0156,376.75 L1149.8438,376.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="290" x="1161.5" y="385.8467">RequestResponseBodyMethodProcessor</text><line style="stroke:#181818;stroke-width:0.5;" x1="1133.5" x2="1453.5" y1="397" y2="397"/><line style="stroke:#181818;stroke-width:0.5;" x1="1133.5" x2="1453.5" y1="405" y2="405"/></g><!--MD5=[853b6eabc0f14065e723d8ad6c6dd909]
+class HttpMessageConverter--><g id="elem_HttpMessageConverter"><rect codeLine="15" fill="#F1F1F1" height="48" id="HttpMessageConverter" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="195" x="185" y="257"/><ellipse cx="200" cy="273" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M200.9531,269.7813 L202.6719,269.7813 C203.0625,269.7813 203.25,269.75 203.375,269.6719 C203.6406,269.5156 203.7813,269.2344 203.7813,268.9375 C203.7813,268.6719 203.6719,268.4063 203.4375,268.2344 C203.2656,268.125 203.125,268.0938 202.6719,268.0938 L197.5313,268.0938 C197.0938,268.0938 196.9688,268.1094 196.8125,268.2031 C196.5625,268.3594 196.4063,268.6563 196.4063,268.9375 C196.4063,269.2188 196.5469,269.4688 196.7656,269.6406 C196.9219,269.75 197.1094,269.7813 197.5313,269.7813 L199.25,269.7813 L199.25,276.2969 L197.5313,276.2969 C197.0938,276.2969 196.9688,276.3125 196.8125,276.4219 C196.5625,276.5781 196.4063,276.8594 196.4063,277.1563 C196.4063,277.4063 196.5469,277.6719 196.7656,277.8281 C196.9219,277.9531 197.125,278 197.5313,278 L202.6719,278 C203.4219,278 203.7813,277.7188 203.7813,277.1563 C203.7813,276.875 203.6719,276.625 203.4375,276.4531 C203.2656,276.3281 203.125,276.2969 202.6719,276.2969 L200.9531,276.2969 L200.9531,269.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="163" x="214" y="277.8467">HttpMessageConverter</text><line style="stroke:#181818;stroke-width:0.5;" x1="186" x2="379" y1="289" y2="289"/><line style="stroke:#181818;stroke-width:0.5;" x1="186" x2="379" y1="297" y2="297"/></g><!--MD5=[a7cdd2678777604d09b7ec46f520c179]
+class HttpMessageConverters--><g id="elem_HttpMessageConverters"><rect codeLine="18" fill="#F1F1F1" height="48" id="HttpMessageConverters" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="207" x="7" y="149"/><ellipse cx="22" cy="165" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M24.3438,160.6719 C23.4063,160.2344 22.8125,160.0938 21.9375,160.0938 C19.3125,160.0938 17.3125,162.1719 17.3125,164.8906 L17.3125,166.0156 C17.3125,168.5938 19.4219,170.4844 22.3125,170.4844 C23.5313,170.4844 24.6875,170.1875 25.4375,169.6406 C26.0156,169.2344 26.3438,168.7813 26.3438,168.3906 C26.3438,167.9375 25.9531,167.5469 25.4844,167.5469 C25.2656,167.5469 25.0625,167.625 24.875,167.8125 C24.4219,168.2969 24.4219,168.2969 24.2344,168.3906 C23.8125,168.6563 23.125,168.7813 22.3594,168.7813 C20.3125,168.7813 19.0156,167.6875 19.0156,165.9844 L19.0156,164.8906 C19.0156,163.1094 20.2656,161.7969 22,161.7969 C22.5781,161.7969 23.1875,161.9531 23.6563,162.2031 C24.1406,162.4844 24.3125,162.7031 24.4063,163.1094 C24.4688,163.5156 24.5,163.6406 24.6406,163.7656 C24.7813,163.9063 25.0156,164.0156 25.2344,164.0156 C25.5,164.0156 25.7656,163.875 25.9375,163.6563 C26.0469,163.5 26.0781,163.3125 26.0781,162.8906 L26.0781,161.4688 C26.0781,161.0313 26.0625,160.9063 25.9688,160.75 C25.8125,160.4844 25.5313,160.3438 25.2344,160.3438 C24.9375,160.3438 24.7344,160.4375 24.5156,160.75 L24.3438,160.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="175" x="36" y="169.8467">HttpMessageConverters</text><line style="stroke:#181818;stroke-width:0.5;" x1="8" x2="213" y1="181" y2="181"/><line style="stroke:#181818;stroke-width:0.5;" x1="8" x2="213" y1="189" y2="189"/></g><!--MD5=[e1d947aeae02c90ff7d879f90a4f64c4]
+reverse link HandlerMethodArgumentResolver to AbstractMessageConverterMethodArgumentResolver--><g id="link_HandlerMethodArgumentResolver_AbstractMessageConverterMethodArgumentResolver"><path d="M602.555,97.972 C569.778,114.361 530.597,133.952 500.777,148.862 " fill="none" id="HandlerMethodArgumentResolver-backto-AbstractMessageConverterMethodArgumentResolver" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="599.48,91.684,620.499,89,605.741,104.206,599.48,91.684" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[5ecae0d47b0e6c61b8fac7bbcc9773c4]
+reverse link HandlerMethodArgumentResolver to AbstractNamedValueMethodArgumentResolver--><g id="link_HandlerMethodArgumentResolver_AbstractNamedValueMethodArgumentResolver"><path d="M730.746,97.972 C763.679,114.361 803.044,133.952 833.005,148.862 " fill="none" id="HandlerMethodArgumentResolver-backto-AbstractNamedValueMethodArgumentResolver" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="727.504,104.178,712.718,89,733.742,91.644,727.504,104.178" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[7dfbe8ca49dbf041009a830247c8d55b]
+reverse link AbstractMessageConverterMethodArgumentResolver to AbstractMessageConverterMethodProcessor--><g id="link_AbstractMessageConverterMethodArgumentResolver_AbstractMessageConverterMethodProcessor"><path d="M571.634,201.265 C605.637,208.479 642.925,215.718 677.5,221 C826.182,243.715 996.472,259.231 1120.27,268.628 " fill="none" id="AbstractMessageConverterMethodArgumentResolver-backto-AbstractMessageConverterMethodProcessor" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="none" points="570.11,208.098,552.037,197.036,573.064,194.413,570.11,208.098" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[60d33d49e201ddf9e306c6abf21a9072]
+reverse link HandlerMethodReturnValueHandler to AbstractMessageConverterMethodProcessor--><g id="link_HandlerMethodReturnValueHandler_AbstractMessageConverterMethodProcessor"><path d="M1293.5,217.024 C1293.5,230.579 1293.5,245.038 1293.5,256.678 " fill="none" id="HandlerMethodReturnValueHandler-backto-AbstractMessageConverterMethodProcessor" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="1286.5,217,1293.5,197,1300.5,217,1286.5,217" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[a38e8769e6daa6d9e5115363784749ae]
+reverse link AbstractMessageConverterMethodProcessor to RequestResponseBodyMethodProcessor--><g id="link_AbstractMessageConverterMethodProcessor_RequestResponseBodyMethodProcessor"><path d="M1293.5,325.024 C1293.5,338.579 1293.5,353.0381 1293.5,364.6784 " fill="none" id="AbstractMessageConverterMethodProcessor-backto-RequestResponseBodyMethodProcessor" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="none" points="1286.5,325,1293.5,305,1300.5,325,1286.5,325" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[1576ba1e42017bd7565795cc36b37362]
+link AbstractMessageConverterMethodArgumentResolver to HttpMessageConverter--><g id="link_AbstractMessageConverterMethodArgumentResolver_HttpMessageConverter"><path codeLine="16" d="M406.9636,203.2965 C406.9636,203.2965 354.536,235.605 331.128,250.032 " fill="none" id="AbstractMessageConverterMethodArgumentResolver-HttpMessageConverter" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="320.045,256.862,329.8054,255.5448,324.3014,254.2385,325.6077,248.7345,320.045,256.862" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="324.3014" x2="331.1125" y1="254.2385" y2="250.0415"/><polygon fill="#181818" points="417.179,197,409.9725,196.7431,406.9636,203.2965,414.1701,203.5534,417.179,197" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="8" x="398.5905" y="217.1558">1</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="7" x="321.769" y="245.8387">*</text></g><!--MD5=[adc14412c255b29a89440d9b20a15529]
+link HttpMessageConverters to HttpMessageConverter--><g id="link_HttpMessageConverters_HttpMessageConverter"><path codeLine="19" d="M158.0364,203.2965 C158.0364,203.2965 210.464,235.605 233.872,250.032 " fill="none" id="HttpMessageConverters-HttpMessageConverter" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="244.955,256.862,239.3923,248.7345,240.6986,254.2385,235.1946,255.5448,244.955,256.862" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="240.6986" x2="233.8875" y1="254.2385" y2="250.0415"/><polygon fill="#181818" points="147.821,197,150.8299,203.5534,158.0364,203.2965,155.0275,196.7431,147.821,197" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="8" x="148.3595" y="217.1558">1</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="7" x="227.4372" y="245.8387">*</text></g><!--MD5=[48f763ca6c7c0545f68f4f0ae3cd0d65]
+@startuml
+package Input {
+interface HandlerMethodArgumentResolver
+
+abstract class AbstractMessageConverterMethodArgumentResolver implements HandlerMethodArgumentResolver
+
+abstract class AbstractNamedValueMethodArgumentResolver implements HandlerMethodArgumentResolver
+}
+
+package Output {
+interface HandlerMethodReturnValueHandler
+abstract class AbstractMessageConverterMethodProcessor extends AbstractMessageConverterMethodArgumentResolver implements HandlerMethodReturnValueHandler
+class RequestResponseBodyMethodProcessor extends AbstractMessageConverterMethodProcessor
+}
+
+interface HttpMessageConverter
+AbstractMessageConverterMethodArgumentResolver "1" *- -> "*" HttpMessageConverter
+
+class HttpMessageConverters
+HttpMessageConverters "1" *- -> "*" HttpMessageConverter
+@enduml
+
+PlantUML version 1.2022.2(Sat Mar 05 16:30:19 UTC 2022)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
+
+<p>通过<code>HttpMessageConverter</code>对body进行序列化和反序列化,<br>其中最常用的就是json的处理模块<code>MappingJackson2HttpMessageConverter</code>.</p>
+<p>通过定义<code>HttpMessageConverters</code>的bean，将自定义的<code>HttpMessageConverter</code>添加进来，通过<code>WebMvcAutoConfigurationAdapter#configureMessageConverters</code>进行注册</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// StringConverter.java</span></span><br><span class="line"><span class="keyword">public</span> StringConverter implements HttpMessageConverter&lt;String&gt; &#123;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// ConverterConfig.java</span></span><br><span class="line"><span class="meta">@Bean</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> HttpMessageConverters <span class="title">converters</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> HttpMessageConverters(<span class="keyword">new</span> StringConverter());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="JacksonJson序列化的支持"><a href="#JacksonJson序列化的支持" class="headerlink" title="JacksonJson序列化的支持"></a>JacksonJson序列化的支持</h3><p>Spring MVC中提供了<code>MappingJackson2HttpMessageConverter</code>对json对象进行序列化处理。</p>
+<p>通过<code>JsonComponnet</code>bean来注册JSON序列化组件</p>
+<ul>
+<li>JsonSerializer</li>
+<li>JsonDeserializer</li>
+</ul>
+<p>s</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@JsonComponent</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MoneyJson</span> <span class="keyword">extends</span> <span class="title">StdSerializer</span>&lt;<span class="title">Money</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="title">MoneyJson</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(Money.class);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">serialize</span><span class="params">(Money money, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        jsonGenerator.writeString(money.toString());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="Interceptor拦截"><a href="#Interceptor拦截" class="headerlink" title="Interceptor拦截"></a>Interceptor拦截</h2><p>Interceptor用于对Controller层进行拦截，<br>处理一些和controller没有依赖的业务，比如鉴权，日志等</p>
+<p>通过<code>WebMvcConfigurer#addInterceptors</code>来添加Interceptor，<br>添加的顺序决定了执行的顺序</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">HandlerInterceptor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">default</span> <span class="keyword">boolean</span> <span class="title">preHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">default</span> <span class="keyword">void</span> <span class="title">postHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler, <span class="meta">@Nullable</span> ModelAndView modelAndView)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">default</span> <span class="keyword">void</span> <span class="title">afterCompletion</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler, <span class="meta">@Nullable</span> Exception ex)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="487px" preserveAspectRatio="none" style="width:226px;height:487px;background:#FFFFFF;" version="1.1" viewBox="0 0 226 487" width="226px" zoomAndPan="magnify"><defs/><g><rect fill="#F1F1F1" height="33.9688" rx="12.5" ry="12.5" style="stroke:#181818;stroke-width:0.5;" width="47" x="77" y="11"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="27" x="87" y="32.1387">start</text><rect fill="#F1F1F1" height="33.9688" rx="12.5" ry="12.5" style="stroke:#181818;stroke-width:0.5;" width="83" x="59" y="64.9688"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="63" x="69" y="86.1074">preHandle</text><rect fill="#F1F1F1" height="33.9688" rx="12.5" ry="12.5" style="stroke:#181818;stroke-width:0.5;" width="78" x="61.5" y="167.3398"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="58" x="71.5" y="188.4785">controller</text><rect fill="#F1F1F1" height="33.9688" rx="12.5" ry="12.5" style="stroke:#181818;stroke-width:0.5;" width="94" x="53.5" y="221.3086"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="74" x="63.5" y="242.4473">postHandler</text><rect fill="#F1F1F1" height="33.9688" rx="12.5" ry="12.5" style="stroke:#181818;stroke-width:0.5;" width="179" x="11" y="290.2773"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="159" x="21" y="311.416">DispatcherServlet#render</text><rect fill="#F1F1F1" height="33.9688" rx="12.5" ry="12.5" style="stroke:#181818;stroke-width:0.5;" width="116" x="42.5" y="344.2461"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="96" x="52.5" y="365.3848">afterCompletion</text><polygon fill="#F1F1F1" points="35.5,118.9375,165.5,118.9375,177.5,130.9375,165.5,142.9375,35.5,142.9375,23.5,130.9375,35.5,118.9375" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="23" x="104.5" y="153.1479">true</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="130" x="35.5" y="134.7456">preHandle return true?</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="28" x="177.5" y="128.3433">false</text><polygon fill="#F1F1F1" points="100.5,398.2148,112.5,410.2148,100.5,422.2148,88.5,410.2148,100.5,398.2148" style="stroke:#181818;stroke-width:0.5;"/><rect fill="#F1F1F1" height="33.9688" rx="12.5" ry="12.5" style="stroke:#181818;stroke-width:0.5;" width="43" x="79" y="442.2148"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="23" x="89" y="463.3535">end</text><line style="stroke:#181818;stroke-width:1.0;" x1="100.5" x2="100.5" y1="44.9688" y2="64.9688"/><polygon fill="#181818" points="96.5,54.9688,100.5,64.9688,104.5,54.9688,100.5,58.9688" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="100.5" x2="100.5" y1="201.3086" y2="221.3086"/><polygon fill="#181818" points="96.5,211.3086,100.5,221.3086,104.5,211.3086,100.5,215.3086" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="100.5" x2="100.5" y1="255.2773" y2="290.2773"/><polygon fill="#181818" points="96.5,280.2773,100.5,290.2773,104.5,280.2773,100.5,284.2773" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="100.5" x2="100.5" y1="324.2461" y2="344.2461"/><polygon fill="#181818" points="96.5,334.2461,100.5,344.2461,104.5,334.2461,100.5,338.2461" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="100.5" x2="100.5" y1="142.9375" y2="167.3398"/><polygon fill="#181818" points="96.5,157.3398,100.5,167.3398,104.5,157.3398,100.5,161.3398" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="177.5" x2="200" y1="130.9375" y2="130.9375"/><polygon fill="#181818" points="196,262.7773,200,272.7773,204,262.7773,200,266.7773" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="200" x2="200" y1="130.9375" y2="410.2148"/><line style="stroke:#181818;stroke-width:1.0;" x1="200" x2="112.5" y1="410.2148" y2="410.2148"/><polygon fill="#181818" points="122.5,406.2148,112.5,410.2148,122.5,414.2148,118.5,410.2148" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="100.5" x2="100.5" y1="378.2148" y2="398.2148"/><polygon fill="#181818" points="96.5,388.2148,100.5,398.2148,104.5,388.2148,100.5,392.2148" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="100.5" x2="100.5" y1="98.9375" y2="118.9375"/><polygon fill="#181818" points="96.5,108.9375,100.5,118.9375,104.5,108.9375,100.5,112.9375" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="100.5" x2="100.5" y1="422.2148" y2="442.2148"/><polygon fill="#181818" points="96.5,432.2148,100.5,442.2148,104.5,432.2148,100.5,436.2148" style="stroke:#181818;stroke-width:1.0;"/><!--MD5=[e20a64d08d7f60f3753c3c106625657c]
+@startuml
+:start;
+:preHandle;
+if (preHandle return true?) then (true)
+:controller;
+:postHandler;
+:DispatcherServlet#render;
+:afterCompletion;
+else (false)
+endif
+:end;
+@enduml
+
+PlantUML version 1.2022.2(Sat Mar 05 16:30:19 UTC 2022)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
+
+<h2 id="异常处理"><a href="#异常处理" class="headerlink" title="异常处理"></a>异常处理</h2><p>对Request Mapping Handler方法抛出的异常进行处理。</p>
+<ul>
+<li>ExceptionHandler<ul>
+<li>Controller层异常处理</li>
+<li>ControllerAdvice全局异常处理</li>
+</ul>
+</li>
+<li>BasicErrorController</li>
+</ul>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://docs.spring.io/spring-framework/docs/current/reference/html/web.html#spring-web">Spring MVC</a></li>
+<li><a target="_blank" rel="noopener" href="https://time.geekbang.org/course/detail/100023501-85504">玩转Spring全家桶 — 46 | Spring MVC中的常用视图（上）</a></li>
+<li><a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1381004">Spring MVC/Boot 统一异常处理最佳实践</a></li>
+<li><a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1561782">Spring Boot 统一异常处理最佳实践 – 拓展篇</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2018/05/spring/request-workflow/" rel="bookmark">Spring --- 请求处理流程</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/01/spring-security/architecture/" rel="bookmark">Spring Security --- Architecture</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/02/spring-security/authentication/" rel="bookmark">Spring Security --- Authentication</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/08/spring-security/authorization/" rel="bookmark">Spring Security --- Authorization</a></div>
+    </li>
+  </ul>
+
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>Amos
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://amos.s2u2m.com/2022/03/spring/spring-mvc/" title="Spring MVC RESTfull请求处理流程">https://amos.s2u2m.com/2022/03/spring/spring-mvc/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-Hans" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Spring/" rel="tag"># Spring</a>
+              <a href="/tags/Spring-MVC/" rel="tag"># Spring MVC</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/12/rabbitmq/best-practice/" rel="prev" title="RabbitMQ 开发实践">
+      <i class="fa fa-chevron-left"></i> RabbitMQ 开发实践
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">核心处理流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96Handler"><span class="nav-number">2.</span> <span class="nav-text">获取Handler</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%80%9A%E8%BF%87Handler%E5%A4%84%E7%90%86%E8%AF%B7%E6%B1%82"><span class="nav-number">3.</span> <span class="nav-text">通过Handler处理请求</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E4%BA%8EString%E8%BE%93%E5%85%A5%E7%9A%84%E5%8F%82%E6%95%B0%E8%A7%A3%E6%9E%90"><span class="nav-number">3.1.</span> <span class="nav-text">基于String输入的参数解析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%92%88%E5%AF%B9Body%E7%9A%84%E8%BE%93%E5%85%A5%E5%92%8C%E8%BE%93%E5%87%BA%E5%A4%84%E7%90%86"><span class="nav-number">3.2.</span> <span class="nav-text">针对Body的输入和输出处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#JacksonJson%E5%BA%8F%E5%88%97%E5%8C%96%E7%9A%84%E6%94%AF%E6%8C%81"><span class="nav-number">3.3.</span> <span class="nav-text">JacksonJson序列化的支持</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Interceptor%E6%8B%A6%E6%88%AA"><span class="nav-number">4.</span> <span class="nav-text">Interceptor拦截</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86"><span class="nav-number">5.</span> <span class="nav-text">异常处理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Amos"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">Amos</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="mailto:xiayy860612@126.com" title="E-Mail → mailto:xiayy860612@126.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/xiayy860612" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;xiayy860612" rel="noopener" target="_blank"><i class="fa fa-github fa-fw"></i>GitHub</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-Hans" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">蜀ICP备18013492号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">s2u2m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">33k</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('https://unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'YnmrykAQHQwGzUR77I61DkKN-9Nh9j0Va',
+      appKey     : '4TzKa97Pz2JTg81B8o5l77mO',
+      placeholder: "一起来聊一聊呗",
+      avatar     : 'retro',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : true,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

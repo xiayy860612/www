@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"amos.s2u2m.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="– 了解airflow的基本元素– 了解airflow的并发控制">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Airflow介绍">
+<meta property="og:url" content="https://amos.s2u2m.com/2020/08/big-data/airflow/airflow-introduction/index.html">
+<meta property="og:site_name" content="观澜">
+<meta property="og:description" content="– 了解airflow的基本元素– 了解airflow的并发控制">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://airflow.apache.org/docs/stable/_images/task_lifecycle_diagram.png">
+<meta property="article:published_time" content="2020-08-23T13:28:07.000Z">
+<meta property="article:modified_time" content="2021-12-24T05:38:15.767Z">
+<meta property="article:author" content="Amos">
+<meta property="article:tag" content="ETL">
+<meta property="article:tag" content="数据处理">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://airflow.apache.org/docs/stable/_images/task_lifecycle_diagram.png">
+
+<link rel="canonical" href="https://amos.s2u2m.com/2020/08/big-data/airflow/airflow-introduction/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Airflow介绍 | 观澜</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">观澜</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">行到水穷处，坐看云起时</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://amos.s2u2m.com/2020/08/big-data/airflow/airflow-introduction/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="Amos">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="观澜">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Airflow介绍
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-08-23 21:28:07" itemprop="dateCreated datePublished" datetime="2020-08-23T21:28:07+08:00">2020-08-23</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-12-24 13:38:15" itemprop="dateModified" datetime="2021-12-24T13:38:15+08:00">2021-12-24</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ETL/" itemprop="url" rel="index"><span itemprop="name">ETL</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2020/08/big-data/airflow/airflow-introduction/" class="post-meta-item leancloud_visitors" data-flag-title="Airflow介绍" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2020/08/big-data/airflow/airflow-introduction/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2020/08/big-data/airflow/airflow-introduction/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>1.9k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>2 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>– 了解airflow的基本元素<br>– 了解airflow的并发控制</p>
+<a id="more"></a>
+
+<p>基本元素:</p>
+<ul>
+<li>DAG, 有向无环图, 用于描述整个处理流程中的任务之间的关系和依赖,<br>只有定义在globals(全局作用域)的dag才会被airflow扫描到并加载</li>
+<li>Operator, 用于定义任务要去做什么, 尽量保证每个Operator可以独立运行, 没有依赖;<br>如果不能避免依赖, 则通过xcom/其他存储方式进行参数传递</li>
+<li>default_args, 可被所有相关dag的Operator共享使用</li>
+<li>DAG Run, DAG被触发后生成的具体执行的DAG实例<ul>
+<li>创建时间</li>
+<li>execution_date, DAG Run的开始执行时间,<br>在同一个DAG中必须保持唯一, 即在同一个DAG在同一时间只能有一个DAG Run.</li>
+</ul>
+</li>
+<li>Task, Operator实例</li>
+<li>Task instance, 每次触发Task都会生成一个task instance, 用于记录这次的task运行.<br>它拥有很多的状态, 状态的完成生命周期:<ol>
+<li>no status</li>
+<li>scheduled, scheduler已计划将要运行对应的task instance</li>
+<li>queued, dispatch将task instance发送对相关的队列上进行排队</li>
+<li>Running, worker拿到队列中的任务进行执行</li>
+<li>success/failed, 任务完成后</li>
+</ol>
+</li>
+</ul>
+<p><img src="https://airflow.apache.org/docs/stable/_images/task_lifecycle_diagram.png"></p>
+<h2 id="DAG调度"><a href="#DAG调度" class="headerlink" title="DAG调度"></a>DAG调度</h2><p>通过在DAG中定义<strong>schedule_interval</strong>来指定如何调度,<br>schedule_interval最好指定为预定义的值或者cron表达式</p>
+<p>DAG的调度分为:</p>
+<ul>
+<li>手动触发, 即schedule_interval=None</li>
+<li>周期性调度<ul>
+<li>backfill and catchup, 根据start_date到现在为止, 来创建过去的Dag Run并依次执行.<br>针对以时间为周期的数据集非常有用.</li>
+<li>非回填追赶模式, 即DAG的catchup=False, 不会为过去创建Dag Run.</li>
+</ul>
+</li>
+</ul>
+<p>关于周期性调度的DAG, 它的创建时间为<code>上一个DAG Run的创建时间+schedule_interval</code>,<br>而第一个DAG Run的创建时间为min(start_date),<br>务必将start_date设置为一个指定的值</p>
+<h2 id="并发控制"><a href="#并发控制" class="headerlink" title="并发控制"></a>并发控制</h2><ul>
+<li>Pools, 用于控制task instance的并行数,<br>它由以下元素组成, 默认任务会被分配到default_pool池中, 它的工作槽有128个位置:<ul>
+<li>工作槽, 用于指定可同时运行的任务数</li>
+<li>等待队列, 当工作槽满时, 任务就进入等待队列, 直到工作槽有空闲位置</li>
+<li>priority_weight, 用于定义队列中的任务优先级以及在工作槽有空闲位置时优先执行哪些任务,<br>默认任务本身的priority_weight为1, 但在评估任务优先级时会计算任务本身及其下游任务的总和.</li>
+</ul>
+</li>
+<li>Celery Queue, 只在使用CeleryExecutor时才有用, 用于给任务贴标签,<br>这样工作节点就可以通过标签来筛选要执行哪些任务. 默认任务会被分配到default_queue.</li>
+</ul>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="395px" preserveAspectRatio="none" style="width:864px;height:395px;background:#FFFFFF;" version="1.1" viewBox="0 0 864 395" width="864px" zoomAndPan="magnify"><defs/><g><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="23" x2="23" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="169.5" x2="169.5" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="286" x2="286" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="542" x2="542" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="665" x2="665" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="760" x2="760" y1="67.2969" y2="317.2266"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="21" x="9.5" y="63.9951">Db</text><path d="M5,15 C5,5 23,5 23,5 C23,5 41,5 41,15 L41,41 C41,51 23,51 23,51 C23,51 5,51 5,41 L5,15 " fill="#E2E2F0" style="stroke:#181818;stroke-width:1.5;"/><path d="M5,15 C5,25 23,25 23,25 C23,25 41,25 41,15 " fill="none" style="stroke:#181818;stroke-width:1.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="21" x="9.5" y="329.2217">Db</text><path d="M5,342.5234 C5,332.5234 23,332.5234 23,332.5234 C23,332.5234 41,332.5234 41,342.5234 L41,368.5234 C41,378.5234 23,378.5234 23,378.5234 C23,378.5234 5,378.5234 5,368.5234 L5,342.5234 " fill="#E2E2F0" style="stroke:#181818;stroke-width:1.5;"/><path d="M5,342.5234 C5,352.5234 23,352.5234 23,352.5234 C23,352.5234 41,352.5234 41,342.5234 " fill="none" style="stroke:#181818;stroke-width:1.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="69" x="132.5" y="63.9951">scheduler</text><ellipse cx="170" cy="35" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="166,23,172,18,170,23,172,28,166,23" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="69" x="132.5" y="329.2217">scheduler</text><ellipse cx="170" cy="348.5234" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="166,336.5234,172,331.5234,170,336.5234,172,341.5234,166,336.5234" style="stroke:#181818;stroke-width:1.0;"/><path d="M237,41 L335,41 C340,41 340,54.1484 340,54.1484 C340,54.1484 340,67.2969 335,67.2969 L237,67.2969 C232,67.2969 232,54.1484 232,54.1484 C232,54.1484 232,41 237,41 " fill="#E2E2F0" style="stroke:#181818;stroke-width:0.5;"/><path d="M335,41 C330,41 330,54.1484 330,54.1484 C330,67.2969 335,67.2969 335,67.2969 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88" x="237" y="58.9951">AirflowPools</text><path d="M237,316.2266 L335,316.2266 C340,316.2266 340,329.375 340,329.375 C340,329.375 340,342.5234 335,342.5234 L237,342.5234 C232,342.5234 232,329.375 232,329.375 C232,329.375 232,316.2266 237,316.2266 " fill="#E2E2F0" style="stroke:#181818;stroke-width:0.5;"/><path d="M335,316.2266 C330,316.2266 330,329.375 330,329.375 C330,342.5234 335,342.5234 335,342.5234 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88" x="237" y="334.2217">AirflowPools</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="110" x="484" y="63.9951">CeleryExecutor</text><ellipse cx="542" cy="35" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="538,23,544,18,542,23,544,28,538,23" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="110" x="484" y="329.2217">CeleryExecutor</text><ellipse cx="542" cy="348.5234" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="538,336.5234,544,331.5234,542,336.5234,544,341.5234,538,336.5234" style="stroke:#181818;stroke-width:1.0;"/><path d="M615,41 L716,41 C721,41 721,54.1484 721,54.1484 C721,54.1484 721,67.2969 716,67.2969 L615,67.2969 C610,67.2969 610,54.1484 610,54.1484 C610,54.1484 610,41 615,41 " fill="#E2E2F0" style="stroke:#181818;stroke-width:0.5;"/><path d="M716,41 C711,41 711,54.1484 711,54.1484 C711,67.2969 716,67.2969 716,67.2969 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="91" x="615" y="58.9951">CeleryQueue</text><path d="M615,316.2266 L716,316.2266 C721,316.2266 721,329.375 721,329.375 C721,329.375 721,342.5234 716,342.5234 L615,342.5234 C610,342.5234 610,329.375 610,329.375 C610,329.375 610,316.2266 615,316.2266 " fill="#E2E2F0" style="stroke:#181818;stroke-width:0.5;"/><path d="M716,316.2266 C711,316.2266 711,329.375 711,329.375 C711,342.5234 716,342.5234 716,342.5234 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="91" x="615" y="334.2217">CeleryQueue</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="53" x="731" y="63.9951">Worker</text><ellipse cx="760.5" cy="35" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="756.5,23,762.5,18,760.5,23,762.5,28,756.5,23" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="53" x="731" y="329.2217">Worker</text><ellipse cx="760.5" cy="348.5234" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="756.5,336.5234,762.5,331.5234,760.5,336.5234,762.5,341.5234,756.5,336.5234" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="34,94.4297,24,98.4297,34,102.4297,30,98.4297" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="28" x2="169" y1="98.4297" y2="98.4297"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="123" x="40" y="93.3638">get no status tasks</text><polygon fill="#181818" points="274,123.5625,284,127.5625,274,131.5625,278,127.5625" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="170" x2="280" y1="127.5625" y2="127.5625"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="92" x="177" y="122.4966">dispatch tasks</text><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="286" x2="328" y1="156.6953" y2="156.6953"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="328" x2="328" y1="156.6953" y2="169.6953"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="287" x2="328" y1="169.6953" y2="169.6953"/><polygon fill="#181818" points="297,165.6953,287,169.6953,297,173.6953,293,169.6953" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="242" x="293" y="151.6294">dispatch tasks by task priority_weight</text><polygon fill="#181818" points="297,194.8281,287,198.8281,297,202.8281,293,198.8281" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="291" x2="541" y1="198.8281" y2="198.8281"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="189" x="303" y="193.7622">get high priority_weight tasks</text><polygon fill="#181818" points="653.5,223.9609,663.5,227.9609,653.5,231.9609,657.5,227.9609" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="542" x2="659.5" y1="227.9609" y2="227.9609"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="92" x="549" y="222.895">dispatch tasks</text><polygon fill="#181818" points="676.5,253.0938,666.5,257.0938,676.5,261.0938,672.5,257.0938" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="670.5" x2="759.5" y1="257.0938" y2="257.0938"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="59" x="682.5" y="252.0278">get tasks</text><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="760.5" x2="802.5" y1="286.2266" y2="286.2266"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="802.5" x2="802.5" y1="286.2266" y2="299.2266"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="761.5" x2="802.5" y1="299.2266" y2="299.2266"/><polygon fill="#181818" points="771.5,295.2266,761.5,299.2266,771.5,303.2266,767.5,299.2266" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="90" x="767.5" y="281.1606">execute tasks</text><!--MD5=[1a3b1baee63d328adbba741b95ce7308]
+@startuml
+database Db
+control scheduler
+queue AirflowPools
+control CeleryExecutor
+queue CeleryQueue
+control Worker
+
+scheduler - -> Db: get no status tasks
+scheduler - -> AirflowPools: dispatch tasks
+AirflowPools - -> AirflowPools: dispatch tasks by task priority_weight
+CeleryExecutor - -> AirflowPools: get high priority_weight tasks
+CeleryExecutor - -> CeleryQueue: dispatch tasks
+Worker - -> CeleryQueue: get tasks
+Worker - -> Worker: execute tasks
+@enduml
+
+PlantUML version 1.2022.2(Sat Mar 05 16:30:19 UTC 2022)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
+
+<p>DAG的多维度并发控制的参数:</p>
+<ul>
+<li>airflow.cfg的parallelism, airflow集群中同时运行的最大task instance数量</li>
+<li>airflow.cfg的dag_concurrency, 一个dag run中可以同时执行的task instance数量, 超出则排队;<br>可以通过DAG的concurrency进行自定义</li>
+<li>max_active_runs, 针对同一个DAG, 同一时间最多运行几个DAG Run,<br>如果没有设置, 默认读取airflow.cfg的max_active_runs_per_dag</li>
+<li>task_concurrency, 控制Operator对应的task同一时间最多运行几个task instance</li>
+<li>pool, 指定task的Pools, 通过Pools来控制某类task的最大并发数</li>
+</ul>
+<p>调度的并发控制参数:</p>
+<ul>
+<li>airflow.cfg的max_threads, 调度线程数, 可以设置为CPU数-1</li>
+<li>airflow.cfg的scheduler_heartbeat_sec, scheduler扫描task并将task调度起来的频率</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+      
+
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>Amos
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://amos.s2u2m.com/2020/08/big-data/airflow/airflow-introduction/" title="Airflow介绍">https://amos.s2u2m.com/2020/08/big-data/airflow/airflow-introduction/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-Hans" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/ETL/" rel="tag"># ETL</a>
+              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86/" rel="tag"># 数据处理</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/11/CI-CD/traditional-workflow/" rel="prev" title="传统的CI/CD流程概述">
+      <i class="fa fa-chevron-left"></i> 传统的CI/CD流程概述
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/01/spring-security/architecture/" rel="next" title="Spring Security --- Architecture">
+      Spring Security --- Architecture <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#DAG%E8%B0%83%E5%BA%A6"><span class="nav-number">1.</span> <span class="nav-text">DAG调度</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B9%B6%E5%8F%91%E6%8E%A7%E5%88%B6"><span class="nav-number">2.</span> <span class="nav-text">并发控制</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Amos"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">Amos</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="mailto:xiayy860612@126.com" title="E-Mail → mailto:xiayy860612@126.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/xiayy860612" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;xiayy860612" rel="noopener" target="_blank"><i class="fa fa-github fa-fw"></i>GitHub</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-Hans" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">蜀ICP备18013492号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">s2u2m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">33k</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('https://unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'YnmrykAQHQwGzUR77I61DkKN-9Nh9j0Va',
+      appKey     : '4TzKa97Pz2JTg81B8o5l77mO',
+      placeholder: "一起来聊一聊呗",
+      avatar     : 'retro',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : true,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

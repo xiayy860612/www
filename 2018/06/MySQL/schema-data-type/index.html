@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"amos.s2u2m.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="学习如何选择合适的数据类型 特殊数据的类型选择 Schema的设计">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL Schema与数据类型优化">
+<meta property="og:url" content="https://amos.s2u2m.com/2018/06/MySQL/schema-data-type/index.html">
+<meta property="og:site_name" content="观澜">
+<meta property="og:description" content="学习如何选择合适的数据类型 特殊数据的类型选择 Schema的设计">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://amos.s2u2m.com/2018/06/MySQL/schema-data-type/example.jpg">
+<meta property="article:published_time" content="2018-06-30T12:57:17.000Z">
+<meta property="article:modified_time" content="2021-12-24T05:38:15.767Z">
+<meta property="article:author" content="Amos">
+<meta property="article:tag" content="MySQL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://amos.s2u2m.com/2018/06/MySQL/schema-data-type/example.jpg">
+
+<link rel="canonical" href="https://amos.s2u2m.com/2018/06/MySQL/schema-data-type/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>MySQL Schema与数据类型优化 | 观澜</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">观澜</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">行到水穷处，坐看云起时</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://amos.s2u2m.com/2018/06/MySQL/schema-data-type/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="Amos">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="观澜">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MySQL Schema与数据类型优化
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2018-06-30 20:57:17" itemprop="dateCreated datePublished" datetime="2018-06-30T20:57:17+08:00">2018-06-30</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-12-24 13:38:15" itemprop="dateModified" datetime="2021-12-24T13:38:15+08:00">2021-12-24</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/MySQL/" itemprop="url" rel="index"><span itemprop="name">MySQL</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2018/06/MySQL/schema-data-type/" class="post-meta-item leancloud_visitors" data-flag-title="MySQL Schema与数据类型优化" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2018/06/MySQL/schema-data-type/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2018/06/MySQL/schema-data-type/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>4.1k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>4 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <ul>
+<li>学习如何选择合适的数据类型</li>
+<li>特殊数据的类型选择</li>
+<li>Schema的设计</li>
+</ul>
+<a id="more"></a>
+
+<h2 id="数据类型的选择"><a href="#数据类型的选择" class="headerlink" title="数据类型的选择"></a>数据类型的选择</h2><p>MySQL基础数据类型</p>
+<ul>
+<li>数字<ul>
+<li>整数<ul>
+<li>tinyint/smallint/mediumint/int/bigint</li>
+<li>unsigned可选</li>
+</ul>
+</li>
+<li>实数<ul>
+<li>Float/Double, 浮点计算</li>
+<li>DECIMAL, 存储精确的小数, 一般可使用bigint来代替decimal, 通过乘以相应的倍数即可</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>字符串<ul>
+<li>char, 定长, 适合更新频繁的列或者长度固定的列</li>
+<li>varchar, 变长, 需要额外的1或2个字节来存储长度, 小于等于255则1个字节, 大于则2个字节; 不适合更新频繁的列, 会导致碎片化</li>
+<li>text, 很长的字符串</li>
+</ul>
+</li>
+<li>二进制字符串, 比较时以<strong>字节</strong>为单位进行比较, 效率要比普通字符串要高<ul>
+<li>binary, 定长</li>
+<li>varbinary, 变长</li>
+<li>blob, 很长的二进制字符串</li>
+</ul>
+</li>
+<li>时间<ul>
+<li>datetime, 从1001到9999年, 精度为秒, 把日期和时间封装到格式为<strong>YYYYMMDDHHMMSS</strong>的<strong>整数</strong>中, 显示<strong>与时区无关</strong>, <strong>使用8字节存储</strong></li>
+<li>timestamp, 同unit时间戳, 从新纪元时间(1970-01-01T00:00:00)以来的秒数, <strong>使用4字节存储</strong>, 只能表示1970到2038年, 显示依赖于时区, 会根据时区不同, 显示对应的时间; 对应的列默认为NOT NULL.</li>
+</ul>
+</li>
+</ul>
+<h3 id="特殊数据类型的处理"><a href="#特殊数据类型的处理" class="headerlink" title="特殊数据类型的处理"></a>特殊数据类型的处理</h3><p><strong>uuid</strong>数据的处理:</p>
+<ol>
+<li>移除uuid中的**-**</li>
+<li>使用unhex函数将uuid字符串转换为16字节的数字, 存储到binary(16)中</li>
+<li>使用hex函数将16字节的数字转换为uuid字符串</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; select uuid();</span><br><span class="line">+--------------------------------------+</span><br><span class="line">| uuid()                               |</span><br><span class="line">+--------------------------------------+</span><br><span class="line">| e8dc60bb-6df3-11e8-8915-0800273063ab |</span><br><span class="line">+--------------------------------------+</span><br><span class="line">1 row in set</span><br><span class="line"></span><br><span class="line">mysql&gt; select unhex(&#39;e8dc60bb6df311e889150800273063ab&#39;);</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">| unhex(&#39;e8dc60bb6df311e889150800273063ab&#39;) |</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">| ��&#96;�m��</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">1 row in set</span><br><span class="line"></span><br><span class="line">mysql&gt; select hex(unhex(&#39;e8dc60bb6df311e889150800273063ab&#39;));</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">| hex(unhex(&#39;e8dc60bb6df311e889150800273063ab&#39;)) |</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">| E8DC60BB6DF311E889150800273063AB               |</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">1 row in set</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<hr>
+<p><strong>ip</strong>数据需要转换为数字存储:</p>
+<ol>
+<li>使用<strong>无符号整数</strong>存储ip列</li>
+<li>使用inet_aton将ip字符串转换为整数</li>
+<li>使用inet_ntoa将数字转换为ip字符串</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; select inet_aton(&#39;192.168.0.1&#39;);</span><br><span class="line">+--------------------------+</span><br><span class="line">| inet_aton(&#39;192.168.0.1&#39;) |</span><br><span class="line">+--------------------------+</span><br><span class="line">|               3232235521 |</span><br><span class="line">+--------------------------+</span><br><span class="line">1 row in set</span><br><span class="line"></span><br><span class="line">mysql&gt; select inet_ntoa(3232235521);</span><br><span class="line">+-----------------------+</span><br><span class="line">| inet_ntoa(3232235521) |</span><br><span class="line">+-----------------------+</span><br><span class="line">| 192.168.0.1           |</span><br><span class="line">+-----------------------+</span><br><span class="line">1 row in set</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<hr>
+<p><strong>id列</strong>的数据类型尽量选择<strong>递增型整数</strong></p>
+<p>因为随机值会分布在很大的空间中, 导致insert和select变慢.<br>而且随机值的插入会随机写到索引的不同位置, 导致insert语句变慢;<br>由于数据分布在很大的空间中, 也就导致了select指定的数据会变慢;<br>还会导致缓存失效.</p>
+<p><strong>由于InnoDB的索引是一个B+Tree, 所以按顺序的插入能够保证数据很快插入,<br>并保证数据集中在一定的范围之内. 递增插入是比较好的选择.</strong></p>
+<p>不建议使用字符串类型作为id列, 查询性能很差.</p>
+<p>一般情况下尽量使用默认值方案来替换NULL, 因为NULL会增加查询的复杂度.</p>
+<h2 id="Schema的设计"><a href="#Schema的设计" class="headerlink" title="Schema的设计"></a>Schema的设计</h2><h3 id="范式与反范式"><a href="#范式与反范式" class="headerlink" title="范式与反范式"></a>范式与反范式</h3><p>范式的主要目的:</p>
+<ul>
+<li>减少数据冗余</li>
+<li>消除插入/删除/更新的异常</li>
+</ul>
+<p>关键概念:</p>
+<ul>
+<li>码/键(候选码), 表中的一个或多个属性组K, 除开K中的属性外的其他所有属性都完全函数依赖于K, 则K为候选码; 一个表可能存在多个码</li>
+<li>主属性, 包含在各个候选码中的属性, 主属性不可为空</li>
+</ul>
+<p>通常使用的范式:</p>
+<ul>
+<li>1NF(Normal Form)第一范式, 属性的原子性保证不可再分割, 每个属性都只能存储一个值</li>
+<li>2NF第二范式, 基于1NF, 定义候选码, 非主属性必须<strong>完全依赖</strong>于候选码, 即通过候选码可以确定实体的唯一性</li>
+<li>3NF第三范式, 基于2NF, 消除<strong>传递依赖</strong>, 即任何非主属性不能由其他属性派生, 要求<strong>属性没有冗余</strong></li>
+<li>BCNF, 基于3NF的改进范式, 消除<strong>主属性对码的部分与传递依赖</strong></li>
+</ul>
+<p>一般情况下, 关系型数据库的表设计只要达到<strong>3NF/BCNF</strong>就够了.</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; 不符合1NF, 电话列可继续拆分</span><br><span class="line">学生|课程|老师|电话(手机, 座机)|教材|教室|上课时间 </span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F; 符合1NF, 候选码为(学生, 课程), 但不符合2NF, 教材只部分依赖于主键列中的课程</span><br><span class="line">学生|课程|老师|手机|座机|教材|教室|上课时间 </span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F; 符合2NF, 但不符合3NF, (学生, 课程) &#x3D;&gt; 老师 &#x3D;&gt; 手机|座机, 存在传递依赖</span><br><span class="line">学生|课程|老师|手机|座机|教室|上课时间</span><br><span class="line"></span><br><span class="line">课程|教材</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F; 符合3NF</span><br><span class="line">学生|课程|老师|教室|上课时间</span><br><span class="line"></span><br><span class="line">课程|教材</span><br><span class="line"></span><br><span class="line">老师|手机|座机</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>上面例子中的关系图:</p>
+<p><img src="/2018/06/MySQL/schema-data-type/example.jpg"></p>
+<p>针对<strong>写密集</strong>的场景尤其需要对schema进行范式化, 而针对读密集的场景可以使用反范式.</p>
+<p>范式化的表能够更好更快的进行更新操作, 但是查询往往需要多表join;<br>然而单独的表能够更有效的利用索引.</p>
+<h3 id="缓存表-amp-amp-汇总表"><a href="#缓存表-amp-amp-汇总表" class="headerlink" title="缓存表 &amp;&amp; 汇总表"></a>缓存表 &amp;&amp; 汇总表</h3><p>通过缓存表和汇总表来缓存源数据经过逻辑计算后的冗余数据, 可以提升相应业务逻辑场景的查询性能.</p>
+<ul>
+<li>非实时性数据, <strong>定时</strong>计算更新的不严格计数</li>
+<li>实时性数据, 通过<strong>小范围查询填满间隙</strong>的严格计数</li>
+</ul>
+<p>在使用缓存表和汇总表时, 对数据的维护有两种方式:</p>
+<ul>
+<li>实时维护, 成本较高, 数据容易碎片化</li>
+<li>定期重建, 可以保持表不会有很多碎片, 而且能保证顺序组织索引, 更加高效</li>
+</ul>
+<p>重建表可以通过<strong>影子表</strong>的技巧</p>
+<ol>
+<li>创建相同结构的新表, <code>create table test_table_new like test_table</code></li>
+<li>填充数据, 数据有可能时老数据, 也可能时重新整理后的数据</li>
+<li>通过重命名来交换新表和旧表的名字, <code>rename table test_table to test_table_old, test_table_new to test_table</code></li>
+<li>如果出问题了, 可以很容易回滚旧表</li>
+</ol>
+<h3 id="计数表"><a href="#计数表" class="headerlink" title="计数表"></a>计数表</h3><p>为了提升技术表的并发处理能力, 在更新时随机到相应的slot行插入, 查询时汇总结果.</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">-- 多slot的计数表</span><br><span class="line"></span><br><span class="line">create table if not exists counter_tb (</span><br><span class="line">slot tinyint unsigned not null primary key, </span><br><span class="line">cnt int unsigned not null</span><br><span class="line">) engine&#x3D;InnoDB default charset&#x3D;utf8mb4;</span><br><span class="line"></span><br><span class="line">-- 更新时随机slot更新</span><br><span class="line">insert into counter_tb (slot, cnt)</span><br><span class="line">values (rand() * 10, 1)</span><br><span class="line">on duplicate key update cnt &#x3D; cnt + 1;</span><br><span class="line"></span><br><span class="line">-- 查询时汇总</span><br><span class="line"></span><br><span class="line">select * from counter_tb;</span><br><span class="line"></span><br><span class="line">select sum(cnt)</span><br><span class="line">from counter_tb;</span><br></pre></td></tr></table></figure>
+<h3 id="schema的修改"><a href="#schema的修改" class="headerlink" title="schema的修改"></a>schema的修改</h3><p>MySQL中大部分执行alter table来修改表结构的操作都会导致重建表, 即用新的结构创建新表, 将旧表数据导入新表, 最后删除旧表.<br>这对大表来说需要花费很大的时间和代价.</p>
+<p>大部分的alter table操作都会导致MySQL服务中断.<br>对于在生产环境中修改表结构, 一般可采用以下方法:</p>
+<ul>
+<li>在备用数据库上修改结构后, 和主库进行切换</li>
+<li>影子拷贝, 操作同创建影子表的操作; 也可借助一些第三方工具来进行影子拷贝</li>
+</ul>
+<p>.frm文件存储着表的结构, 它存放在mysql的data目录下对应的schema目录里, 默认的data目录为/var/lib/mysql.<br>以下情况可通过修改**.frm文件**的结构来更新表结构, 但对.frm文件的修改存在风险, 需要做好备份:</p>
+<ul>
+<li>列的默认值</li>
+<li>NULL/NOT Null</li>
+</ul>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/xiayy860612/example/tree/master/mysql_demo/schema">Demo</a></li>
+<li><a target="_blank" rel="noopener" href="https://book.douban.com/subject/23008813/">高性能MySQL</a>, 第4章 Schema与数据类型优化</li>
+<li><a target="_blank" rel="noopener" href="https://www.zhihu.com/question/24696366">解释一下关系数据库的第一第二第三范式</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/ybwang/archive/2010/06/04/1751279.html">数据库设计三大范式与BCNF，学习笔记</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="/2021/06/MySQL/backup-rollback/" rel="bookmark">MySQL备份和恢复</a></div>
+    </li>
+  </ul>
+
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>Amos
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://amos.s2u2m.com/2018/06/MySQL/schema-data-type/" title="MySQL Schema与数据类型优化">https://amos.s2u2m.com/2018/06/MySQL/schema-data-type/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-Hans" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/MySQL/" rel="tag"># MySQL</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2018/05/spring/request-workflow/" rel="prev" title="Spring --- 请求处理流程">
+      <i class="fa fa-chevron-left"></i> Spring --- 请求处理流程
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2018/08/test/test-strategy/" rel="next" title="浅谈服务级的测试策略">
+      浅谈服务级的测试策略 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E7%9A%84%E9%80%89%E6%8B%A9"><span class="nav-number">1.</span> <span class="nav-text">数据类型的选择</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%89%B9%E6%AE%8A%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E7%9A%84%E5%A4%84%E7%90%86"><span class="nav-number">1.1.</span> <span class="nav-text">特殊数据类型的处理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Schema%E7%9A%84%E8%AE%BE%E8%AE%A1"><span class="nav-number">2.</span> <span class="nav-text">Schema的设计</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%8C%83%E5%BC%8F%E4%B8%8E%E5%8F%8D%E8%8C%83%E5%BC%8F"><span class="nav-number">2.1.</span> <span class="nav-text">范式与反范式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BC%93%E5%AD%98%E8%A1%A8-amp-amp-%E6%B1%87%E6%80%BB%E8%A1%A8"><span class="nav-number">2.2.</span> <span class="nav-text">缓存表 &amp;&amp; 汇总表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%A1%E6%95%B0%E8%A1%A8"><span class="nav-number">2.3.</span> <span class="nav-text">计数表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#schema%E7%9A%84%E4%BF%AE%E6%94%B9"><span class="nav-number">2.4.</span> <span class="nav-text">schema的修改</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Reference"><span class="nav-number">3.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Amos"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">Amos</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="mailto:xiayy860612@126.com" title="E-Mail → mailto:xiayy860612@126.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://github.com/xiayy860612" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;xiayy860612" rel="noopener" target="_blank"><i class="fa fa-github fa-fw"></i>GitHub</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-Hans" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">蜀ICP备18013492号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">s2u2m</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">站点总字数：</span>
+    <span title="站点总字数">33k</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('https://unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'YnmrykAQHQwGzUR77I61DkKN-9Nh9j0Va',
+      appKey     : '4TzKa97Pz2JTg81B8o5l77mO',
+      placeholder: "一起来聊一聊呗",
+      avatar     : 'retro',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : true,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>
