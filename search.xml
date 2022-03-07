@@ -469,189 +469,6 @@ Country: US
       </tags>
   </entry>
   <entry>
-    <title>Spring --- 请求处理流程</title>
-    <url>/2018/05/spring/request-workflow/</url>
-    <content><![CDATA[<ul>
-<li>了解Spring请求的处理流程</li>
-<li>了解其中的核心元素</li>
-</ul>
-<a id="more"></a>
-
-<h2 id="核心设计"><a href="#核心设计" class="headerlink" title="核心设计"></a>核心设计</h2><ul>
-<li>Filter</li>
-<li>DispatcherServlet</li>
-<li>Interceptor</li>
-<li>HandlerAdapter</li>
-</ul>
-<p>web程序启动时的初始化顺序: ServletContext -&gt; listener -&gt; filter -&gt; servlet</p>
-<p>spring bean的初始化是在listener中声明的, 可以在后面使用.</p>
-<p><img src="/2018/05/spring/request-workflow/request-workflow.jpg" alt="workflow"></p>
-<p><img src="/2018/05/spring/request-workflow/request-workflow-seq.jpg" alt="workflow-seq"></p>
-<h2 id="Filter"><a href="#Filter" class="headerlink" title="Filter"></a>Filter</h2><ul>
-<li>Servlet规范规定的，只能用于Web程序中, 由Servlet容器提供支持</li>
-<li>作用于Servlet执行前后</li>
-</ul>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">@Order(1)</span><br><span class="line">@WebFilter(filterName &#x3D; &quot;customized&quot;, urlPatterns &#x3D; &quot;&#x2F;*&quot;)</span><br><span class="line">public class CustomizedFilter implements Filter &#123;</span><br><span class="line">    @Override</span><br><span class="line">    public void init(FilterConfig filterConfig) throws ServletException &#123;</span><br><span class="line">        log.info(&quot;CustomizedFilter Init&quot;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException &#123;</span><br><span class="line">        log.info(&quot;CustomizedFilter doFilter before&quot;);</span><br><span class="line"></span><br><span class="line">        &#x2F;&#x2F; 执行Servlet</span><br><span class="line">        filterChain.doFilter(servletRequest, servletResponse);</span><br><span class="line"></span><br><span class="line">        log.info(&quot;CustomizedFilter doFilter after&quot;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void destroy() &#123;</span><br><span class="line">        log.info(&quot;CustomizedFilter destroy&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>必须要注解<strong>ServletComponentScan</strong>才能让自定义的Filter其效果.</p>
-<p>在filterChain.doFilter调用的前后来执行操作, 作用于Servlet之前的前后.</p>
-<h2 id="DispatcherServlet"><a href="#DispatcherServlet" class="headerlink" title="DispatcherServlet"></a>DispatcherServlet</h2><p>为Spring框架定制的Servlet, 用来对请求进行处理</p>
-<ul>
-<li>获取请求处理链HandlerExecutionChain</li>
-<li>通过HandlerAdapter将请求发送给Controller进行处理</li>
-<li>对视图进行解析并将Model传递给视图View, 生成response</li>
-</ul>
-<h2 id="Interceptor"><a href="#Interceptor" class="headerlink" title="Interceptor"></a>Interceptor</h2><ul>
-<li>作用于Handler/Controller前后执行</li>
-<li>不能修改request</li>
-</ul>
-<p>在spring中优先使用Interceptor</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public class CustomizedInterceptor extends HandlerInterceptorAdapter &#123;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)</span><br><span class="line">            throws Exception &#123;</span><br><span class="line">        log.info(&quot;CustomizedInterceptor prehandle&quot;);</span><br><span class="line">        return true;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,</span><br><span class="line">			@Nullable ModelAndView modelAndView) throws Exception &#123;</span><br><span class="line">		log.info(&quot;CustomizedInterceptor postHandle&quot;);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	@Override</span><br><span class="line">	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,</span><br><span class="line">			@Nullable Exception ex) throws Exception &#123;</span><br><span class="line">		log.info(&quot;CustomizedInterceptor afterCompletion&quot;);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F; 添加interceptor</span><br><span class="line">@Configuration</span><br><span class="line">public class AppServiceConfig extends WebMvcConfigurationSupport &#123;</span><br><span class="line"></span><br><span class="line">    @Autowired</span><br><span class="line">    private CustomizedInterceptor customizedInterceptor;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    protected void addInterceptors(InterceptorRegistry registry) &#123;</span><br><span class="line">        registry.addInterceptor(customizedInterceptor).addPathPatterns(&quot;&#x2F;**&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="HandlerAdapter"><a href="#HandlerAdapter" class="headerlink" title="HandlerAdapter"></a>HandlerAdapter</h2><p><img src="/2018/05/spring/request-workflow/handleradapter-workflow.jpg" alt="workflow"></p>
-<ul>
-<li>请求流到POJO对象的转换</li>
-<li>请求的handler方法调用</li>
-<li>ExceptionHandler异常统一处理</li>
-</ul>
-<p>当使用<strong>RequestBoddy/ResponseBody</strong>注解时, Spring将使用<strong>HttpMessageConverter</strong><br>对用户请求以及Handler的处理结果进行<strong>请求流和POJO对象</strong>之间的转换.</p>
-<p>POJO对象转换的处理方式:</p>
-<ul>
-<li>HttpMessageConverter, spring框架的组件, 用于对body进行转换</li>
-<li>WebDataBinder的PropertyEditor, JDK的组件, 从字符串转换到具体的类型, 主要用于对PathVariable参数进行转换</li>
-<li>自定义<strong>HandlerMethodArgumentResolver和HandlerMethodReturnValueHandler</strong>来映射Controller中的方法参数和返回结果</li>
-</ul>
-<p>当所有的参数没解析完毕后, POJO对象列表会被传递给handler方法, 用于获取handler方法中的对应参数.</p>
-<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><p><a href="https://github.com/xiayy860612/JavaResearch/tree/master/spring/spring-request-workflow">源码</a></p>
-<p>Servlet规范:</p>
-<ul>
-<li><a href="https://jcp.org/en/jsr/detail?id=340">JSR 340: Java Servlet 3.1 Specification</a></li>
-<li><a href="https://waylau.gitbooks.io/servlet-3-1-specification/content/">中文翻译</a></li>
-</ul>
-<p>参考文章:</p>
-<ul>
-<li><a href="https://blog.csdn.net/zhaolijing2012/article/details/41596803">SpringMVC系列（一）核心：处理请求流程</a></li>
-<li><a href="http://www.cnblogs.com/cnndevelop/p/7255622.html">Spring Boot :Request请求处理流程</a></li>
-<li><a href="http://www.51gjie.com/javaweb/909.html">Spring MVC工作流程以及请求处理流程</a></li>
-<li><a href="https://blog.csdn.net/u012881904/article/details/51292211">码农小汪-Spring MVC -DispatcherServlet 详解</a></li>
-<li><a href="https://www.ibm.com/developerworks/cn/java/j-lo-servlet/index.html">Servlet 工作原理解析</a></li>
-<li><a href="https://www.cnblogs.com/ycpanda/p/3637312.html">Spring filter和拦截器(Interceptor)的区别和执行顺序</a></li>
-<li><a href="http://fanlychie.github.io/post/spring-boot-servlet-filter-listener-usage.html">Spring Boot 使用 Servlet、Filter、Listener</a></li>
-<li><a href="https://my.oschina.net/lichhao/blog/172562">SpringMVC源码剖析（五)-消息转换器HttpMessageConverter</a></li>
-<li><a href="https://leokongwq.github.io/2015/04/17/springMVCOutlines.html">Spring MVC HandlerMapping HandlerAdapter</a></li>
-<li><a href="https://blog.csdn.net/hongxingxiaonan/article/details/50282001">SpringMVC中WebDataBinder的应用及原理</a></li>
-<li><a href="https://blog.csdn.net/u010913106/article/details/50855691">说说Spring中的WebDataBinder</a></li>
-<li><a href="https://www.jianshu.com/p/ffe56d9553fd">Spring Boot：定制HTTP消息转换器</a></li>
-</ul>
-]]></content>
-      <categories>
-        <category>Spring</category>
-      </categories>
-      <tags>
-        <tag>Spring</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring Security --- Architecture</title>
-    <url>/2021/01/spring-security/architecture/</url>
-    <content><![CDATA[<h2 id="同Spring的集成"><a href="#同Spring的集成" class="headerlink" title="同Spring的集成"></a>同Spring的集成</h2><p>Spring Security的架构是完全基于标准的Servlet过滤器进行实现的,<br>所以只要是基于Java Servlet框架就可以集成它.</p>
-<p>整个Spring Security的入口为FilterChainProxy.</p>
-<p><img src="/2021/01/spring-security/architecture/spring-security-integrate-to-spring.png"></p>
-<p>在Spring中定义名为<strong>springSecurityFilterChain</strong>的FilterChainProxy的bean实例,<br>然后通过DelegatingFilterProxy获取它, 并将它插入到Servlet的过滤器链中.</p>
-<h2 id="过滤器链的设计"><a href="#过滤器链的设计" class="headerlink" title="过滤器链的设计"></a>过滤器链的设计</h2><p>FilterChainProxy的内部维护了多个过滤器链(SecurityFilterChain),<br>会按照Order注解定义的顺序, 每个SecurityFilterChain通过<strong>RequestMatcher</strong>对请求url进行匹配,<br>并使用第一个匹配的SecurityFilterChain对请求进行处理.<br>所以每个SecurityFilterChain的匹配规则和顺序.</p>
-<ul>
-<li>AutowiredWebSecurityConfigurersIgnoreParents#getWebSecurityConfigurers,<br>获取所有实现了<strong>WebSecurityConfigurer接口</strong>的SecurityFilterChain的配置</li>
-<li>WebSecurityConfiguration#setFilterChainProxySecurityConfigurer,<br>对所有的SecurityFilterChain的配置根据Order注解进行排序,<br>并加载到WebSecurity中用于生成SecurityFilterChain.</li>
-<li>WebSecurityConfiguration#springSecurityFilterChain,<br>定义了名为<strong>springSecurityFilterChain</strong>的FilterChainProxy的bean实例</li>
-</ul>
-<p><img src="/2021/01/spring-security/architecture/filter-chain-design.png"></p>
-<h2 id="怎样配置过滤器链"><a href="#怎样配置过滤器链" class="headerlink" title="怎样配置过滤器链"></a>怎样配置过滤器链</h2><p>Spring Security通过实现WebSecurityConfigurer接口来进行相关的配置,<br>并且它提供了一个默认的抽象实现WebSecurityConfigurerAdapter,<br>它主要提供了3个方面的配置:</p>
-<ul>
-<li>WebSecurityConfigurerAdapter#configure(WebSecurity), 对FilterChainProxy进行配置</li>
-<li>WebSecurityConfigurerAdapter#configure(HttpSecurity), 对SecurityFilterChain进行配置</li>
-<li>WebSecurityConfigurerAdapter#configure(AuthenticationManagerBuilder), 对认证相关进行配置</li>
-</ul>
-<h2 id="核心的过滤器介绍"><a href="#核心的过滤器介绍" class="headerlink" title="核心的过滤器介绍"></a>核心的过滤器介绍</h2><p>每个SecurityFilterChain中都包含多个过滤器(Filter),<br>下面是一般默认加载的Filter.</p>
-<p><img src="/2021/01/spring-security/architecture/chain-default-filters.png"></p>
-<h3 id="SecurityContextPersistenceFilter"><a href="#SecurityContextPersistenceFilter" class="headerlink" title="SecurityContextPersistenceFilter"></a>SecurityContextPersistenceFilter</h3><p>检查当前请求是否有相关的session存在, 如果存在, 则获取保存的SecurityContext;<br>不存在, 则创建新的SecurityContext.</p>
-<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="296px" preserveAspectRatio="none" style="width:1911px;height:296px;background:#FFFFFF;" version="1.1" viewBox="0 0 1911 296" width="1911px" zoomAndPan="magnify"><defs/><g><!--MD5=[86b30c3e0fe779331a576db045bd0856]
-class SecurityContext--><g id="elem_SecurityContext"><rect codeLine="1" fill="#F1F1F1" height="48" id="SecurityContext" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="145" x="574.5" y="241"/><ellipse cx="589.5" cy="257" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M590.4531,253.7813 L592.1719,253.7813 C592.5625,253.7813 592.75,253.75 592.875,253.6719 C593.1406,253.5156 593.2813,253.2344 593.2813,252.9375 C593.2813,252.6719 593.1719,252.4063 592.9375,252.2344 C592.7656,252.125 592.625,252.0938 592.1719,252.0938 L587.0313,252.0938 C586.5938,252.0938 586.4688,252.1094 586.3125,252.2031 C586.0625,252.3594 585.9063,252.6563 585.9063,252.9375 C585.9063,253.2188 586.0469,253.4688 586.2656,253.6406 C586.4219,253.75 586.6094,253.7813 587.0313,253.7813 L588.75,253.7813 L588.75,260.2969 L587.0313,260.2969 C586.5938,260.2969 586.4688,260.3125 586.3125,260.4219 C586.0625,260.5781 585.9063,260.8594 585.9063,261.1563 C585.9063,261.4063 586.0469,261.6719 586.2656,261.8281 C586.4219,261.9531 586.625,262 587.0313,262 L592.1719,262 C592.9219,262 593.2813,261.7188 593.2813,261.1563 C593.2813,260.875 593.1719,260.625 592.9375,260.4531 C592.7656,260.3281 592.625,260.2969 592.1719,260.2969 L590.4531,260.2969 L590.4531,253.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="113" x="603.5" y="261.8467">SecurityContext</text><line style="stroke:#181818;stroke-width:0.5;" x1="575.5" x2="718.5" y1="273" y2="273"/><line style="stroke:#181818;stroke-width:0.5;" x1="575.5" x2="718.5" y1="281" y2="281"/></g><!--MD5=[9a99cb9a334c3f5f64071e0b1ceb1139]
-class SecurityContextRepository--><g id="elem_SecurityContextRepository"><rect codeLine="3" fill="#F1F1F1" height="48" id="SecurityContextRepository" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="221" x="295.5" y="116"/><ellipse cx="310.5" cy="132" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M311.4531,128.7813 L313.1719,128.7813 C313.5625,128.7813 313.75,128.75 313.875,128.6719 C314.1406,128.5156 314.2813,128.2344 314.2813,127.9375 C314.2813,127.6719 314.1719,127.4063 313.9375,127.2344 C313.7656,127.125 313.625,127.0938 313.1719,127.0938 L308.0313,127.0938 C307.5938,127.0938 307.4688,127.1094 307.3125,127.2031 C307.0625,127.3594 306.9063,127.6563 306.9063,127.9375 C306.9063,128.2188 307.0469,128.4688 307.2656,128.6406 C307.4219,128.75 307.6094,128.7813 308.0313,128.7813 L309.75,128.7813 L309.75,135.2969 L308.0313,135.2969 C307.5938,135.2969 307.4688,135.3125 307.3125,135.4219 C307.0625,135.5781 306.9063,135.8594 306.9063,136.1563 C306.9063,136.4063 307.0469,136.6719 307.2656,136.8281 C307.4219,136.9531 307.625,137 308.0313,137 L313.1719,137 C313.9219,137 314.2813,136.7188 314.2813,136.1563 C314.2813,135.875 314.1719,135.625 313.9375,135.4531 C313.7656,135.3281 313.625,135.2969 313.1719,135.2969 L311.4531,135.2969 L311.4531,128.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="189" x="324.5" y="136.8467">SecurityContextRepository</text><line style="stroke:#181818;stroke-width:0.5;" x1="296.5" x2="515.5" y1="148" y2="148"/><line style="stroke:#181818;stroke-width:0.5;" x1="296.5" x2="515.5" y1="156" y2="156"/></g><!--MD5=[c0e9df09858c93831bec50f6f100df88]
-class HttpSessionSecurityContextRepository--><g id="elem_HttpSessionSecurityContextRepository"><rect codeLine="4" fill="#F1F1F1" height="48" id="HttpSessionSecurityContextRepository" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="317" x="222.5" y="241"/><ellipse cx="237.5" cy="257" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M239.8438,252.6719 C238.9063,252.2344 238.3125,252.0938 237.4375,252.0938 C234.8125,252.0938 232.8125,254.1719 232.8125,256.8906 L232.8125,258.0156 C232.8125,260.5938 234.9219,262.4844 237.8125,262.4844 C239.0313,262.4844 240.1875,262.1875 240.9375,261.6406 C241.5156,261.2344 241.8438,260.7813 241.8438,260.3906 C241.8438,259.9375 241.4531,259.5469 240.9844,259.5469 C240.7656,259.5469 240.5625,259.625 240.375,259.8125 C239.9219,260.2969 239.9219,260.2969 239.7344,260.3906 C239.3125,260.6563 238.625,260.7813 237.8594,260.7813 C235.8125,260.7813 234.5156,259.6875 234.5156,257.9844 L234.5156,256.8906 C234.5156,255.1094 235.7656,253.7969 237.5,253.7969 C238.0781,253.7969 238.6875,253.9531 239.1563,254.2031 C239.6406,254.4844 239.8125,254.7031 239.9063,255.1094 C239.9688,255.5156 240,255.6406 240.1406,255.7656 C240.2813,255.9063 240.5156,256.0156 240.7344,256.0156 C241,256.0156 241.2656,255.875 241.4375,255.6563 C241.5469,255.5 241.5781,255.3125 241.5781,254.8906 L241.5781,253.4688 C241.5781,253.0313 241.5625,252.9063 241.4688,252.75 C241.3125,252.4844 241.0313,252.3438 240.7344,252.3438 C240.4375,252.3438 240.2344,252.4375 240.0156,252.75 L239.8438,252.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="285" x="251.5" y="261.8467">HttpSessionSecurityContextRepository</text><line style="stroke:#181818;stroke-width:0.5;" x1="223.5" x2="538.5" y1="273" y2="273"/><line style="stroke:#181818;stroke-width:0.5;" x1="223.5" x2="538.5" y1="281" y2="281"/></g><g id="elem_GMN53185"><path d="M6,127.5 L6,152.6328 A0,0 0 0 0 6,152.6328 L260,152.6328 A0,0 0 0 0 260,152.6328 L260,145.5 L295.487,140 L260,137.5 L260,137.5 L250,127.5 L6,127.5 A0,0 0 0 0 6,127.5 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><path d="M250,127.5 L250,137.5 L260,137.5 L250,127.5 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="233" x="12" y="144.5669">通过http session关联SecurityContext</text></g><!--MD5=[434a86a25993eeeea880c43cffc3083d]
-class SecurityContextHolder--><g id="elem_SecurityContextHolder"><rect codeLine="11" fill="#F1F1F1" height="48" id="SecurityContextHolder" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="197" x="962.5" y="7"/><ellipse cx="977.5" cy="23" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M979.8438,18.6719 C978.9063,18.2344 978.3125,18.0938 977.4375,18.0938 C974.8125,18.0938 972.8125,20.1719 972.8125,22.8906 L972.8125,24.0156 C972.8125,26.5938 974.9219,28.4844 977.8125,28.4844 C979.0313,28.4844 980.1875,28.1875 980.9375,27.6406 C981.5156,27.2344 981.8438,26.7813 981.8438,26.3906 C981.8438,25.9375 981.4531,25.5469 980.9844,25.5469 C980.7656,25.5469 980.5625,25.625 980.375,25.8125 C979.9219,26.2969 979.9219,26.2969 979.7344,26.3906 C979.3125,26.6563 978.625,26.7813 977.8594,26.7813 C975.8125,26.7813 974.5156,25.6875 974.5156,23.9844 L974.5156,22.8906 C974.5156,21.1094 975.7656,19.7969 977.5,19.7969 C978.0781,19.7969 978.6875,19.9531 979.1563,20.2031 C979.6406,20.4844 979.8125,20.7031 979.9063,21.1094 C979.9688,21.5156 980,21.6406 980.1406,21.7656 C980.2813,21.9063 980.5156,22.0156 980.7344,22.0156 C981,22.0156 981.2656,21.875 981.4375,21.6563 C981.5469,21.5 981.5781,21.3125 981.5781,20.8906 L981.5781,19.4688 C981.5781,19.0313 981.5625,18.9063 981.4688,18.75 C981.3125,18.4844 981.0313,18.3438 980.7344,18.3438 C980.4375,18.3438 980.2344,18.4375 980.0156,18.75 L979.8438,18.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="165" x="991.5" y="27.8467">SecurityContextHolder</text><line style="stroke:#181818;stroke-width:0.5;" x1="963.5" x2="1158.5" y1="39" y2="39"/><line style="stroke:#181818;stroke-width:0.5;" x1="963.5" x2="1158.5" y1="47" y2="47"/></g><g id="elem_M1"><path d="M601,127.5 L601,152.6328 L855,152.6328 L855,137.5 L845,127.5 L601,127.5 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><path d="M845,127.5 L845,137.5 L855,137.5 L845,127.5 " fill="#FEFFDD" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="233" x="607" y="144.5669">对当前请求的SecurityContext进行代理</text></g><!--MD5=[be780c5fb7e3c3d02d75cf2b549e3215]
-class SecurityContextHolderStrategy--><g id="elem_SecurityContextHolderStrategy"><rect codeLine="16" fill="#F1F1F1" height="48" id="SecurityContextHolderStrategy" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="253" x="1142.5" y="116"/><ellipse cx="1157.5" cy="132" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1158.4531,128.7813 L1160.1719,128.7813 C1160.5625,128.7813 1160.75,128.75 1160.875,128.6719 C1161.1406,128.5156 1161.2813,128.2344 1161.2813,127.9375 C1161.2813,127.6719 1161.1719,127.4063 1160.9375,127.2344 C1160.7656,127.125 1160.625,127.0938 1160.1719,127.0938 L1155.0313,127.0938 C1154.5938,127.0938 1154.4688,127.1094 1154.3125,127.2031 C1154.0625,127.3594 1153.9063,127.6563 1153.9063,127.9375 C1153.9063,128.2188 1154.0469,128.4688 1154.2656,128.6406 C1154.4219,128.75 1154.6094,128.7813 1155.0313,128.7813 L1156.75,128.7813 L1156.75,135.2969 L1155.0313,135.2969 C1154.5938,135.2969 1154.4688,135.3125 1154.3125,135.4219 C1154.0625,135.5781 1153.9063,135.8594 1153.9063,136.1563 C1153.9063,136.4063 1154.0469,136.6719 1154.2656,136.8281 C1154.4219,136.9531 1154.625,137 1155.0313,137 L1160.1719,137 C1160.9219,137 1161.2813,136.7188 1161.2813,136.1563 C1161.2813,135.875 1161.1719,135.625 1160.9375,135.4531 C1160.7656,135.3281 1160.625,135.2969 1160.1719,135.2969 L1158.4531,135.2969 L1158.4531,128.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="221" x="1171.5" y="136.8467">SecurityContextHolderStrategy</text><line style="stroke:#181818;stroke-width:0.5;" x1="1143.5" x2="1394.5" y1="148" y2="148"/><line style="stroke:#181818;stroke-width:0.5;" x1="1143.5" x2="1394.5" y1="156" y2="156"/></g><g id="elem_GMN53194"><path d="M914.5,120 L914.5,160.2656 A0,0 0 0 0 914.5,160.2656 L1107.5,160.2656 A0,0 0 0 0 1107.5,160.2656 L1107.5,144 L1142.39,140 L1107.5,136 L1107.5,130 L1097.5,120 L914.5,120 A0,0 0 0 0 914.5,120 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><path d="M1097.5,120 L1097.5,130 L1107.5,130 L1097.5,120 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="172" x="920.5" y="137.0669">SecurityContext的存储策略,</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="117" x="920.5" y="152.1997">默认为ThreadLocal</text></g><!--MD5=[7a03ac347b7eb35ecfc2fc99aff3260a]
-class GlobalSecurityContextHolderStrategy--><g id="elem_GlobalSecurityContextHolderStrategy"><rect codeLine="21" fill="#F1F1F1" height="48" id="GlobalSecurityContextHolderStrategy" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="306" x="755" y="241"/><ellipse cx="770" cy="257" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M772.3438,252.6719 C771.4063,252.2344 770.8125,252.0938 769.9375,252.0938 C767.3125,252.0938 765.3125,254.1719 765.3125,256.8906 L765.3125,258.0156 C765.3125,260.5938 767.4219,262.4844 770.3125,262.4844 C771.5313,262.4844 772.6875,262.1875 773.4375,261.6406 C774.0156,261.2344 774.3438,260.7813 774.3438,260.3906 C774.3438,259.9375 773.9531,259.5469 773.4844,259.5469 C773.2656,259.5469 773.0625,259.625 772.875,259.8125 C772.4219,260.2969 772.4219,260.2969 772.2344,260.3906 C771.8125,260.6563 771.125,260.7813 770.3594,260.7813 C768.3125,260.7813 767.0156,259.6875 767.0156,257.9844 L767.0156,256.8906 C767.0156,255.1094 768.2656,253.7969 770,253.7969 C770.5781,253.7969 771.1875,253.9531 771.6563,254.2031 C772.1406,254.4844 772.3125,254.7031 772.4063,255.1094 C772.4688,255.5156 772.5,255.6406 772.6406,255.7656 C772.7813,255.9063 773.0156,256.0156 773.2344,256.0156 C773.5,256.0156 773.7656,255.875 773.9375,255.6563 C774.0469,255.5 774.0781,255.3125 774.0781,254.8906 L774.0781,253.4688 C774.0781,253.0313 774.0625,252.9063 773.9688,252.75 C773.8125,252.4844 773.5313,252.3438 773.2344,252.3438 C772.9375,252.3438 772.7344,252.4375 772.5156,252.75 L772.3438,252.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="274" x="784" y="261.8467">GlobalSecurityContextHolderStrategy</text><line style="stroke:#181818;stroke-width:0.5;" x1="756" x2="1060" y1="273" y2="273"/><line style="stroke:#181818;stroke-width:0.5;" x1="756" x2="1060" y1="281" y2="281"/></g><!--MD5=[032766fa7dbad1ac191509830aade588]
-class InheritableThreadLocalSecurityContextHolderStrategy--><g id="elem_InheritableThreadLocalSecurityContextHolderStrategy"><rect codeLine="22" fill="#F1F1F1" height="48" id="InheritableThreadLocalSecurityContextHolderStrategy" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="426" x="1096" y="241"/><ellipse cx="1111" cy="257" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1113.3438,252.6719 C1112.4063,252.2344 1111.8125,252.0938 1110.9375,252.0938 C1108.3125,252.0938 1106.3125,254.1719 1106.3125,256.8906 L1106.3125,258.0156 C1106.3125,260.5938 1108.4219,262.4844 1111.3125,262.4844 C1112.5313,262.4844 1113.6875,262.1875 1114.4375,261.6406 C1115.0156,261.2344 1115.3438,260.7813 1115.3438,260.3906 C1115.3438,259.9375 1114.9531,259.5469 1114.4844,259.5469 C1114.2656,259.5469 1114.0625,259.625 1113.875,259.8125 C1113.4219,260.2969 1113.4219,260.2969 1113.2344,260.3906 C1112.8125,260.6563 1112.125,260.7813 1111.3594,260.7813 C1109.3125,260.7813 1108.0156,259.6875 1108.0156,257.9844 L1108.0156,256.8906 C1108.0156,255.1094 1109.2656,253.7969 1111,253.7969 C1111.5781,253.7969 1112.1875,253.9531 1112.6563,254.2031 C1113.1406,254.4844 1113.3125,254.7031 1113.4063,255.1094 C1113.4688,255.5156 1113.5,255.6406 1113.6406,255.7656 C1113.7813,255.9063 1114.0156,256.0156 1114.2344,256.0156 C1114.5,256.0156 1114.7656,255.875 1114.9375,255.6563 C1115.0469,255.5 1115.0781,255.3125 1115.0781,254.8906 L1115.0781,253.4688 C1115.0781,253.0313 1115.0625,252.9063 1114.9688,252.75 C1114.8125,252.4844 1114.5313,252.3438 1114.2344,252.3438 C1113.9375,252.3438 1113.7344,252.4375 1113.5156,252.75 L1113.3438,252.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="394" x="1125" y="261.8467">InheritableThreadLocalSecurityContextHolderStrategy</text><line style="stroke:#181818;stroke-width:0.5;" x1="1097" x2="1521" y1="273" y2="273"/><line style="stroke:#181818;stroke-width:0.5;" x1="1097" x2="1521" y1="281" y2="281"/></g><!--MD5=[bcc8d52e431d3d51980519b26057fde1]
-class ThreadLocalSecurityContextHolderStrategy--><g id="elem_ThreadLocalSecurityContextHolderStrategy"><rect codeLine="23" fill="#F1F1F1" height="48" id="ThreadLocalSecurityContextHolderStrategy" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="347" x="1557.5" y="241"/><ellipse cx="1572.5" cy="257" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1574.8438,252.6719 C1573.9063,252.2344 1573.3125,252.0938 1572.4375,252.0938 C1569.8125,252.0938 1567.8125,254.1719 1567.8125,256.8906 L1567.8125,258.0156 C1567.8125,260.5938 1569.9219,262.4844 1572.8125,262.4844 C1574.0313,262.4844 1575.1875,262.1875 1575.9375,261.6406 C1576.5156,261.2344 1576.8438,260.7813 1576.8438,260.3906 C1576.8438,259.9375 1576.4531,259.5469 1575.9844,259.5469 C1575.7656,259.5469 1575.5625,259.625 1575.375,259.8125 C1574.9219,260.2969 1574.9219,260.2969 1574.7344,260.3906 C1574.3125,260.6563 1573.625,260.7813 1572.8594,260.7813 C1570.8125,260.7813 1569.5156,259.6875 1569.5156,257.9844 L1569.5156,256.8906 C1569.5156,255.1094 1570.7656,253.7969 1572.5,253.7969 C1573.0781,253.7969 1573.6875,253.9531 1574.1563,254.2031 C1574.6406,254.4844 1574.8125,254.7031 1574.9063,255.1094 C1574.9688,255.5156 1575,255.6406 1575.1406,255.7656 C1575.2813,255.9063 1575.5156,256.0156 1575.7344,256.0156 C1576,256.0156 1576.2656,255.875 1576.4375,255.6563 C1576.5469,255.5 1576.5781,255.3125 1576.5781,254.8906 L1576.5781,253.4688 C1576.5781,253.0313 1576.5625,252.9063 1576.4688,252.75 C1576.3125,252.4844 1576.0313,252.3438 1575.7344,252.3438 C1575.4375,252.3438 1575.2344,252.4375 1575.0156,252.75 L1574.8438,252.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="315" x="1586.5" y="261.8467">ThreadLocalSecurityContextHolderStrategy</text><line style="stroke:#181818;stroke-width:0.5;" x1="1558.5" x2="1903.5" y1="273" y2="273"/><line style="stroke:#181818;stroke-width:0.5;" x1="1558.5" x2="1903.5" y1="281" y2="281"/></g><!--MD5=[71892c67b0ff1cb845f0194e61e60f2e]
-reverse link SecurityContextRepository to HttpSessionSecurityContextRepository--><g id="link_SecurityContextRepository_HttpSessionSecurityContextRepository"><path d="M397.288,183.864 C393.386,203.0596 388.941,224.9301 385.681,240.9684 " fill="none" id="SecurityContextRepository-backto-HttpSessionSecurityContextRepository" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="390.454,182.34,401.298,164.135,404.174,185.129,390.454,182.34" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[37d07bce3f1802e02386dbd6d9427d34]
-link SecurityContextRepository to SecurityContext--><g id="link_SecurityContextRepository_SecurityContext"><path codeLine="9" d="M462.0185,169.59 C462.0185,169.59 551.63,215.3258 589.898,234.8565 " fill="none" id="SecurityContextRepository-SecurityContext" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="601.873,240.9684,595.6753,233.3141,597.4196,238.6953,592.0383,240.4396,601.873,240.9684" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="597.4196" x2="590.2935" y1="238.6953" y2="235.0587"/><polygon fill="#181818" points="451.33,164.135,454.8559,170.4253,462.0185,169.59,458.4926,163.2997,451.33,164.135" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="26" x="542" y="207.0669">管理</text></g><!--MD5=[ae56cfd077aaad477c47b1c82d5b65bc]
-link SecurityContextHolder to M1--><g id="link_SecurityContextHolder_M1"><path codeLine="13" d="M989.154,55.086 C919.749,77.387 817.487,110.246 763.845,127.482 " fill="none" id="SecurityContextHolder-M1" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[ebbb7c37604a30d39e2aeb3096bbea59]
-link M1 to SecurityContext--><g id="link_M1_SecurityContext"><path codeLine="14" d="M720.233,152.794 C707.656,171.892 682.5,210.0922 665.212,236.3442 " fill="none" id="M1-to-SecurityContext" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="662.295,240.7743,670.5849,235.4566,665.0444,236.5981,663.9029,231.0576,662.295,240.7743" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[128144d96a9bd0bc9663f6c4a818020c]
-reverse link SecurityContextHolderStrategy to GlobalSecurityContextHolderStrategy--><g id="link_SecurityContextHolderStrategy_GlobalSecurityContextHolderStrategy"><path d="M1182.16,170.589 C1118.74,192.196 1034,221.0707 975.597,240.9684 " fill="none" id="SecurityContextHolderStrategy-backto-GlobalSecurityContextHolderStrategy" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="1179.91,163.96,1201.1,164.135,1184.42,177.212,1179.91,163.96" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[03364836ee6754ac724b9d3313278467]
-reverse link SecurityContextHolderStrategy to InheritableThreadLocalSecurityContextHolderStrategy--><g id="link_SecurityContextHolderStrategy_InheritableThreadLocalSecurityContextHolderStrategy"><path d="M1282.74,183.249 C1289.03,202.5911 1296.24,224.7586 1301.51,240.9684 " fill="none" id="SecurityContextHolderStrategy-backto-InheritableThreadLocalSecurityContextHolderStrategy" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="1276.05,185.32,1276.52,164.135,1289.37,180.99,1276.05,185.32" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[5eac4ed8ac12a7e818699eb5d1847ef6]
-reverse link SecurityContextHolderStrategy to ThreadLocalSecurityContextHolderStrategy--><g id="link_SecurityContextHolderStrategy_ThreadLocalSecurityContextHolderStrategy"><path d="M1375.17,169.267 C1456.79,190.9957 1568.12,220.6349 1644.39,240.9408 " fill="none" id="SecurityContextHolderStrategy-backto-ThreadLocalSecurityContextHolderStrategy" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="1373.15,175.973,1355.63,164.063,1376.76,162.444,1373.15,175.973" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[c2c61623dd30c7705779b8791b568f97]
-link SecurityContextHolder to SecurityContextHolderStrategy--><g id="link_SecurityContextHolder_SecurityContextHolderStrategy"><path codeLine="24" d="M1105.88,55.086 C1140.87,73.086 1189.23,97.966 1224.2,115.956 " fill="none" id="SecurityContextHolder-SecurityContextHolderStrategy" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[95f27ee902713e6b5fbe721ec36af134]
-@startuml
-interface SecurityContext
-
-interface SecurityContextRepository
-class HttpSessionSecurityContextRepository implements SecurityContextRepository
-note left
-通过http session关联SecurityContext
-end note
-
-SecurityContextRepository *- -> SecurityContext: 管理
-
-class SecurityContextHolder
-note "对当前请求的SecurityContext进行代理" as M1
-SecurityContextHolder - - M1
-M1 - -> SecurityContext
-
-interface SecurityContextHolderStrategy
-note left
-SecurityContext的存储策略,
-默认为ThreadLocal
-end note
-class GlobalSecurityContextHolderStrategy implements SecurityContextHolderStrategy
-class InheritableThreadLocalSecurityContextHolderStrategy implements SecurityContextHolderStrategy
-class ThreadLocalSecurityContextHolderStrategy implements SecurityContextHolderStrategy
-SecurityContextHolder - - SecurityContextHolderStrategy
-@enduml
-
-PlantUML version 1.2022.2(Sat Mar 05 16:30:19 UTC 2022)
-(GPL source distribution)
-Java Runtime: Java(TM) SE Runtime Environment
-JVM: Java HotSpot(TM) 64-Bit Server VM
-Default Encoding: UTF-8
-Language: en
-Country: US
---></g></svg>
-
-<p>在请求处理的过程中, 可以通过SecurityContextHolder来获取SecurityContext,<br>SecurityContext中包含了Authentication信息.</p>
-<p><img src="/2021/01/spring-security/architecture/SecurityContext.png"></p>
-<p>SecurityContextHolder默认将SecurityContext保存在ThreadLocal中</p>
-<h3 id="LogoutFilter"><a href="#LogoutFilter" class="headerlink" title="LogoutFilter"></a>LogoutFilter</h3><p>处理用户的登出请求, 通过LogoutHandler实例对相关的数据进行清理,<br>成功清理完成后调用LogoutSuccessHandler</p>
-<h3 id="AuthenticationFilter"><a href="#AuthenticationFilter" class="headerlink" title="AuthenticationFilter"></a>AuthenticationFilter</h3><p>Authentication描述登录的认证输入信息,<br>通过校验认证输入信息, 得到认证成功后的Authentication信息.<br>认证成功后的Authentication会被保存在SecurityContext中.</p>
-<p>详情会在认证章节进行讨论.</p>
-<h3 id="SessionManagementFilter"><a href="#SessionManagementFilter" class="headerlink" title="SessionManagementFilter"></a>SessionManagementFilter</h3><p>对刚刚认证通过的用户进行session校验, 主要针对同时登录数之类的检查.</p>
-<p>详情会在Session章节进行讨论.</p>
-<h3 id="ExceptionTranslationFilter"><a href="#ExceptionTranslationFilter" class="headerlink" title="ExceptionTranslationFilter"></a>ExceptionTranslationFilter</h3><p>Spring Security中的全局异常处理,<br>用于对ExceptionTranslationFilter之后的所有Filter产生的<br>AccessDeniedException和AuthenticationException进行捕获处理.</p>
-<p><img src="/2021/01/spring-security/architecture/spring-security-excepton-handle.png"></p>
-<h3 id="FilterSecurityInterceptor"><a href="#FilterSecurityInterceptor" class="headerlink" title="FilterSecurityInterceptor"></a>FilterSecurityInterceptor</h3><p>根据<strong>在SecurityFilterChain中预先配置</strong>的鉴权信息, 对当前请求进行校验.</p>
-<p><img src="/2021/01/spring-security/architecture/filtersecurityinterceptor.png"></p>
-<p>详情会在认证章节进行讨论.</p>
-<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
-<li><a href="https://spring.io/guides/topicals/spring-security-architecture">Spring Security Architecture</a></li>
-<li><a href="https://docs.spring.io/spring-security/site/docs/current/reference/html5/">Spring Security Reference</a></li>
-</ul>
-]]></content>
-      <categories>
-        <category>Spring Security</category>
-      </categories>
-      <tags>
-        <tag>Spring</tag>
-        <tag>Spring Security</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Spring MVC RESTfull请求处理流程</title>
     <url>/2022/03/spring/spring-mvc/</url>
     <content><![CDATA[<p>开发环境</p>
@@ -976,6 +793,189 @@ Country: US
       </tags>
   </entry>
   <entry>
+    <title>Spring --- 请求处理流程</title>
+    <url>/2018/05/spring/request-workflow/</url>
+    <content><![CDATA[<ul>
+<li>了解Spring请求的处理流程</li>
+<li>了解其中的核心元素</li>
+</ul>
+<a id="more"></a>
+
+<h2 id="核心设计"><a href="#核心设计" class="headerlink" title="核心设计"></a>核心设计</h2><ul>
+<li>Filter</li>
+<li>DispatcherServlet</li>
+<li>Interceptor</li>
+<li>HandlerAdapter</li>
+</ul>
+<p>web程序启动时的初始化顺序: ServletContext -&gt; listener -&gt; filter -&gt; servlet</p>
+<p>spring bean的初始化是在listener中声明的, 可以在后面使用.</p>
+<p><img src="/2018/05/spring/request-workflow/request-workflow.jpg" alt="workflow"></p>
+<p><img src="/2018/05/spring/request-workflow/request-workflow-seq.jpg" alt="workflow-seq"></p>
+<h2 id="Filter"><a href="#Filter" class="headerlink" title="Filter"></a>Filter</h2><ul>
+<li>Servlet规范规定的，只能用于Web程序中, 由Servlet容器提供支持</li>
+<li>作用于Servlet执行前后</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">@Order(1)</span><br><span class="line">@WebFilter(filterName &#x3D; &quot;customized&quot;, urlPatterns &#x3D; &quot;&#x2F;*&quot;)</span><br><span class="line">public class CustomizedFilter implements Filter &#123;</span><br><span class="line">    @Override</span><br><span class="line">    public void init(FilterConfig filterConfig) throws ServletException &#123;</span><br><span class="line">        log.info(&quot;CustomizedFilter Init&quot;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException &#123;</span><br><span class="line">        log.info(&quot;CustomizedFilter doFilter before&quot;);</span><br><span class="line"></span><br><span class="line">        &#x2F;&#x2F; 执行Servlet</span><br><span class="line">        filterChain.doFilter(servletRequest, servletResponse);</span><br><span class="line"></span><br><span class="line">        log.info(&quot;CustomizedFilter doFilter after&quot;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public void destroy() &#123;</span><br><span class="line">        log.info(&quot;CustomizedFilter destroy&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>必须要注解<strong>ServletComponentScan</strong>才能让自定义的Filter其效果.</p>
+<p>在filterChain.doFilter调用的前后来执行操作, 作用于Servlet之前的前后.</p>
+<h2 id="DispatcherServlet"><a href="#DispatcherServlet" class="headerlink" title="DispatcherServlet"></a>DispatcherServlet</h2><p>为Spring框架定制的Servlet, 用来对请求进行处理</p>
+<ul>
+<li>获取请求处理链HandlerExecutionChain</li>
+<li>通过HandlerAdapter将请求发送给Controller进行处理</li>
+<li>对视图进行解析并将Model传递给视图View, 生成response</li>
+</ul>
+<h2 id="Interceptor"><a href="#Interceptor" class="headerlink" title="Interceptor"></a>Interceptor</h2><ul>
+<li>作用于Handler/Controller前后执行</li>
+<li>不能修改request</li>
+</ul>
+<p>在spring中优先使用Interceptor</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public class CustomizedInterceptor extends HandlerInterceptorAdapter &#123;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)</span><br><span class="line">            throws Exception &#123;</span><br><span class="line">        log.info(&quot;CustomizedInterceptor prehandle&quot;);</span><br><span class="line">        return true;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,</span><br><span class="line">			@Nullable ModelAndView modelAndView) throws Exception &#123;</span><br><span class="line">		log.info(&quot;CustomizedInterceptor postHandle&quot;);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	@Override</span><br><span class="line">	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,</span><br><span class="line">			@Nullable Exception ex) throws Exception &#123;</span><br><span class="line">		log.info(&quot;CustomizedInterceptor afterCompletion&quot;);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F; 添加interceptor</span><br><span class="line">@Configuration</span><br><span class="line">public class AppServiceConfig extends WebMvcConfigurationSupport &#123;</span><br><span class="line"></span><br><span class="line">    @Autowired</span><br><span class="line">    private CustomizedInterceptor customizedInterceptor;</span><br><span class="line"></span><br><span class="line">    @Override</span><br><span class="line">    protected void addInterceptors(InterceptorRegistry registry) &#123;</span><br><span class="line">        registry.addInterceptor(customizedInterceptor).addPathPatterns(&quot;&#x2F;**&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="HandlerAdapter"><a href="#HandlerAdapter" class="headerlink" title="HandlerAdapter"></a>HandlerAdapter</h2><p><img src="/2018/05/spring/request-workflow/handleradapter-workflow.jpg" alt="workflow"></p>
+<ul>
+<li>请求流到POJO对象的转换</li>
+<li>请求的handler方法调用</li>
+<li>ExceptionHandler异常统一处理</li>
+</ul>
+<p>当使用<strong>RequestBoddy/ResponseBody</strong>注解时, Spring将使用<strong>HttpMessageConverter</strong><br>对用户请求以及Handler的处理结果进行<strong>请求流和POJO对象</strong>之间的转换.</p>
+<p>POJO对象转换的处理方式:</p>
+<ul>
+<li>HttpMessageConverter, spring框架的组件, 用于对body进行转换</li>
+<li>WebDataBinder的PropertyEditor, JDK的组件, 从字符串转换到具体的类型, 主要用于对PathVariable参数进行转换</li>
+<li>自定义<strong>HandlerMethodArgumentResolver和HandlerMethodReturnValueHandler</strong>来映射Controller中的方法参数和返回结果</li>
+</ul>
+<p>当所有的参数没解析完毕后, POJO对象列表会被传递给handler方法, 用于获取handler方法中的对应参数.</p>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><p><a href="https://github.com/xiayy860612/JavaResearch/tree/master/spring/spring-request-workflow">源码</a></p>
+<p>Servlet规范:</p>
+<ul>
+<li><a href="https://jcp.org/en/jsr/detail?id=340">JSR 340: Java Servlet 3.1 Specification</a></li>
+<li><a href="https://waylau.gitbooks.io/servlet-3-1-specification/content/">中文翻译</a></li>
+</ul>
+<p>参考文章:</p>
+<ul>
+<li><a href="https://blog.csdn.net/zhaolijing2012/article/details/41596803">SpringMVC系列（一）核心：处理请求流程</a></li>
+<li><a href="http://www.cnblogs.com/cnndevelop/p/7255622.html">Spring Boot :Request请求处理流程</a></li>
+<li><a href="http://www.51gjie.com/javaweb/909.html">Spring MVC工作流程以及请求处理流程</a></li>
+<li><a href="https://blog.csdn.net/u012881904/article/details/51292211">码农小汪-Spring MVC -DispatcherServlet 详解</a></li>
+<li><a href="https://www.ibm.com/developerworks/cn/java/j-lo-servlet/index.html">Servlet 工作原理解析</a></li>
+<li><a href="https://www.cnblogs.com/ycpanda/p/3637312.html">Spring filter和拦截器(Interceptor)的区别和执行顺序</a></li>
+<li><a href="http://fanlychie.github.io/post/spring-boot-servlet-filter-listener-usage.html">Spring Boot 使用 Servlet、Filter、Listener</a></li>
+<li><a href="https://my.oschina.net/lichhao/blog/172562">SpringMVC源码剖析（五)-消息转换器HttpMessageConverter</a></li>
+<li><a href="https://leokongwq.github.io/2015/04/17/springMVCOutlines.html">Spring MVC HandlerMapping HandlerAdapter</a></li>
+<li><a href="https://blog.csdn.net/hongxingxiaonan/article/details/50282001">SpringMVC中WebDataBinder的应用及原理</a></li>
+<li><a href="https://blog.csdn.net/u010913106/article/details/50855691">说说Spring中的WebDataBinder</a></li>
+<li><a href="https://www.jianshu.com/p/ffe56d9553fd">Spring Boot：定制HTTP消息转换器</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>Spring</category>
+      </categories>
+      <tags>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Security --- Architecture</title>
+    <url>/2021/01/spring-security/architecture/</url>
+    <content><![CDATA[<h2 id="同Spring的集成"><a href="#同Spring的集成" class="headerlink" title="同Spring的集成"></a>同Spring的集成</h2><p>Spring Security的架构是完全基于标准的Servlet过滤器进行实现的,<br>所以只要是基于Java Servlet框架就可以集成它.</p>
+<p>整个Spring Security的入口为FilterChainProxy.</p>
+<p><img src="/2021/01/spring-security/architecture/spring-security-integrate-to-spring.png"></p>
+<p>在Spring中定义名为<strong>springSecurityFilterChain</strong>的FilterChainProxy的bean实例,<br>然后通过DelegatingFilterProxy获取它, 并将它插入到Servlet的过滤器链中.</p>
+<h2 id="过滤器链的设计"><a href="#过滤器链的设计" class="headerlink" title="过滤器链的设计"></a>过滤器链的设计</h2><p>FilterChainProxy的内部维护了多个过滤器链(SecurityFilterChain),<br>会按照Order注解定义的顺序, 每个SecurityFilterChain通过<strong>RequestMatcher</strong>对请求url进行匹配,<br>并使用第一个匹配的SecurityFilterChain对请求进行处理.<br>所以每个SecurityFilterChain的匹配规则和顺序.</p>
+<ul>
+<li>AutowiredWebSecurityConfigurersIgnoreParents#getWebSecurityConfigurers,<br>获取所有实现了<strong>WebSecurityConfigurer接口</strong>的SecurityFilterChain的配置</li>
+<li>WebSecurityConfiguration#setFilterChainProxySecurityConfigurer,<br>对所有的SecurityFilterChain的配置根据Order注解进行排序,<br>并加载到WebSecurity中用于生成SecurityFilterChain.</li>
+<li>WebSecurityConfiguration#springSecurityFilterChain,<br>定义了名为<strong>springSecurityFilterChain</strong>的FilterChainProxy的bean实例</li>
+</ul>
+<p><img src="/2021/01/spring-security/architecture/filter-chain-design.png"></p>
+<h2 id="怎样配置过滤器链"><a href="#怎样配置过滤器链" class="headerlink" title="怎样配置过滤器链"></a>怎样配置过滤器链</h2><p>Spring Security通过实现WebSecurityConfigurer接口来进行相关的配置,<br>并且它提供了一个默认的抽象实现WebSecurityConfigurerAdapter,<br>它主要提供了3个方面的配置:</p>
+<ul>
+<li>WebSecurityConfigurerAdapter#configure(WebSecurity), 对FilterChainProxy进行配置</li>
+<li>WebSecurityConfigurerAdapter#configure(HttpSecurity), 对SecurityFilterChain进行配置</li>
+<li>WebSecurityConfigurerAdapter#configure(AuthenticationManagerBuilder), 对认证相关进行配置</li>
+</ul>
+<h2 id="核心的过滤器介绍"><a href="#核心的过滤器介绍" class="headerlink" title="核心的过滤器介绍"></a>核心的过滤器介绍</h2><p>每个SecurityFilterChain中都包含多个过滤器(Filter),<br>下面是一般默认加载的Filter.</p>
+<p><img src="/2021/01/spring-security/architecture/chain-default-filters.png"></p>
+<h3 id="SecurityContextPersistenceFilter"><a href="#SecurityContextPersistenceFilter" class="headerlink" title="SecurityContextPersistenceFilter"></a>SecurityContextPersistenceFilter</h3><p>检查当前请求是否有相关的session存在, 如果存在, 则获取保存的SecurityContext;<br>不存在, 则创建新的SecurityContext.</p>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="296px" preserveAspectRatio="none" style="width:1911px;height:296px;background:#FFFFFF;" version="1.1" viewBox="0 0 1911 296" width="1911px" zoomAndPan="magnify"><defs/><g><!--MD5=[86b30c3e0fe779331a576db045bd0856]
+class SecurityContext--><g id="elem_SecurityContext"><rect codeLine="1" fill="#F1F1F1" height="48" id="SecurityContext" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="145" x="574.5" y="241"/><ellipse cx="589.5" cy="257" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M590.4531,253.7813 L592.1719,253.7813 C592.5625,253.7813 592.75,253.75 592.875,253.6719 C593.1406,253.5156 593.2813,253.2344 593.2813,252.9375 C593.2813,252.6719 593.1719,252.4063 592.9375,252.2344 C592.7656,252.125 592.625,252.0938 592.1719,252.0938 L587.0313,252.0938 C586.5938,252.0938 586.4688,252.1094 586.3125,252.2031 C586.0625,252.3594 585.9063,252.6563 585.9063,252.9375 C585.9063,253.2188 586.0469,253.4688 586.2656,253.6406 C586.4219,253.75 586.6094,253.7813 587.0313,253.7813 L588.75,253.7813 L588.75,260.2969 L587.0313,260.2969 C586.5938,260.2969 586.4688,260.3125 586.3125,260.4219 C586.0625,260.5781 585.9063,260.8594 585.9063,261.1563 C585.9063,261.4063 586.0469,261.6719 586.2656,261.8281 C586.4219,261.9531 586.625,262 587.0313,262 L592.1719,262 C592.9219,262 593.2813,261.7188 593.2813,261.1563 C593.2813,260.875 593.1719,260.625 592.9375,260.4531 C592.7656,260.3281 592.625,260.2969 592.1719,260.2969 L590.4531,260.2969 L590.4531,253.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="113" x="603.5" y="261.8467">SecurityContext</text><line style="stroke:#181818;stroke-width:0.5;" x1="575.5" x2="718.5" y1="273" y2="273"/><line style="stroke:#181818;stroke-width:0.5;" x1="575.5" x2="718.5" y1="281" y2="281"/></g><!--MD5=[9a99cb9a334c3f5f64071e0b1ceb1139]
+class SecurityContextRepository--><g id="elem_SecurityContextRepository"><rect codeLine="3" fill="#F1F1F1" height="48" id="SecurityContextRepository" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="221" x="295.5" y="116"/><ellipse cx="310.5" cy="132" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M311.4531,128.7813 L313.1719,128.7813 C313.5625,128.7813 313.75,128.75 313.875,128.6719 C314.1406,128.5156 314.2813,128.2344 314.2813,127.9375 C314.2813,127.6719 314.1719,127.4063 313.9375,127.2344 C313.7656,127.125 313.625,127.0938 313.1719,127.0938 L308.0313,127.0938 C307.5938,127.0938 307.4688,127.1094 307.3125,127.2031 C307.0625,127.3594 306.9063,127.6563 306.9063,127.9375 C306.9063,128.2188 307.0469,128.4688 307.2656,128.6406 C307.4219,128.75 307.6094,128.7813 308.0313,128.7813 L309.75,128.7813 L309.75,135.2969 L308.0313,135.2969 C307.5938,135.2969 307.4688,135.3125 307.3125,135.4219 C307.0625,135.5781 306.9063,135.8594 306.9063,136.1563 C306.9063,136.4063 307.0469,136.6719 307.2656,136.8281 C307.4219,136.9531 307.625,137 308.0313,137 L313.1719,137 C313.9219,137 314.2813,136.7188 314.2813,136.1563 C314.2813,135.875 314.1719,135.625 313.9375,135.4531 C313.7656,135.3281 313.625,135.2969 313.1719,135.2969 L311.4531,135.2969 L311.4531,128.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="189" x="324.5" y="136.8467">SecurityContextRepository</text><line style="stroke:#181818;stroke-width:0.5;" x1="296.5" x2="515.5" y1="148" y2="148"/><line style="stroke:#181818;stroke-width:0.5;" x1="296.5" x2="515.5" y1="156" y2="156"/></g><!--MD5=[c0e9df09858c93831bec50f6f100df88]
+class HttpSessionSecurityContextRepository--><g id="elem_HttpSessionSecurityContextRepository"><rect codeLine="4" fill="#F1F1F1" height="48" id="HttpSessionSecurityContextRepository" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="317" x="222.5" y="241"/><ellipse cx="237.5" cy="257" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M239.8438,252.6719 C238.9063,252.2344 238.3125,252.0938 237.4375,252.0938 C234.8125,252.0938 232.8125,254.1719 232.8125,256.8906 L232.8125,258.0156 C232.8125,260.5938 234.9219,262.4844 237.8125,262.4844 C239.0313,262.4844 240.1875,262.1875 240.9375,261.6406 C241.5156,261.2344 241.8438,260.7813 241.8438,260.3906 C241.8438,259.9375 241.4531,259.5469 240.9844,259.5469 C240.7656,259.5469 240.5625,259.625 240.375,259.8125 C239.9219,260.2969 239.9219,260.2969 239.7344,260.3906 C239.3125,260.6563 238.625,260.7813 237.8594,260.7813 C235.8125,260.7813 234.5156,259.6875 234.5156,257.9844 L234.5156,256.8906 C234.5156,255.1094 235.7656,253.7969 237.5,253.7969 C238.0781,253.7969 238.6875,253.9531 239.1563,254.2031 C239.6406,254.4844 239.8125,254.7031 239.9063,255.1094 C239.9688,255.5156 240,255.6406 240.1406,255.7656 C240.2813,255.9063 240.5156,256.0156 240.7344,256.0156 C241,256.0156 241.2656,255.875 241.4375,255.6563 C241.5469,255.5 241.5781,255.3125 241.5781,254.8906 L241.5781,253.4688 C241.5781,253.0313 241.5625,252.9063 241.4688,252.75 C241.3125,252.4844 241.0313,252.3438 240.7344,252.3438 C240.4375,252.3438 240.2344,252.4375 240.0156,252.75 L239.8438,252.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="285" x="251.5" y="261.8467">HttpSessionSecurityContextRepository</text><line style="stroke:#181818;stroke-width:0.5;" x1="223.5" x2="538.5" y1="273" y2="273"/><line style="stroke:#181818;stroke-width:0.5;" x1="223.5" x2="538.5" y1="281" y2="281"/></g><g id="elem_GMN31424"><path d="M6,127.5 L6,152.6328 A0,0 0 0 0 6,152.6328 L260,152.6328 A0,0 0 0 0 260,152.6328 L260,145.5 L295.487,140 L260,137.5 L260,137.5 L250,127.5 L6,127.5 A0,0 0 0 0 6,127.5 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><path d="M250,127.5 L250,137.5 L260,137.5 L250,127.5 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="233" x="12" y="144.5669">通过http session关联SecurityContext</text></g><!--MD5=[434a86a25993eeeea880c43cffc3083d]
+class SecurityContextHolder--><g id="elem_SecurityContextHolder"><rect codeLine="11" fill="#F1F1F1" height="48" id="SecurityContextHolder" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="197" x="962.5" y="7"/><ellipse cx="977.5" cy="23" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M979.8438,18.6719 C978.9063,18.2344 978.3125,18.0938 977.4375,18.0938 C974.8125,18.0938 972.8125,20.1719 972.8125,22.8906 L972.8125,24.0156 C972.8125,26.5938 974.9219,28.4844 977.8125,28.4844 C979.0313,28.4844 980.1875,28.1875 980.9375,27.6406 C981.5156,27.2344 981.8438,26.7813 981.8438,26.3906 C981.8438,25.9375 981.4531,25.5469 980.9844,25.5469 C980.7656,25.5469 980.5625,25.625 980.375,25.8125 C979.9219,26.2969 979.9219,26.2969 979.7344,26.3906 C979.3125,26.6563 978.625,26.7813 977.8594,26.7813 C975.8125,26.7813 974.5156,25.6875 974.5156,23.9844 L974.5156,22.8906 C974.5156,21.1094 975.7656,19.7969 977.5,19.7969 C978.0781,19.7969 978.6875,19.9531 979.1563,20.2031 C979.6406,20.4844 979.8125,20.7031 979.9063,21.1094 C979.9688,21.5156 980,21.6406 980.1406,21.7656 C980.2813,21.9063 980.5156,22.0156 980.7344,22.0156 C981,22.0156 981.2656,21.875 981.4375,21.6563 C981.5469,21.5 981.5781,21.3125 981.5781,20.8906 L981.5781,19.4688 C981.5781,19.0313 981.5625,18.9063 981.4688,18.75 C981.3125,18.4844 981.0313,18.3438 980.7344,18.3438 C980.4375,18.3438 980.2344,18.4375 980.0156,18.75 L979.8438,18.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="165" x="991.5" y="27.8467">SecurityContextHolder</text><line style="stroke:#181818;stroke-width:0.5;" x1="963.5" x2="1158.5" y1="39" y2="39"/><line style="stroke:#181818;stroke-width:0.5;" x1="963.5" x2="1158.5" y1="47" y2="47"/></g><g id="elem_M1"><path d="M601,127.5 L601,152.6328 L855,152.6328 L855,137.5 L845,127.5 L601,127.5 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><path d="M845,127.5 L845,137.5 L855,137.5 L845,127.5 " fill="#FEFFDD" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="233" x="607" y="144.5669">对当前请求的SecurityContext进行代理</text></g><!--MD5=[be780c5fb7e3c3d02d75cf2b549e3215]
+class SecurityContextHolderStrategy--><g id="elem_SecurityContextHolderStrategy"><rect codeLine="16" fill="#F1F1F1" height="48" id="SecurityContextHolderStrategy" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="253" x="1142.5" y="116"/><ellipse cx="1157.5" cy="132" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1158.4531,128.7813 L1160.1719,128.7813 C1160.5625,128.7813 1160.75,128.75 1160.875,128.6719 C1161.1406,128.5156 1161.2813,128.2344 1161.2813,127.9375 C1161.2813,127.6719 1161.1719,127.4063 1160.9375,127.2344 C1160.7656,127.125 1160.625,127.0938 1160.1719,127.0938 L1155.0313,127.0938 C1154.5938,127.0938 1154.4688,127.1094 1154.3125,127.2031 C1154.0625,127.3594 1153.9063,127.6563 1153.9063,127.9375 C1153.9063,128.2188 1154.0469,128.4688 1154.2656,128.6406 C1154.4219,128.75 1154.6094,128.7813 1155.0313,128.7813 L1156.75,128.7813 L1156.75,135.2969 L1155.0313,135.2969 C1154.5938,135.2969 1154.4688,135.3125 1154.3125,135.4219 C1154.0625,135.5781 1153.9063,135.8594 1153.9063,136.1563 C1153.9063,136.4063 1154.0469,136.6719 1154.2656,136.8281 C1154.4219,136.9531 1154.625,137 1155.0313,137 L1160.1719,137 C1160.9219,137 1161.2813,136.7188 1161.2813,136.1563 C1161.2813,135.875 1161.1719,135.625 1160.9375,135.4531 C1160.7656,135.3281 1160.625,135.2969 1160.1719,135.2969 L1158.4531,135.2969 L1158.4531,128.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="221" x="1171.5" y="136.8467">SecurityContextHolderStrategy</text><line style="stroke:#181818;stroke-width:0.5;" x1="1143.5" x2="1394.5" y1="148" y2="148"/><line style="stroke:#181818;stroke-width:0.5;" x1="1143.5" x2="1394.5" y1="156" y2="156"/></g><g id="elem_GMN31433"><path d="M914.5,120 L914.5,160.2656 A0,0 0 0 0 914.5,160.2656 L1107.5,160.2656 A0,0 0 0 0 1107.5,160.2656 L1107.5,144 L1142.39,140 L1107.5,136 L1107.5,130 L1097.5,120 L914.5,120 A0,0 0 0 0 914.5,120 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><path d="M1097.5,120 L1097.5,130 L1107.5,130 L1097.5,120 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="172" x="920.5" y="137.0669">SecurityContext的存储策略,</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="117" x="920.5" y="152.1997">默认为ThreadLocal</text></g><!--MD5=[7a03ac347b7eb35ecfc2fc99aff3260a]
+class GlobalSecurityContextHolderStrategy--><g id="elem_GlobalSecurityContextHolderStrategy"><rect codeLine="21" fill="#F1F1F1" height="48" id="GlobalSecurityContextHolderStrategy" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="306" x="755" y="241"/><ellipse cx="770" cy="257" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M772.3438,252.6719 C771.4063,252.2344 770.8125,252.0938 769.9375,252.0938 C767.3125,252.0938 765.3125,254.1719 765.3125,256.8906 L765.3125,258.0156 C765.3125,260.5938 767.4219,262.4844 770.3125,262.4844 C771.5313,262.4844 772.6875,262.1875 773.4375,261.6406 C774.0156,261.2344 774.3438,260.7813 774.3438,260.3906 C774.3438,259.9375 773.9531,259.5469 773.4844,259.5469 C773.2656,259.5469 773.0625,259.625 772.875,259.8125 C772.4219,260.2969 772.4219,260.2969 772.2344,260.3906 C771.8125,260.6563 771.125,260.7813 770.3594,260.7813 C768.3125,260.7813 767.0156,259.6875 767.0156,257.9844 L767.0156,256.8906 C767.0156,255.1094 768.2656,253.7969 770,253.7969 C770.5781,253.7969 771.1875,253.9531 771.6563,254.2031 C772.1406,254.4844 772.3125,254.7031 772.4063,255.1094 C772.4688,255.5156 772.5,255.6406 772.6406,255.7656 C772.7813,255.9063 773.0156,256.0156 773.2344,256.0156 C773.5,256.0156 773.7656,255.875 773.9375,255.6563 C774.0469,255.5 774.0781,255.3125 774.0781,254.8906 L774.0781,253.4688 C774.0781,253.0313 774.0625,252.9063 773.9688,252.75 C773.8125,252.4844 773.5313,252.3438 773.2344,252.3438 C772.9375,252.3438 772.7344,252.4375 772.5156,252.75 L772.3438,252.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="274" x="784" y="261.8467">GlobalSecurityContextHolderStrategy</text><line style="stroke:#181818;stroke-width:0.5;" x1="756" x2="1060" y1="273" y2="273"/><line style="stroke:#181818;stroke-width:0.5;" x1="756" x2="1060" y1="281" y2="281"/></g><!--MD5=[032766fa7dbad1ac191509830aade588]
+class InheritableThreadLocalSecurityContextHolderStrategy--><g id="elem_InheritableThreadLocalSecurityContextHolderStrategy"><rect codeLine="22" fill="#F1F1F1" height="48" id="InheritableThreadLocalSecurityContextHolderStrategy" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="426" x="1096" y="241"/><ellipse cx="1111" cy="257" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1113.3438,252.6719 C1112.4063,252.2344 1111.8125,252.0938 1110.9375,252.0938 C1108.3125,252.0938 1106.3125,254.1719 1106.3125,256.8906 L1106.3125,258.0156 C1106.3125,260.5938 1108.4219,262.4844 1111.3125,262.4844 C1112.5313,262.4844 1113.6875,262.1875 1114.4375,261.6406 C1115.0156,261.2344 1115.3438,260.7813 1115.3438,260.3906 C1115.3438,259.9375 1114.9531,259.5469 1114.4844,259.5469 C1114.2656,259.5469 1114.0625,259.625 1113.875,259.8125 C1113.4219,260.2969 1113.4219,260.2969 1113.2344,260.3906 C1112.8125,260.6563 1112.125,260.7813 1111.3594,260.7813 C1109.3125,260.7813 1108.0156,259.6875 1108.0156,257.9844 L1108.0156,256.8906 C1108.0156,255.1094 1109.2656,253.7969 1111,253.7969 C1111.5781,253.7969 1112.1875,253.9531 1112.6563,254.2031 C1113.1406,254.4844 1113.3125,254.7031 1113.4063,255.1094 C1113.4688,255.5156 1113.5,255.6406 1113.6406,255.7656 C1113.7813,255.9063 1114.0156,256.0156 1114.2344,256.0156 C1114.5,256.0156 1114.7656,255.875 1114.9375,255.6563 C1115.0469,255.5 1115.0781,255.3125 1115.0781,254.8906 L1115.0781,253.4688 C1115.0781,253.0313 1115.0625,252.9063 1114.9688,252.75 C1114.8125,252.4844 1114.5313,252.3438 1114.2344,252.3438 C1113.9375,252.3438 1113.7344,252.4375 1113.5156,252.75 L1113.3438,252.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="394" x="1125" y="261.8467">InheritableThreadLocalSecurityContextHolderStrategy</text><line style="stroke:#181818;stroke-width:0.5;" x1="1097" x2="1521" y1="273" y2="273"/><line style="stroke:#181818;stroke-width:0.5;" x1="1097" x2="1521" y1="281" y2="281"/></g><!--MD5=[bcc8d52e431d3d51980519b26057fde1]
+class ThreadLocalSecurityContextHolderStrategy--><g id="elem_ThreadLocalSecurityContextHolderStrategy"><rect codeLine="23" fill="#F1F1F1" height="48" id="ThreadLocalSecurityContextHolderStrategy" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="347" x="1557.5" y="241"/><ellipse cx="1572.5" cy="257" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M1574.8438,252.6719 C1573.9063,252.2344 1573.3125,252.0938 1572.4375,252.0938 C1569.8125,252.0938 1567.8125,254.1719 1567.8125,256.8906 L1567.8125,258.0156 C1567.8125,260.5938 1569.9219,262.4844 1572.8125,262.4844 C1574.0313,262.4844 1575.1875,262.1875 1575.9375,261.6406 C1576.5156,261.2344 1576.8438,260.7813 1576.8438,260.3906 C1576.8438,259.9375 1576.4531,259.5469 1575.9844,259.5469 C1575.7656,259.5469 1575.5625,259.625 1575.375,259.8125 C1574.9219,260.2969 1574.9219,260.2969 1574.7344,260.3906 C1574.3125,260.6563 1573.625,260.7813 1572.8594,260.7813 C1570.8125,260.7813 1569.5156,259.6875 1569.5156,257.9844 L1569.5156,256.8906 C1569.5156,255.1094 1570.7656,253.7969 1572.5,253.7969 C1573.0781,253.7969 1573.6875,253.9531 1574.1563,254.2031 C1574.6406,254.4844 1574.8125,254.7031 1574.9063,255.1094 C1574.9688,255.5156 1575,255.6406 1575.1406,255.7656 C1575.2813,255.9063 1575.5156,256.0156 1575.7344,256.0156 C1576,256.0156 1576.2656,255.875 1576.4375,255.6563 C1576.5469,255.5 1576.5781,255.3125 1576.5781,254.8906 L1576.5781,253.4688 C1576.5781,253.0313 1576.5625,252.9063 1576.4688,252.75 C1576.3125,252.4844 1576.0313,252.3438 1575.7344,252.3438 C1575.4375,252.3438 1575.2344,252.4375 1575.0156,252.75 L1574.8438,252.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="315" x="1586.5" y="261.8467">ThreadLocalSecurityContextHolderStrategy</text><line style="stroke:#181818;stroke-width:0.5;" x1="1558.5" x2="1903.5" y1="273" y2="273"/><line style="stroke:#181818;stroke-width:0.5;" x1="1558.5" x2="1903.5" y1="281" y2="281"/></g><!--MD5=[71892c67b0ff1cb845f0194e61e60f2e]
+reverse link SecurityContextRepository to HttpSessionSecurityContextRepository--><g id="link_SecurityContextRepository_HttpSessionSecurityContextRepository"><path d="M397.288,183.864 C393.386,203.0596 388.941,224.9301 385.681,240.9684 " fill="none" id="SecurityContextRepository-backto-HttpSessionSecurityContextRepository" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="390.454,182.34,401.298,164.135,404.174,185.129,390.454,182.34" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[37d07bce3f1802e02386dbd6d9427d34]
+link SecurityContextRepository to SecurityContext--><g id="link_SecurityContextRepository_SecurityContext"><path codeLine="9" d="M462.0185,169.59 C462.0185,169.59 551.63,215.3258 589.898,234.8565 " fill="none" id="SecurityContextRepository-SecurityContext" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="601.873,240.9684,595.6753,233.3141,597.4196,238.6953,592.0383,240.4396,601.873,240.9684" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;" x1="597.4196" x2="590.2935" y1="238.6953" y2="235.0587"/><polygon fill="#181818" points="451.33,164.135,454.8559,170.4253,462.0185,169.59,458.4926,163.2997,451.33,164.135" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="26" x="542" y="207.0669">管理</text></g><!--MD5=[ae56cfd077aaad477c47b1c82d5b65bc]
+link SecurityContextHolder to M1--><g id="link_SecurityContextHolder_M1"><path codeLine="13" d="M989.154,55.086 C919.749,77.387 817.487,110.246 763.845,127.482 " fill="none" id="SecurityContextHolder-M1" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[ebbb7c37604a30d39e2aeb3096bbea59]
+link M1 to SecurityContext--><g id="link_M1_SecurityContext"><path codeLine="14" d="M720.233,152.794 C707.656,171.892 682.5,210.0922 665.212,236.3442 " fill="none" id="M1-to-SecurityContext" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="662.295,240.7743,670.5849,235.4566,665.0444,236.5981,663.9029,231.0576,662.295,240.7743" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[128144d96a9bd0bc9663f6c4a818020c]
+reverse link SecurityContextHolderStrategy to GlobalSecurityContextHolderStrategy--><g id="link_SecurityContextHolderStrategy_GlobalSecurityContextHolderStrategy"><path d="M1182.16,170.589 C1118.74,192.196 1034,221.0707 975.597,240.9684 " fill="none" id="SecurityContextHolderStrategy-backto-GlobalSecurityContextHolderStrategy" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="1179.91,163.96,1201.1,164.135,1184.42,177.212,1179.91,163.96" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[03364836ee6754ac724b9d3313278467]
+reverse link SecurityContextHolderStrategy to InheritableThreadLocalSecurityContextHolderStrategy--><g id="link_SecurityContextHolderStrategy_InheritableThreadLocalSecurityContextHolderStrategy"><path d="M1282.74,183.249 C1289.03,202.5911 1296.24,224.7586 1301.51,240.9684 " fill="none" id="SecurityContextHolderStrategy-backto-InheritableThreadLocalSecurityContextHolderStrategy" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="1276.05,185.32,1276.52,164.135,1289.37,180.99,1276.05,185.32" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[5eac4ed8ac12a7e818699eb5d1847ef6]
+reverse link SecurityContextHolderStrategy to ThreadLocalSecurityContextHolderStrategy--><g id="link_SecurityContextHolderStrategy_ThreadLocalSecurityContextHolderStrategy"><path d="M1375.17,169.267 C1456.79,190.9957 1568.12,220.6349 1644.39,240.9408 " fill="none" id="SecurityContextHolderStrategy-backto-ThreadLocalSecurityContextHolderStrategy" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="none" points="1373.15,175.973,1355.63,164.063,1376.76,162.444,1373.15,175.973" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[c2c61623dd30c7705779b8791b568f97]
+link SecurityContextHolder to SecurityContextHolderStrategy--><g id="link_SecurityContextHolder_SecurityContextHolderStrategy"><path codeLine="24" d="M1105.88,55.086 C1140.87,73.086 1189.23,97.966 1224.2,115.956 " fill="none" id="SecurityContextHolder-SecurityContextHolderStrategy" style="stroke:#181818;stroke-width:1.0;"/></g><!--MD5=[95f27ee902713e6b5fbe721ec36af134]
+@startuml
+interface SecurityContext
+
+interface SecurityContextRepository
+class HttpSessionSecurityContextRepository implements SecurityContextRepository
+note left
+通过http session关联SecurityContext
+end note
+
+SecurityContextRepository *- -> SecurityContext: 管理
+
+class SecurityContextHolder
+note "对当前请求的SecurityContext进行代理" as M1
+SecurityContextHolder - - M1
+M1 - -> SecurityContext
+
+interface SecurityContextHolderStrategy
+note left
+SecurityContext的存储策略,
+默认为ThreadLocal
+end note
+class GlobalSecurityContextHolderStrategy implements SecurityContextHolderStrategy
+class InheritableThreadLocalSecurityContextHolderStrategy implements SecurityContextHolderStrategy
+class ThreadLocalSecurityContextHolderStrategy implements SecurityContextHolderStrategy
+SecurityContextHolder - - SecurityContextHolderStrategy
+@enduml
+
+PlantUML version 1.2022.2(Sat Mar 05 16:30:19 UTC 2022)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
+
+<p>在请求处理的过程中, 可以通过SecurityContextHolder来获取SecurityContext,<br>SecurityContext中包含了Authentication信息.</p>
+<p><img src="/2021/01/spring-security/architecture/SecurityContext.png"></p>
+<p>SecurityContextHolder默认将SecurityContext保存在ThreadLocal中</p>
+<h3 id="LogoutFilter"><a href="#LogoutFilter" class="headerlink" title="LogoutFilter"></a>LogoutFilter</h3><p>处理用户的登出请求, 通过LogoutHandler实例对相关的数据进行清理,<br>成功清理完成后调用LogoutSuccessHandler</p>
+<h3 id="AuthenticationFilter"><a href="#AuthenticationFilter" class="headerlink" title="AuthenticationFilter"></a>AuthenticationFilter</h3><p>Authentication描述登录的认证输入信息,<br>通过校验认证输入信息, 得到认证成功后的Authentication信息.<br>认证成功后的Authentication会被保存在SecurityContext中.</p>
+<p>详情会在认证章节进行讨论.</p>
+<h3 id="SessionManagementFilter"><a href="#SessionManagementFilter" class="headerlink" title="SessionManagementFilter"></a>SessionManagementFilter</h3><p>对刚刚认证通过的用户进行session校验, 主要针对同时登录数之类的检查.</p>
+<p>详情会在Session章节进行讨论.</p>
+<h3 id="ExceptionTranslationFilter"><a href="#ExceptionTranslationFilter" class="headerlink" title="ExceptionTranslationFilter"></a>ExceptionTranslationFilter</h3><p>Spring Security中的全局异常处理,<br>用于对ExceptionTranslationFilter之后的所有Filter产生的<br>AccessDeniedException和AuthenticationException进行捕获处理.</p>
+<p><img src="/2021/01/spring-security/architecture/spring-security-excepton-handle.png"></p>
+<h3 id="FilterSecurityInterceptor"><a href="#FilterSecurityInterceptor" class="headerlink" title="FilterSecurityInterceptor"></a>FilterSecurityInterceptor</h3><p>根据<strong>在SecurityFilterChain中预先配置</strong>的鉴权信息, 对当前请求进行校验.</p>
+<p><img src="/2021/01/spring-security/architecture/filtersecurityinterceptor.png"></p>
+<p>详情会在认证章节进行讨论.</p>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a href="https://spring.io/guides/topicals/spring-security-architecture">Spring Security Architecture</a></li>
+<li><a href="https://docs.spring.io/spring-security/site/docs/current/reference/html5/">Spring Security Reference</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>Spring Security</category>
+      </categories>
+      <tags>
+        <tag>Spring</tag>
+        <tag>Spring Security</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Spring Security --- Authentication</title>
     <url>/2021/02/spring-security/authentication/</url>
     <content><![CDATA[<h2 id="Authentication设计"><a href="#Authentication设计" class="headerlink" title="Authentication设计"></a>Authentication设计</h2><h3 id="认证处理流程"><a href="#认证处理流程" class="headerlink" title="认证处理流程"></a>认证处理流程</h3><p><img src="/2021/02/spring-security/authentication/abstractauthenticationprocessingfilter.png" alt="认证处理流程"></p>
@@ -1253,7 +1253,7 @@ Country: US
 
 <h2 id="Architecture-Core"><a href="#Architecture-Core" class="headerlink" title="Architecture Core"></a>Architecture Core</h2><h3 id="Pre-Invocation-Handling"><a href="#Pre-Invocation-Handling" class="headerlink" title="Pre-Invocation Handling"></a>Pre-Invocation Handling</h3><?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="382px" preserveAspectRatio="none" style="width:1944px;height:382px;background:#FFFFFF;" version="1.1" viewBox="0 0 1944 382" width="1944px" zoomAndPan="magnify"><defs/><g><!--MD5=[afcb8546e38fd0254ebcf2f9ef9d8004]
 cluster Authorization--><g id="cluster_Authorization"><path d="M8.5,118 L122.5,118 A3.75,3.75 0 0 1 125,120.5 L132,140.2969 L1437.5,140.2969 A2.5,2.5 0 0 1 1440,142.7969 L1440,372.5 A2.5,2.5 0 0 1 1437.5,375 L8.5,375 A2.5,2.5 0 0 1 6,372.5 L6,120.5 A2.5,2.5 0 0 1 8.5,118 " style="stroke:#000000;stroke-width:1.5;fill:none;"/><line style="stroke:#000000;stroke-width:1.5;fill:none;" x1="6" x2="132" y1="140.2969" y2="140.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="113" x="10" y="132.9951">Authorization</text></g><!--MD5=[e3e144d13ada41eaab5375ff982d1fe4]
-class GrantedAuthority--><g id="elem_GrantedAuthority"><rect codeLine="3" fill="#F1F1F1" height="64.2969" id="GrantedAuthority" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="168" x="22" y="169.5"/><ellipse cx="42.85" cy="185.5" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M43.8031,182.2813 L45.5219,182.2813 C45.9125,182.2813 46.1,182.25 46.225,182.1719 C46.4906,182.0156 46.6313,181.7344 46.6313,181.4375 C46.6313,181.1719 46.5219,180.9063 46.2875,180.7344 C46.1156,180.625 45.975,180.5938 45.5219,180.5938 L40.3813,180.5938 C39.9438,180.5938 39.8188,180.6094 39.6625,180.7031 C39.4125,180.8594 39.2563,181.1563 39.2563,181.4375 C39.2563,181.7188 39.3969,181.9688 39.6156,182.1406 C39.7719,182.25 39.9594,182.2813 40.3813,182.2813 L42.1,182.2813 L42.1,188.7969 L40.3813,188.7969 C39.9438,188.7969 39.8188,188.8125 39.6625,188.9219 C39.4125,189.0781 39.2563,189.3594 39.2563,189.6563 C39.2563,189.9063 39.3969,190.1719 39.6156,190.3281 C39.7719,190.4531 39.975,190.5 40.3813,190.5 L45.5219,190.5 C46.2719,190.5 46.6313,190.2188 46.6313,189.6563 C46.6313,189.375 46.5219,189.125 46.2875,188.9531 C46.1156,188.8281 45.975,188.7969 45.5219,188.7969 L43.8031,188.7969 L43.8031,182.2813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="123" x="58.15" y="190.3467">GrantedAuthority</text><line style="stroke:#181818;stroke-width:0.5;" x1="23" x2="189" y1="201.5" y2="201.5"/><line style="stroke:#181818;stroke-width:0.5;" x1="23" x2="189" y1="209.5" y2="209.5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="156" x="28" y="226.4951">String getAuthority();</text></g><g id="elem_GMN53460"><path d="M225,181.5 L225,197.5 L190.404,201.5 L225,205.5 L225,221.7656 A0,0 0 0 0 225,221.7656 L417,221.7656 A0,0 0 0 0 417,221.7656 L417,191.5 L407,181.5 L225,181.5 A0,0 0 0 0 225,181.5 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><path d="M407,181.5 L407,191.5 L417,191.5 L407,181.5 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="167" x="231" y="198.5669">如果无法用String进行描述，</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="74" x="231" y="213.6997">则需返回null</text></g><!--MD5=[adc8916905935507507a42e1b12cf196]
+class GrantedAuthority--><g id="elem_GrantedAuthority"><rect codeLine="3" fill="#F1F1F1" height="64.2969" id="GrantedAuthority" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="168" x="22" y="169.5"/><ellipse cx="42.85" cy="185.5" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M43.8031,182.2813 L45.5219,182.2813 C45.9125,182.2813 46.1,182.25 46.225,182.1719 C46.4906,182.0156 46.6313,181.7344 46.6313,181.4375 C46.6313,181.1719 46.5219,180.9063 46.2875,180.7344 C46.1156,180.625 45.975,180.5938 45.5219,180.5938 L40.3813,180.5938 C39.9438,180.5938 39.8188,180.6094 39.6625,180.7031 C39.4125,180.8594 39.2563,181.1563 39.2563,181.4375 C39.2563,181.7188 39.3969,181.9688 39.6156,182.1406 C39.7719,182.25 39.9594,182.2813 40.3813,182.2813 L42.1,182.2813 L42.1,188.7969 L40.3813,188.7969 C39.9438,188.7969 39.8188,188.8125 39.6625,188.9219 C39.4125,189.0781 39.2563,189.3594 39.2563,189.6563 C39.2563,189.9063 39.3969,190.1719 39.6156,190.3281 C39.7719,190.4531 39.975,190.5 40.3813,190.5 L45.5219,190.5 C46.2719,190.5 46.6313,190.2188 46.6313,189.6563 C46.6313,189.375 46.5219,189.125 46.2875,188.9531 C46.1156,188.8281 45.975,188.7969 45.5219,188.7969 L43.8031,188.7969 L43.8031,182.2813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="123" x="58.15" y="190.3467">GrantedAuthority</text><line style="stroke:#181818;stroke-width:0.5;" x1="23" x2="189" y1="201.5" y2="201.5"/><line style="stroke:#181818;stroke-width:0.5;" x1="23" x2="189" y1="209.5" y2="209.5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="156" x="28" y="226.4951">String getAuthority();</text></g><g id="elem_GMN54424"><path d="M225,181.5 L225,197.5 L190.404,201.5 L225,205.5 L225,221.7656 A0,0 0 0 0 225,221.7656 L417,221.7656 A0,0 0 0 0 417,221.7656 L417,191.5 L407,181.5 L225,181.5 A0,0 0 0 0 225,181.5 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><path d="M407,181.5 L407,191.5 L417,191.5 L407,181.5 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="167" x="231" y="198.5669">如果无法用String进行描述，</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="74" x="231" y="213.6997">则需返回null</text></g><!--MD5=[adc8916905935507507a42e1b12cf196]
 class SimpleGrantedAuthority--><g id="elem_SimpleGrantedAuthority"><rect codeLine="11" fill="#F1F1F1" height="48" id="SimpleGrantedAuthority" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="209" x="22.5" y="311"/><ellipse cx="37.5" cy="327" fill="#ADD1B2" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M39.8438,322.6719 C38.9063,322.2344 38.3125,322.0938 37.4375,322.0938 C34.8125,322.0938 32.8125,324.1719 32.8125,326.8906 L32.8125,328.0156 C32.8125,330.5938 34.9219,332.4844 37.8125,332.4844 C39.0313,332.4844 40.1875,332.1875 40.9375,331.6406 C41.5156,331.2344 41.8438,330.7813 41.8438,330.3906 C41.8438,329.9375 41.4531,329.5469 40.9844,329.5469 C40.7656,329.5469 40.5625,329.625 40.375,329.8125 C39.9219,330.2969 39.9219,330.2969 39.7344,330.3906 C39.3125,330.6563 38.625,330.7813 37.8594,330.7813 C35.8125,330.7813 34.5156,329.6875 34.5156,327.9844 L34.5156,326.8906 C34.5156,325.1094 35.7656,323.7969 37.5,323.7969 C38.0781,323.7969 38.6875,323.9531 39.1563,324.2031 C39.6406,324.4844 39.8125,324.7031 39.9063,325.1094 C39.9688,325.5156 40,325.6406 40.1406,325.7656 C40.2813,325.9063 40.5156,326.0156 40.7344,326.0156 C41,326.0156 41.2656,325.875 41.4375,325.6563 C41.5469,325.5 41.5781,325.3125 41.5781,324.8906 L41.5781,323.4688 C41.5781,323.0313 41.5625,322.9063 41.4688,322.75 C41.3125,322.4844 41.0313,322.3438 40.7344,322.3438 C40.4375,322.3438 40.2344,322.4375 40.0156,322.75 L39.8438,322.6719 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="177" x="51.5" y="331.8467">SimpleGrantedAuthority</text><line style="stroke:#181818;stroke-width:0.5;" x1="23.5" x2="230.5" y1="343" y2="343"/><line style="stroke:#181818;stroke-width:0.5;" x1="23.5" x2="230.5" y1="351" y2="351"/></g><!--MD5=[3c3699dab3baf2740bb151cfc90fd64b]
 class AccessDecisionManager--><g id="elem_AccessDecisionManager"><rect codeLine="13" fill="#F1F1F1" height="96.8906" id="AccessDecisionManager" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="971" x="452.5" y="153"/><ellipse cx="847.25" cy="169" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M848.2031,165.7813 L849.9219,165.7813 C850.3125,165.7813 850.5,165.75 850.625,165.6719 C850.8906,165.5156 851.0313,165.2344 851.0313,164.9375 C851.0313,164.6719 850.9219,164.4063 850.6875,164.2344 C850.5156,164.125 850.375,164.0938 849.9219,164.0938 L844.7813,164.0938 C844.3438,164.0938 844.2188,164.1094 844.0625,164.2031 C843.8125,164.3594 843.6563,164.6563 843.6563,164.9375 C843.6563,165.2188 843.7969,165.4688 844.0156,165.6406 C844.1719,165.75 844.3594,165.7813 844.7813,165.7813 L846.5,165.7813 L846.5,172.2969 L844.7813,172.2969 C844.3438,172.2969 844.2188,172.3125 844.0625,172.4219 C843.8125,172.5781 843.6563,172.8594 843.6563,173.1563 C843.6563,173.4063 843.7969,173.6719 844.0156,173.8281 C844.1719,173.9531 844.375,174 844.7813,174 L849.9219,174 C850.6719,174 851.0313,173.7188 851.0313,173.1563 C851.0313,172.875 850.9219,172.625 850.6875,172.4531 C850.5156,172.3281 850.375,172.2969 849.9219,172.2969 L848.2031,172.2969 L848.2031,165.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="173" x="867.75" y="173.8467">AccessDecisionManager</text><line style="stroke:#181818;stroke-width:0.5;" x1="453.5" x2="1422.5" y1="185" y2="185"/><line style="stroke:#181818;stroke-width:0.5;" x1="453.5" x2="1422.5" y1="193" y2="193"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="959" x="458.5" y="209.9951">void decide(Authentication authentication, Object secureObject, Collection&lt;ConfigAttribute&gt; attrs) throws AccessDeniedException;</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="326" x="458.5" y="226.292">boolean supports(ConfigAttribute attribute);</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="217" x="458.5" y="242.5889">boolean supports(Class clazz);</text></g><!--MD5=[a139e992f8a77546bf37c14edd197f06]
 class Authentication--><g id="elem_Authentication"><rect codeLine="21" fill="#F1F1F1" height="48" id="Authentication" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="136" x="474" y="7"/><ellipse cx="489" cy="23" fill="#B4A7E5" rx="11" ry="11" style="stroke:#181818;stroke-width:1.0;"/><path d="M489.9531,19.7813 L491.6719,19.7813 C492.0625,19.7813 492.25,19.75 492.375,19.6719 C492.6406,19.5156 492.7813,19.2344 492.7813,18.9375 C492.7813,18.6719 492.6719,18.4063 492.4375,18.2344 C492.2656,18.125 492.125,18.0938 491.6719,18.0938 L486.5313,18.0938 C486.0938,18.0938 485.9688,18.1094 485.8125,18.2031 C485.5625,18.3594 485.4063,18.6563 485.4063,18.9375 C485.4063,19.2188 485.5469,19.4688 485.7656,19.6406 C485.9219,19.75 486.1094,19.7813 486.5313,19.7813 L488.25,19.7813 L488.25,26.2969 L486.5313,26.2969 C486.0938,26.2969 485.9688,26.3125 485.8125,26.4219 C485.5625,26.5781 485.4063,26.8594 485.4063,27.1563 C485.4063,27.4063 485.5469,27.6719 485.7656,27.8281 C485.9219,27.9531 486.125,28 486.5313,28 L491.6719,28 C492.4219,28 492.7813,27.7188 492.7813,27.1563 C492.7813,26.875 492.6719,26.625 492.4375,26.4531 C492.2656,26.3281 492.125,26.2969 491.6719,26.2969 L489.9531,26.2969 L489.9531,19.7813 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="14" font-style="italic" lengthAdjust="spacing" textLength="104" x="503" y="27.8467">Authentication</text><line style="stroke:#181818;stroke-width:0.5;" x1="475" x2="609" y1="39" y2="39"/><line style="stroke:#181818;stroke-width:0.5;" x1="475" x2="609" y1="47" y2="47"/></g><!--MD5=[e01a0f457b12b1c790c8336f0238b7d5]
@@ -1354,6 +1354,129 @@ Country: US
         <tag>Spring</tag>
         <tag>Spring Security</tag>
         <tag>鉴权</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>观&lt;&lt;你好, 李焕英&gt;&gt;后感</title>
+    <url>/2021/02/%E7%94%9F%E6%B4%BB/hi-mum/</url>
+    <content><![CDATA[<p>故不积跬步, 无以至千里; 不积小流, 无以成江海.<br>骐骥一跃, 不能十步; 驽马十驾, 功在不舍.<br>锲而舍之, 朽木不折; 锲而不舍, 金石可镂.</p>
+<p>— 荀子-劝学</p>
+<a id="more"></a>
+
+<p>因为交通事故导致母亲李焕英遭受严重的伤害, 这让身为女儿的贾晓玲深陷自责,<br>觉得自己在其成长的过程中未曾真正让母亲高兴过.<br>当李焕英和贾晓玲都回到了过去,<br>母亲的默默付出为女儿抚平了心中的自责;<br>女儿的努力弥补, 也同样让母亲释怀了曾经的虚荣,<br>只留下”只要健康快乐就好, 而不一定要有多好的成就”的安慰;<br>最后贾晓玲发现了母亲的默默付出时, 她感动了,<br>泪水犹如圣光一般驱散了一切黑暗的自责, 使她得到了自我救赎,<br>并带着母亲遗留的安慰, 健康快乐的生活下去.</p>
+<p>这让我们无不感叹母爱的无私和伟大,<br>但是我们更加需要一种健康的母爱以及给予孩子真正健康快乐的成长.</p>
+<p>回顾贾晓玲的成长, 母亲的默默付出她从未真切的感受到,<br>更多的是不断的失败和打击, 以及从未给母亲涨涨脸的失落,<br>所以为了去满足母亲的虚荣, 才在最后不得不选择了做假证和撒谎.<br>我想这绝不是一种健康快乐的生活, 也不会是一个母亲真正想要的.</p>
+<p>李焕英最后说的”只要健康快乐就好, 而不一定要有多好的成就”,<br>“健康快乐”是她对贾晓玲未来的希望,<br>而”不一定要有多好的成就”却是自己无可奈何的妥协吧.<br>又有哪个母亲会真的希望孩子一事无成呢, 只不过是弥留之际的妥协罢了.<br>因为以后她的孩子将要一个人学着去”健康快乐”的长大, 她又怎会有更多的渴求呢.</p>
+<p>与其等待着让孩子一个人学着去”健康快乐”的长大, 为什么不陪着她一起呢.<br>家庭本就应该是互相陪伴, 互相尊重, 共同前进的,<br>而不仅仅只是为了某人而深陷泥沼, 不可自拔.</p>
+<p>在她们长大以前, 让我们陪着她们去学会如何健康快乐的长大;<br>在长大之后, 尊重她们的选择, 她们有自己的努力和期待.<br>让她们即使在最艰难的孤独时, 手中也有着一盏温暖的烛光照亮前程,<br>而不是孤零零的面对冰冷的黑暗.</p>
+<p>很多时候, 我们往往渴求太多, 却又做的太少, 亦或是做的不那么正确.</p>
+<p>时下一些人打着所谓”健康快乐”的幌子而无所作为, 或许只是为了逃避责任.<br>健康不是有一口饭吃, 快乐也绝不等同于放任自流.<br>也许他们所谓的健康快乐, 不是指孩子的健康快乐, 而是自己的”健康快乐”吧.</p>
+<p>努力的去生活, 于平凡中向往着不平凡, 于悲伤中寻找快乐,<br>这是我所理解的健康快乐, 它是一种乐观积极的生活态度, 而努力去获得成就这更是一种期待;<br>生活态度需要潜移默化的培养, 成就需要合理的规划,<br>彼此本不矛盾, 只是它们都需要漫长时间的付出才能结果.</p>
+<p>孩子的成长, 又何尝不是我们的又一次成长,<br>它需要我们去回顾过去, 亦需要去学习新时代的新事物,<br>然后源源不断的传输给孩子, 同时又从她们身上学会新的东西.<br>放下我们年龄的架子, 尊重彼此, 成就彼此.<br>我们很清楚年长者未必优于年少者, 三字经记述: 昔仲尼, 师项橐.<br>项橐不过7岁的稚童, 而古之圣贤尚能如此,<br>作为平凡的我们又何来的如此尊贵, 不过虚荣作祟罢了.</p>
+<p>我承认李焕英的默默付出的母爱的伟大, 却不太赞同这种没有回应的默默付出的行为.<br>没有回应的默默付出是可怕的, 因为不知付出之艰辛, 又如何能知道收获之珍贵呢,<br>不知收获之珍贵, 又怎会珍惜来之不易的收获呢.<br>只会让人形成惰性, 觉得这一切都不过是理所当然的.</p>
+<p>我们感慨美丽的事物, 光辉的岁月, 却更需要明白这一切背后的来之不易.</p>
+]]></content>
+      <categories>
+        <category>生活</category>
+      </categories>
+      <tags>
+        <tag>观后感</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Airflow介绍</title>
+    <url>/2020/08/big-data/airflow/airflow-introduction/</url>
+    <content><![CDATA[<p>– 了解airflow的基本元素<br>– 了解airflow的并发控制</p>
+<a id="more"></a>
+
+<p>基本元素:</p>
+<ul>
+<li>DAG, 有向无环图, 用于描述整个处理流程中的任务之间的关系和依赖,<br>只有定义在globals(全局作用域)的dag才会被airflow扫描到并加载</li>
+<li>Operator, 用于定义任务要去做什么, 尽量保证每个Operator可以独立运行, 没有依赖;<br>如果不能避免依赖, 则通过xcom/其他存储方式进行参数传递</li>
+<li>default_args, 可被所有相关dag的Operator共享使用</li>
+<li>DAG Run, DAG被触发后生成的具体执行的DAG实例<ul>
+<li>创建时间</li>
+<li>execution_date, DAG Run的开始执行时间,<br>在同一个DAG中必须保持唯一, 即在同一个DAG在同一时间只能有一个DAG Run.</li>
+</ul>
+</li>
+<li>Task, Operator实例</li>
+<li>Task instance, 每次触发Task都会生成一个task instance, 用于记录这次的task运行.<br>它拥有很多的状态, 状态的完成生命周期:<ol>
+<li>no status</li>
+<li>scheduled, scheduler已计划将要运行对应的task instance</li>
+<li>queued, dispatch将task instance发送对相关的队列上进行排队</li>
+<li>Running, worker拿到队列中的任务进行执行</li>
+<li>success/failed, 任务完成后</li>
+</ol>
+</li>
+</ul>
+<p><img src="https://airflow.apache.org/docs/stable/_images/task_lifecycle_diagram.png"></p>
+<h2 id="DAG调度"><a href="#DAG调度" class="headerlink" title="DAG调度"></a>DAG调度</h2><p>通过在DAG中定义<strong>schedule_interval</strong>来指定如何调度,<br>schedule_interval最好指定为预定义的值或者cron表达式</p>
+<p>DAG的调度分为:</p>
+<ul>
+<li>手动触发, 即schedule_interval=None</li>
+<li>周期性调度<ul>
+<li>backfill and catchup, 根据start_date到现在为止, 来创建过去的Dag Run并依次执行.<br>针对以时间为周期的数据集非常有用.</li>
+<li>非回填追赶模式, 即DAG的catchup=False, 不会为过去创建Dag Run.</li>
+</ul>
+</li>
+</ul>
+<p>关于周期性调度的DAG, 它的创建时间为<code>上一个DAG Run的创建时间+schedule_interval</code>,<br>而第一个DAG Run的创建时间为min(start_date),<br>务必将start_date设置为一个指定的值</p>
+<h2 id="并发控制"><a href="#并发控制" class="headerlink" title="并发控制"></a>并发控制</h2><ul>
+<li>Pools, 用于控制task instance的并行数,<br>它由以下元素组成, 默认任务会被分配到default_pool池中, 它的工作槽有128个位置:<ul>
+<li>工作槽, 用于指定可同时运行的任务数</li>
+<li>等待队列, 当工作槽满时, 任务就进入等待队列, 直到工作槽有空闲位置</li>
+<li>priority_weight, 用于定义队列中的任务优先级以及在工作槽有空闲位置时优先执行哪些任务,<br>默认任务本身的priority_weight为1, 但在评估任务优先级时会计算任务本身及其下游任务的总和.</li>
+</ul>
+</li>
+<li>Celery Queue, 只在使用CeleryExecutor时才有用, 用于给任务贴标签,<br>这样工作节点就可以通过标签来筛选要执行哪些任务. 默认任务会被分配到default_queue.</li>
+</ul>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="395px" preserveAspectRatio="none" style="width:864px;height:395px;background:#FFFFFF;" version="1.1" viewBox="0 0 864 395" width="864px" zoomAndPan="magnify"><defs/><g><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="23" x2="23" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="169.5" x2="169.5" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="286" x2="286" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="542" x2="542" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="665" x2="665" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="760" x2="760" y1="67.2969" y2="317.2266"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="21" x="9.5" y="63.9951">Db</text><path d="M5,15 C5,5 23,5 23,5 C23,5 41,5 41,15 L41,41 C41,51 23,51 23,51 C23,51 5,51 5,41 L5,15 " fill="#E2E2F0" style="stroke:#181818;stroke-width:1.5;"/><path d="M5,15 C5,25 23,25 23,25 C23,25 41,25 41,15 " fill="none" style="stroke:#181818;stroke-width:1.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="21" x="9.5" y="329.2217">Db</text><path d="M5,342.5234 C5,332.5234 23,332.5234 23,332.5234 C23,332.5234 41,332.5234 41,342.5234 L41,368.5234 C41,378.5234 23,378.5234 23,378.5234 C23,378.5234 5,378.5234 5,368.5234 L5,342.5234 " fill="#E2E2F0" style="stroke:#181818;stroke-width:1.5;"/><path d="M5,342.5234 C5,352.5234 23,352.5234 23,352.5234 C23,352.5234 41,352.5234 41,342.5234 " fill="none" style="stroke:#181818;stroke-width:1.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="69" x="132.5" y="63.9951">scheduler</text><ellipse cx="170" cy="35" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="166,23,172,18,170,23,172,28,166,23" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="69" x="132.5" y="329.2217">scheduler</text><ellipse cx="170" cy="348.5234" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="166,336.5234,172,331.5234,170,336.5234,172,341.5234,166,336.5234" style="stroke:#181818;stroke-width:1.0;"/><path d="M237,41 L335,41 C340,41 340,54.1484 340,54.1484 C340,54.1484 340,67.2969 335,67.2969 L237,67.2969 C232,67.2969 232,54.1484 232,54.1484 C232,54.1484 232,41 237,41 " fill="#E2E2F0" style="stroke:#181818;stroke-width:0.5;"/><path d="M335,41 C330,41 330,54.1484 330,54.1484 C330,67.2969 335,67.2969 335,67.2969 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88" x="237" y="58.9951">AirflowPools</text><path d="M237,316.2266 L335,316.2266 C340,316.2266 340,329.375 340,329.375 C340,329.375 340,342.5234 335,342.5234 L237,342.5234 C232,342.5234 232,329.375 232,329.375 C232,329.375 232,316.2266 237,316.2266 " fill="#E2E2F0" style="stroke:#181818;stroke-width:0.5;"/><path d="M335,316.2266 C330,316.2266 330,329.375 330,329.375 C330,342.5234 335,342.5234 335,342.5234 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88" x="237" y="334.2217">AirflowPools</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="110" x="484" y="63.9951">CeleryExecutor</text><ellipse cx="542" cy="35" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="538,23,544,18,542,23,544,28,538,23" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="110" x="484" y="329.2217">CeleryExecutor</text><ellipse cx="542" cy="348.5234" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="538,336.5234,544,331.5234,542,336.5234,544,341.5234,538,336.5234" style="stroke:#181818;stroke-width:1.0;"/><path d="M615,41 L716,41 C721,41 721,54.1484 721,54.1484 C721,54.1484 721,67.2969 716,67.2969 L615,67.2969 C610,67.2969 610,54.1484 610,54.1484 C610,54.1484 610,41 615,41 " fill="#E2E2F0" style="stroke:#181818;stroke-width:0.5;"/><path d="M716,41 C711,41 711,54.1484 711,54.1484 C711,67.2969 716,67.2969 716,67.2969 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="91" x="615" y="58.9951">CeleryQueue</text><path d="M615,316.2266 L716,316.2266 C721,316.2266 721,329.375 721,329.375 C721,329.375 721,342.5234 716,342.5234 L615,342.5234 C610,342.5234 610,329.375 610,329.375 C610,329.375 610,316.2266 615,316.2266 " fill="#E2E2F0" style="stroke:#181818;stroke-width:0.5;"/><path d="M716,316.2266 C711,316.2266 711,329.375 711,329.375 C711,342.5234 716,342.5234 716,342.5234 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="91" x="615" y="334.2217">CeleryQueue</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="53" x="731" y="63.9951">Worker</text><ellipse cx="760.5" cy="35" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="756.5,23,762.5,18,760.5,23,762.5,28,756.5,23" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="53" x="731" y="329.2217">Worker</text><ellipse cx="760.5" cy="348.5234" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="756.5,336.5234,762.5,331.5234,760.5,336.5234,762.5,341.5234,756.5,336.5234" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="34,94.4297,24,98.4297,34,102.4297,30,98.4297" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="28" x2="169" y1="98.4297" y2="98.4297"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="123" x="40" y="93.3638">get no status tasks</text><polygon fill="#181818" points="274,123.5625,284,127.5625,274,131.5625,278,127.5625" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="170" x2="280" y1="127.5625" y2="127.5625"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="92" x="177" y="122.4966">dispatch tasks</text><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="286" x2="328" y1="156.6953" y2="156.6953"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="328" x2="328" y1="156.6953" y2="169.6953"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="287" x2="328" y1="169.6953" y2="169.6953"/><polygon fill="#181818" points="297,165.6953,287,169.6953,297,173.6953,293,169.6953" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="242" x="293" y="151.6294">dispatch tasks by task priority_weight</text><polygon fill="#181818" points="297,194.8281,287,198.8281,297,202.8281,293,198.8281" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="291" x2="541" y1="198.8281" y2="198.8281"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="189" x="303" y="193.7622">get high priority_weight tasks</text><polygon fill="#181818" points="653.5,223.9609,663.5,227.9609,653.5,231.9609,657.5,227.9609" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="542" x2="659.5" y1="227.9609" y2="227.9609"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="92" x="549" y="222.895">dispatch tasks</text><polygon fill="#181818" points="676.5,253.0938,666.5,257.0938,676.5,261.0938,672.5,257.0938" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="670.5" x2="759.5" y1="257.0938" y2="257.0938"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="59" x="682.5" y="252.0278">get tasks</text><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="760.5" x2="802.5" y1="286.2266" y2="286.2266"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="802.5" x2="802.5" y1="286.2266" y2="299.2266"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="761.5" x2="802.5" y1="299.2266" y2="299.2266"/><polygon fill="#181818" points="771.5,295.2266,761.5,299.2266,771.5,303.2266,767.5,299.2266" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="90" x="767.5" y="281.1606">execute tasks</text><!--MD5=[1a3b1baee63d328adbba741b95ce7308]
+@startuml
+database Db
+control scheduler
+queue AirflowPools
+control CeleryExecutor
+queue CeleryQueue
+control Worker
+
+scheduler - -> Db: get no status tasks
+scheduler - -> AirflowPools: dispatch tasks
+AirflowPools - -> AirflowPools: dispatch tasks by task priority_weight
+CeleryExecutor - -> AirflowPools: get high priority_weight tasks
+CeleryExecutor - -> CeleryQueue: dispatch tasks
+Worker - -> CeleryQueue: get tasks
+Worker - -> Worker: execute tasks
+@enduml
+
+PlantUML version 1.2022.2(Sat Mar 05 16:30:19 UTC 2022)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
+
+<p>DAG的多维度并发控制的参数:</p>
+<ul>
+<li>airflow.cfg的parallelism, airflow集群中同时运行的最大task instance数量</li>
+<li>airflow.cfg的dag_concurrency, 一个dag run中可以同时执行的task instance数量, 超出则排队;<br>可以通过DAG的concurrency进行自定义</li>
+<li>max_active_runs, 针对同一个DAG, 同一时间最多运行几个DAG Run,<br>如果没有设置, 默认读取airflow.cfg的max_active_runs_per_dag</li>
+<li>task_concurrency, 控制Operator对应的task同一时间最多运行几个task instance</li>
+<li>pool, 指定task的Pools, 通过Pools来控制某类task的最大并发数</li>
+</ul>
+<p>调度的并发控制参数:</p>
+<ul>
+<li>airflow.cfg的max_threads, 调度线程数, 可以设置为CPU数-1</li>
+<li>airflow.cfg的scheduler_heartbeat_sec, scheduler扫描task并将task调度起来的频率</li>
+</ul>
+]]></content>
+      <categories>
+        <category>ETL</category>
+      </categories>
+      <tags>
+        <tag>ETL</tag>
+        <tag>数据处理</tag>
       </tags>
   </entry>
   <entry>
@@ -1484,129 +1607,6 @@ Country: US
       </categories>
       <tags>
         <tag>Test</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>观&lt;&lt;你好, 李焕英&gt;&gt;后感</title>
-    <url>/2021/02/%E7%94%9F%E6%B4%BB/hi-mum/</url>
-    <content><![CDATA[<p>故不积跬步, 无以至千里; 不积小流, 无以成江海.<br>骐骥一跃, 不能十步; 驽马十驾, 功在不舍.<br>锲而舍之, 朽木不折; 锲而不舍, 金石可镂.</p>
-<p>— 荀子-劝学</p>
-<a id="more"></a>
-
-<p>因为交通事故导致母亲李焕英遭受严重的伤害, 这让身为女儿的贾晓玲深陷自责,<br>觉得自己在其成长的过程中未曾真正让母亲高兴过.<br>当李焕英和贾晓玲都回到了过去,<br>母亲的默默付出为女儿抚平了心中的自责;<br>女儿的努力弥补, 也同样让母亲释怀了曾经的虚荣,<br>只留下”只要健康快乐就好, 而不一定要有多好的成就”的安慰;<br>最后贾晓玲发现了母亲的默默付出时, 她感动了,<br>泪水犹如圣光一般驱散了一切黑暗的自责, 使她得到了自我救赎,<br>并带着母亲遗留的安慰, 健康快乐的生活下去.</p>
-<p>这让我们无不感叹母爱的无私和伟大,<br>但是我们更加需要一种健康的母爱以及给予孩子真正健康快乐的成长.</p>
-<p>回顾贾晓玲的成长, 母亲的默默付出她从未真切的感受到,<br>更多的是不断的失败和打击, 以及从未给母亲涨涨脸的失落,<br>所以为了去满足母亲的虚荣, 才在最后不得不选择了做假证和撒谎.<br>我想这绝不是一种健康快乐的生活, 也不会是一个母亲真正想要的.</p>
-<p>李焕英最后说的”只要健康快乐就好, 而不一定要有多好的成就”,<br>“健康快乐”是她对贾晓玲未来的希望,<br>而”不一定要有多好的成就”却是自己无可奈何的妥协吧.<br>又有哪个母亲会真的希望孩子一事无成呢, 只不过是弥留之际的妥协罢了.<br>因为以后她的孩子将要一个人学着去”健康快乐”的长大, 她又怎会有更多的渴求呢.</p>
-<p>与其等待着让孩子一个人学着去”健康快乐”的长大, 为什么不陪着她一起呢.<br>家庭本就应该是互相陪伴, 互相尊重, 共同前进的,<br>而不仅仅只是为了某人而深陷泥沼, 不可自拔.</p>
-<p>在她们长大以前, 让我们陪着她们去学会如何健康快乐的长大;<br>在长大之后, 尊重她们的选择, 她们有自己的努力和期待.<br>让她们即使在最艰难的孤独时, 手中也有着一盏温暖的烛光照亮前程,<br>而不是孤零零的面对冰冷的黑暗.</p>
-<p>很多时候, 我们往往渴求太多, 却又做的太少, 亦或是做的不那么正确.</p>
-<p>时下一些人打着所谓”健康快乐”的幌子而无所作为, 或许只是为了逃避责任.<br>健康不是有一口饭吃, 快乐也绝不等同于放任自流.<br>也许他们所谓的健康快乐, 不是指孩子的健康快乐, 而是自己的”健康快乐”吧.</p>
-<p>努力的去生活, 于平凡中向往着不平凡, 于悲伤中寻找快乐,<br>这是我所理解的健康快乐, 它是一种乐观积极的生活态度, 而努力去获得成就这更是一种期待;<br>生活态度需要潜移默化的培养, 成就需要合理的规划,<br>彼此本不矛盾, 只是它们都需要漫长时间的付出才能结果.</p>
-<p>孩子的成长, 又何尝不是我们的又一次成长,<br>它需要我们去回顾过去, 亦需要去学习新时代的新事物,<br>然后源源不断的传输给孩子, 同时又从她们身上学会新的东西.<br>放下我们年龄的架子, 尊重彼此, 成就彼此.<br>我们很清楚年长者未必优于年少者, 三字经记述: 昔仲尼, 师项橐.<br>项橐不过7岁的稚童, 而古之圣贤尚能如此,<br>作为平凡的我们又何来的如此尊贵, 不过虚荣作祟罢了.</p>
-<p>我承认李焕英的默默付出的母爱的伟大, 却不太赞同这种没有回应的默默付出的行为.<br>没有回应的默默付出是可怕的, 因为不知付出之艰辛, 又如何能知道收获之珍贵呢,<br>不知收获之珍贵, 又怎会珍惜来之不易的收获呢.<br>只会让人形成惰性, 觉得这一切都不过是理所当然的.</p>
-<p>我们感慨美丽的事物, 光辉的岁月, 却更需要明白这一切背后的来之不易.</p>
-]]></content>
-      <categories>
-        <category>生活</category>
-      </categories>
-      <tags>
-        <tag>观后感</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Airflow介绍</title>
-    <url>/2020/08/big-data/airflow/airflow-introduction/</url>
-    <content><![CDATA[<p>– 了解airflow的基本元素<br>– 了解airflow的并发控制</p>
-<a id="more"></a>
-
-<p>基本元素:</p>
-<ul>
-<li>DAG, 有向无环图, 用于描述整个处理流程中的任务之间的关系和依赖,<br>只有定义在globals(全局作用域)的dag才会被airflow扫描到并加载</li>
-<li>Operator, 用于定义任务要去做什么, 尽量保证每个Operator可以独立运行, 没有依赖;<br>如果不能避免依赖, 则通过xcom/其他存储方式进行参数传递</li>
-<li>default_args, 可被所有相关dag的Operator共享使用</li>
-<li>DAG Run, DAG被触发后生成的具体执行的DAG实例<ul>
-<li>创建时间</li>
-<li>execution_date, DAG Run的开始执行时间,<br>在同一个DAG中必须保持唯一, 即在同一个DAG在同一时间只能有一个DAG Run.</li>
-</ul>
-</li>
-<li>Task, Operator实例</li>
-<li>Task instance, 每次触发Task都会生成一个task instance, 用于记录这次的task运行.<br>它拥有很多的状态, 状态的完成生命周期:<ol>
-<li>no status</li>
-<li>scheduled, scheduler已计划将要运行对应的task instance</li>
-<li>queued, dispatch将task instance发送对相关的队列上进行排队</li>
-<li>Running, worker拿到队列中的任务进行执行</li>
-<li>success/failed, 任务完成后</li>
-</ol>
-</li>
-</ul>
-<p><img src="https://airflow.apache.org/docs/stable/_images/task_lifecycle_diagram.png"></p>
-<h2 id="DAG调度"><a href="#DAG调度" class="headerlink" title="DAG调度"></a>DAG调度</h2><p>通过在DAG中定义<strong>schedule_interval</strong>来指定如何调度,<br>schedule_interval最好指定为预定义的值或者cron表达式</p>
-<p>DAG的调度分为:</p>
-<ul>
-<li>手动触发, 即schedule_interval=None</li>
-<li>周期性调度<ul>
-<li>backfill and catchup, 根据start_date到现在为止, 来创建过去的Dag Run并依次执行.<br>针对以时间为周期的数据集非常有用.</li>
-<li>非回填追赶模式, 即DAG的catchup=False, 不会为过去创建Dag Run.</li>
-</ul>
-</li>
-</ul>
-<p>关于周期性调度的DAG, 它的创建时间为<code>上一个DAG Run的创建时间+schedule_interval</code>,<br>而第一个DAG Run的创建时间为min(start_date),<br>务必将start_date设置为一个指定的值</p>
-<h2 id="并发控制"><a href="#并发控制" class="headerlink" title="并发控制"></a>并发控制</h2><ul>
-<li>Pools, 用于控制task instance的并行数,<br>它由以下元素组成, 默认任务会被分配到default_pool池中, 它的工作槽有128个位置:<ul>
-<li>工作槽, 用于指定可同时运行的任务数</li>
-<li>等待队列, 当工作槽满时, 任务就进入等待队列, 直到工作槽有空闲位置</li>
-<li>priority_weight, 用于定义队列中的任务优先级以及在工作槽有空闲位置时优先执行哪些任务,<br>默认任务本身的priority_weight为1, 但在评估任务优先级时会计算任务本身及其下游任务的总和.</li>
-</ul>
-</li>
-<li>Celery Queue, 只在使用CeleryExecutor时才有用, 用于给任务贴标签,<br>这样工作节点就可以通过标签来筛选要执行哪些任务. 默认任务会被分配到default_queue.</li>
-</ul>
-<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="395px" preserveAspectRatio="none" style="width:864px;height:395px;background:#FFFFFF;" version="1.1" viewBox="0 0 864 395" width="864px" zoomAndPan="magnify"><defs/><g><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="23" x2="23" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="169.5" x2="169.5" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="286" x2="286" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="542" x2="542" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="665" x2="665" y1="67.2969" y2="317.2266"/><line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="760" x2="760" y1="67.2969" y2="317.2266"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="21" x="9.5" y="63.9951">Db</text><path d="M5,15 C5,5 23,5 23,5 C23,5 41,5 41,15 L41,41 C41,51 23,51 23,51 C23,51 5,51 5,41 L5,15 " fill="#E2E2F0" style="stroke:#181818;stroke-width:1.5;"/><path d="M5,15 C5,25 23,25 23,25 C23,25 41,25 41,15 " fill="none" style="stroke:#181818;stroke-width:1.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="21" x="9.5" y="329.2217">Db</text><path d="M5,342.5234 C5,332.5234 23,332.5234 23,332.5234 C23,332.5234 41,332.5234 41,342.5234 L41,368.5234 C41,378.5234 23,378.5234 23,378.5234 C23,378.5234 5,378.5234 5,368.5234 L5,342.5234 " fill="#E2E2F0" style="stroke:#181818;stroke-width:1.5;"/><path d="M5,342.5234 C5,352.5234 23,352.5234 23,352.5234 C23,352.5234 41,352.5234 41,342.5234 " fill="none" style="stroke:#181818;stroke-width:1.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="69" x="132.5" y="63.9951">scheduler</text><ellipse cx="170" cy="35" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="166,23,172,18,170,23,172,28,166,23" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="69" x="132.5" y="329.2217">scheduler</text><ellipse cx="170" cy="348.5234" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="166,336.5234,172,331.5234,170,336.5234,172,341.5234,166,336.5234" style="stroke:#181818;stroke-width:1.0;"/><path d="M237,41 L335,41 C340,41 340,54.1484 340,54.1484 C340,54.1484 340,67.2969 335,67.2969 L237,67.2969 C232,67.2969 232,54.1484 232,54.1484 C232,54.1484 232,41 237,41 " fill="#E2E2F0" style="stroke:#181818;stroke-width:0.5;"/><path d="M335,41 C330,41 330,54.1484 330,54.1484 C330,67.2969 335,67.2969 335,67.2969 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88" x="237" y="58.9951">AirflowPools</text><path d="M237,316.2266 L335,316.2266 C340,316.2266 340,329.375 340,329.375 C340,329.375 340,342.5234 335,342.5234 L237,342.5234 C232,342.5234 232,329.375 232,329.375 C232,329.375 232,316.2266 237,316.2266 " fill="#E2E2F0" style="stroke:#181818;stroke-width:0.5;"/><path d="M335,316.2266 C330,316.2266 330,329.375 330,329.375 C330,342.5234 335,342.5234 335,342.5234 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="88" x="237" y="334.2217">AirflowPools</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="110" x="484" y="63.9951">CeleryExecutor</text><ellipse cx="542" cy="35" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="538,23,544,18,542,23,544,28,538,23" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="110" x="484" y="329.2217">CeleryExecutor</text><ellipse cx="542" cy="348.5234" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="538,336.5234,544,331.5234,542,336.5234,544,341.5234,538,336.5234" style="stroke:#181818;stroke-width:1.0;"/><path d="M615,41 L716,41 C721,41 721,54.1484 721,54.1484 C721,54.1484 721,67.2969 716,67.2969 L615,67.2969 C610,67.2969 610,54.1484 610,54.1484 C610,54.1484 610,41 615,41 " fill="#E2E2F0" style="stroke:#181818;stroke-width:0.5;"/><path d="M716,41 C711,41 711,54.1484 711,54.1484 C711,67.2969 716,67.2969 716,67.2969 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="91" x="615" y="58.9951">CeleryQueue</text><path d="M615,316.2266 L716,316.2266 C721,316.2266 721,329.375 721,329.375 C721,329.375 721,342.5234 716,342.5234 L615,342.5234 C610,342.5234 610,329.375 610,329.375 C610,329.375 610,316.2266 615,316.2266 " fill="#E2E2F0" style="stroke:#181818;stroke-width:0.5;"/><path d="M716,316.2266 C711,316.2266 711,329.375 711,329.375 C711,342.5234 716,342.5234 716,342.5234 " fill="none" style="stroke:#181818;stroke-width:0.5;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="91" x="615" y="334.2217">CeleryQueue</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="53" x="731" y="63.9951">Worker</text><ellipse cx="760.5" cy="35" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="756.5,23,762.5,18,760.5,23,762.5,28,756.5,23" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="53" x="731" y="329.2217">Worker</text><ellipse cx="760.5" cy="348.5234" fill="#E2E2F0" rx="12" ry="12" style="stroke:#181818;stroke-width:0.5;"/><polygon fill="#181818" points="756.5,336.5234,762.5,331.5234,760.5,336.5234,762.5,341.5234,756.5,336.5234" style="stroke:#181818;stroke-width:1.0;"/><polygon fill="#181818" points="34,94.4297,24,98.4297,34,102.4297,30,98.4297" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="28" x2="169" y1="98.4297" y2="98.4297"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="123" x="40" y="93.3638">get no status tasks</text><polygon fill="#181818" points="274,123.5625,284,127.5625,274,131.5625,278,127.5625" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="170" x2="280" y1="127.5625" y2="127.5625"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="92" x="177" y="122.4966">dispatch tasks</text><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="286" x2="328" y1="156.6953" y2="156.6953"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="328" x2="328" y1="156.6953" y2="169.6953"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="287" x2="328" y1="169.6953" y2="169.6953"/><polygon fill="#181818" points="297,165.6953,287,169.6953,297,173.6953,293,169.6953" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="242" x="293" y="151.6294">dispatch tasks by task priority_weight</text><polygon fill="#181818" points="297,194.8281,287,198.8281,297,202.8281,293,198.8281" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="291" x2="541" y1="198.8281" y2="198.8281"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="189" x="303" y="193.7622">get high priority_weight tasks</text><polygon fill="#181818" points="653.5,223.9609,663.5,227.9609,653.5,231.9609,657.5,227.9609" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="542" x2="659.5" y1="227.9609" y2="227.9609"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="92" x="549" y="222.895">dispatch tasks</text><polygon fill="#181818" points="676.5,253.0938,666.5,257.0938,676.5,261.0938,672.5,257.0938" style="stroke:#181818;stroke-width:1.0;"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="670.5" x2="759.5" y1="257.0938" y2="257.0938"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="59" x="682.5" y="252.0278">get tasks</text><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="760.5" x2="802.5" y1="286.2266" y2="286.2266"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="802.5" x2="802.5" y1="286.2266" y2="299.2266"/><line style="stroke:#181818;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="761.5" x2="802.5" y1="299.2266" y2="299.2266"/><polygon fill="#181818" points="771.5,295.2266,761.5,299.2266,771.5,303.2266,767.5,299.2266" style="stroke:#181818;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="90" x="767.5" y="281.1606">execute tasks</text><!--MD5=[1a3b1baee63d328adbba741b95ce7308]
-@startuml
-database Db
-control scheduler
-queue AirflowPools
-control CeleryExecutor
-queue CeleryQueue
-control Worker
-
-scheduler - -> Db: get no status tasks
-scheduler - -> AirflowPools: dispatch tasks
-AirflowPools - -> AirflowPools: dispatch tasks by task priority_weight
-CeleryExecutor - -> AirflowPools: get high priority_weight tasks
-CeleryExecutor - -> CeleryQueue: dispatch tasks
-Worker - -> CeleryQueue: get tasks
-Worker - -> Worker: execute tasks
-@enduml
-
-PlantUML version 1.2022.2(Sat Mar 05 16:30:19 UTC 2022)
-(GPL source distribution)
-Java Runtime: Java(TM) SE Runtime Environment
-JVM: Java HotSpot(TM) 64-Bit Server VM
-Default Encoding: UTF-8
-Language: en
-Country: US
---></g></svg>
-
-<p>DAG的多维度并发控制的参数:</p>
-<ul>
-<li>airflow.cfg的parallelism, airflow集群中同时运行的最大task instance数量</li>
-<li>airflow.cfg的dag_concurrency, 一个dag run中可以同时执行的task instance数量, 超出则排队;<br>可以通过DAG的concurrency进行自定义</li>
-<li>max_active_runs, 针对同一个DAG, 同一时间最多运行几个DAG Run,<br>如果没有设置, 默认读取airflow.cfg的max_active_runs_per_dag</li>
-<li>task_concurrency, 控制Operator对应的task同一时间最多运行几个task instance</li>
-<li>pool, 指定task的Pools, 通过Pools来控制某类task的最大并发数</li>
-</ul>
-<p>调度的并发控制参数:</p>
-<ul>
-<li>airflow.cfg的max_threads, 调度线程数, 可以设置为CPU数-1</li>
-<li>airflow.cfg的scheduler_heartbeat_sec, scheduler扫描task并将task调度起来的频率</li>
-</ul>
-]]></content>
-      <categories>
-        <category>ETL</category>
-      </categories>
-      <tags>
-        <tag>ETL</tag>
-        <tag>数据处理</tag>
       </tags>
   </entry>
 </search>
