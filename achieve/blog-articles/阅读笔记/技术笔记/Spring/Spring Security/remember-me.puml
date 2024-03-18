@@ -1,0 +1,24 @@
+@startuml "Remember-Me Authentication"
+
+interface RememberMeServices
+
+abstract class AbstractRememberMeServices
+RememberMeServices <|.. AbstractRememberMeServices
+
+class TokenBasedRememberMeServices extends AbstractRememberMeServices
+
+
+abstract class AbstractAuthenticationProcessingFilter
+AbstractAuthenticationProcessingFilter --> RememberMeServices
+
+
+class RememberMeAuthenticationToken extends Authentication
+
+class RememberMeAuthenticationProvider extends AuthenticationProvider
+RememberMeAuthenticationProvider --> RememberMeAuthenticationToken: generate
+
+class RememberMeAuthenticationFilter
+
+
+
+@enduml

@@ -1,0 +1,50 @@
+@startuml "Session Management"
+
+interface HttpServletRequest
+note bottom
+HttpServletRequest contains session id
+which is from the session cookie name in Cookies or url.
+
+depend on config of server.session.tracking-modes 
+and server.session.cookie.name(default JSESSIONID)
+endnote
+
+interface SecurityContext
+interface HttpSession
+note bottom
+HttpSession is stored 
+and shared between request by session id
+endnote
+HttpSession --> SecurityContext: contains
+HttpServletRequest --> HttpSession
+
+class StandardSession
+HttpSession <|.. StandardSession
+
+interface SecurityContextRepository
+class HttpSessionSecurityContextRepository
+SecurityContextRepository <|.. HttpSessionSecurityContextRepository
+class NullSecurityContextRepository
+SecurityContextRepository <|.. NullSecurityContextRepository: SessionCreationPolicy.STATELESS
+
+SecurityContextRepository --> HttpServletRequest: use to store/get SecurityContext
+
+interface SessionAuthenticationStrategy
+SessionAuthenticationStrategy --> HttpSession: create/update
+
+abstract class AbstractAuthenticationProcessingFilter
+AbstractAuthenticationProcessingFilter --> SessionAuthenticationStrategy: use after success authentication
+
+class UsernamePasswordAuthenticationFilter extends AbstractAuthenticationProcessingFilter
+
+class SessionManagementFilter
+note left
+invoke after authentication
+endnote
+SessionManagementFilter --> SecurityContextRepository: get SecurityContext
+SessionManagementFilter --> SessionAuthenticationStrategy: use
+
+class SecurityContextPersistenceFilter
+SecurityContextPersistenceFilter --> SecurityContextRepository: get existed/new SecurityContext
+
+@enduml

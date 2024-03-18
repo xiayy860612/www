@@ -1,0 +1,24 @@
+@startuml
+
+interface Iterator<E> {
+  E next();
+  boolean hasNext();
+} 
+
+interface Iterable<E> {
+  Iterator<E> iterator();
+}
+
+Iterable ..> Iterator: produce >
+
+interface Collection<E> {
+}
+
+Collection --|> Iterable
+
+class AbstractCollection<E>
+
+AbstractCollection --|> Collection
+
+
+@enduml

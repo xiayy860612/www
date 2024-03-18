@@ -1,0 +1,98 @@
+@startuml "Spring Security框架设计"
+
+frame "获取Authentication" as Step1 {
+object FilterChainProxy
+interface "Spring Security Filter" as Filter
+FilterChainProxy "1" *-- "1..*" Filter
+note as FilterNote
+可以通过WebSecurityConfigurerAdapter::configure(HttpSecurity http)
+为指定格式的路径配置多个Filter
+endnote
+FilterNote .. Filter
+
+interface Authentication
+note as AuthenticationNote
+登录的账户信息, 用于认证,
+认证成功后, 会保护用户信息以及权限信息
+endnote
+AuthenticationNote .. Authentication
+
+object WebAuthenticationDetails
+note as AuthenticationDetails
+保存登录的账户的额外信息
+endnote
+AuthenticationDetails .. WebAuthenticationDetails
+Authentication "1" *.. "0..1" WebAuthenticationDetails
+
+interface AuthenticationDetailsSource
+AuthenticationDetailsSource --> WebAuthenticationDetails: generate
+
+interface GrantedAuthority
+note as GrantedAuthorityNote
+用户权限信息
+endnote
+GrantedAuthorityNote .. GrantedAuthority
+
+Filter --> Authentication: generate
+
+class BasicAuthenticationFilter extends Filter
+class UsernamePasswordAuthenticationToken extends Authentication
+BasicAuthenticationFilter ..> UsernamePasswordAuthenticationToken: generate
+}
+
+frame "执行Authentication的认证" as Step2 {
+
+interface AuthenticationManager
+note as AuthenticationManagerNote
+一个全局AuthenticationManager, 
+通过WebSecurityConfigurerAdapter::configure(AuthenticationManagerBuilder auth)
+配置基于指定资源的局部AuthenticationManager.
+endnote
+AuthenticationManagerNote .. AuthenticationManager
+class ProviderManager extends AuthenticationManager
+note as ProviderManagerNote
+用于执行认证流程: 
+- 认证通过则返回Authentication
+- 失败则抛出AuthenticationException
+- 无法判断则返回null
+endnote
+ProviderManagerNote .. ProviderManager
+
+interface AuthenticationProvider
+note as AuthenticationProviderNote
+对指定的Authentication进行认证
+endnote
+AuthenticationProviderNote .. AuthenticationProvider
+AuthenticationProvider --> Authentication: check
+
+ProviderManager "1" *--> "*" AuthenticationProvider
+}
+
+frame "通过DAO进行认证" as Step3 {
+
+abstract class AbstractUserDetailsAuthenticationProvider extends AuthenticationProvider
+AbstractUserDetailsAuthenticationProvider --> UsernamePasswordAuthenticationToken: check
+
+class DaoAuthenticationProvider extends AbstractUserDetailsAuthenticationProvider
+note as DaoAuthenticationProviderNote
+通过UserDetails来进行认证
+endnote
+DaoAuthenticationProviderNote .. AbstractUserDetailsAuthenticationProvider
+
+interface UserDetails
+note as UserDetailsNote
+保存登录的账户相关的信息
+endnote
+UserDetailsNote .. UserDetails
+interface UserDetailsService
+
+AbstractUserDetailsAuthenticationProvider --> UserDetails: use
+
+UserDetailsService --> UserDetails: get
+DaoAuthenticationProvider --> UserDetailsService: use
+
+UserDetails "1" *-- "*" GrantedAuthority: contain
+
+}
+
+@enduml
