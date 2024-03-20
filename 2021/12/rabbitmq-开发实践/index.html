@@ -16,10 +16,9 @@
 
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha256-wiz7ZSCn/btzhjKDQBms9Hx4sSeUYsDrTLg7roPstac=" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.33/fancybox/fancybox.css" integrity="sha256-gkQVf8UKZgQ0HyuxL/VnacadJ+D2Kox2TCEBuNQg5+w=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"amos.s2u2m.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":7,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"amos.s2u2m.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.19.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":false,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":7,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
 
     <meta name="description" content="快速熟悉RabbitMQ的元素, 以及开发相关的最佳实践总结.">
 <meta property="og:type" content="article">
@@ -60,7 +59,7 @@
   </noscript>
 </head>
 
-<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+<body itemscope itemtype="http://schema.org/WebPage">
   <div class="headband"></div>
 
   <main class="main">
@@ -145,8 +144,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A3%B0%E6%98%8Eexchange%E5%92%8Cqueue"><span class="nav-number">1.</span> <span class="nav-text">声明Exchange和Queue</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#exchange"><span class="nav-number">1.1.</span> <span class="nav-text">Exchange</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#queue"><span class="nav-number">1.2.</span> <span class="nav-text">Queue</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%87%E7%94%A8%E4%BA%A4%E6%8D%A2%E5%99%A8ae-alternate-exchange"><span class="nav-number">1.3.</span> <span class="nav-text">备用交换器(AE, Alternate
-Exchange)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E6%A8%A1%E6%9D%BF"><span class="nav-number">1.4.</span> <span class="nav-text">基本模板</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#message"><span class="nav-number">1.5.</span> <span class="nav-text">Message</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#connect-channel"><span class="nav-number">1.6.</span> <span class="nav-text">Connect &amp;&amp; Channel</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0publisher"><span class="nav-number">2.</span> <span class="nav-text">实现Publisher</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0consumer"><span class="nav-number">3.</span> <span class="nav-text">实现Consumer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">4.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A3%B0%E6%98%8EExchange%E5%92%8CQueue"><span class="nav-number">1.</span> <span class="nav-text">声明Exchange和Queue</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Exchange"><span class="nav-number">1.1.</span> <span class="nav-text">Exchange</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Queue"><span class="nav-number">1.2.</span> <span class="nav-text">Queue</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%87%E7%94%A8%E4%BA%A4%E6%8D%A2%E5%99%A8-AE-Alternate-Exchange"><span class="nav-number">1.3.</span> <span class="nav-text">备用交换器(AE, Alternate Exchange)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E6%A8%A1%E6%9D%BF"><span class="nav-number">1.4.</span> <span class="nav-text">基本模板</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Message"><span class="nav-number">1.5.</span> <span class="nav-text">Message</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Connect-Channel"><span class="nav-number">1.6.</span> <span class="nav-text">Connect &amp;&amp; Channel</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0Publisher"><span class="nav-number">2.</span> <span class="nav-text">实现Publisher</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0Consumer"><span class="nav-number">3.</span> <span class="nav-text">实现Consumer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Reference"><span class="nav-number">4.</span> <span class="nav-text">Reference</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -261,11 +259,10 @@ Exchange)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" hr
     
     <div class="post-body" itemprop="articleBody"><p>快速熟悉RabbitMQ的元素, 以及开发相关的最佳实践总结.</p>
 <span id="more"></span>
-<p><img src="rmq-modal.png" /></p>
-<h2 id="声明exchange和queue">声明Exchange和Queue</h2>
-<p>Exchange负责对消息的路由, 而Queue负责对消息的存储.</p>
-<h3 id="exchange">Exchange</h3>
-<p>Exchange主要有以下几种路由方式:</p>
+
+<p><img src="/2021/12/rabbitmq-%E5%BC%80%E5%8F%91%E5%AE%9E%E8%B7%B5/rmq-modal.png"></p>
+<h2 id="声明Exchange和Queue"><a href="#声明Exchange和Queue" class="headerlink" title="声明Exchange和Queue"></a>声明Exchange和Queue</h2><p>Exchange负责对消息的路由, 而Queue负责对消息的存储.</p>
+<h3 id="Exchange"><a href="#Exchange" class="headerlink" title="Exchange"></a>Exchange</h3><p>Exchange主要有以下几种路由方式:</p>
 <ul>
 <li>fanout, 分发到所有绑定的Queue中</li>
 <li>direct, 只分发到路由键完全匹配的Queue中</li>
@@ -273,123 +270,73 @@ Exchange)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" hr
 </ul>
 <p>Exchange的常用属性:</p>
 <ul>
-<li>durable, 对于长期使用的交换器设置为true,
-保证服务重启后仍然存在.</li>
+<li>durable, 对于长期使用的交换器设置为true, 保证服务重启后仍然存在.</li>
 <li>auto delete, 对于长期使用的交换器设置为false</li>
-<li>internal, 用于Broker内部的路由, 对于同客户端连接的交换器设置为false,
-AE可设置为true.</li>
+<li>internal, 用于Broker内部的路由, 对于同客户端连接的交换器设置为false, AE可设置为true.</li>
 </ul>
-<h3 id="queue">Queue</h3>
-<p>交换器的使用并不真正消耗服务器的性能, 但队列会,
-所以需要更加关注队列的设计, 需要对队列的流量,
-内存占用以及网卡占用要有一个清晰的评估, 预估其平均值和峰值,
-以便合理分配硬件资源.</p>
+<h3 id="Queue"><a href="#Queue" class="headerlink" title="Queue"></a>Queue</h3><p>交换器的使用并不真正消耗服务器的性能,<br>但队列会, 所以需要更加关注队列的设计,<br>需要对队列的流量, 内存占用以及网卡占用要有一个清晰的评估,<br>预估其平均值和峰值, 以便合理分配硬件资源.</p>
 <p>Queue的主要属性:</p>
 <ul>
-<li>durable, 设置为true, 则服务重启后队列信息仍然存在; 配合消息的持久化,
-可以保证服务重启后消息不丢失.</li>
-<li>exclusive, true则仅对声明它的连接可见, 断开时自动删除;
-一般情况下设置为false</li>
+<li>durable, 设置为true, 则服务重启后队列信息仍然存在; 配合消息的持久化, 可以保证服务重启后消息不丢失.</li>
+<li>exclusive, true则仅对声明它的连接可见, 断开时自动删除; 一般情况下设置为false</li>
 <li>auto delete, 一般设置为false</li>
-<li>队列中消息的TTL, 通过x-message-ttl来设置,
-最终消息的TTL=min(队列中消息的TTL, 消息设置的TTL),
-消息过期后则变为死信(Dead Message)</li>
+<li>队列中消息的TTL, 通过x-message-ttl来设置, 最终消息的TTL&#x3D;min(队列中消息的TTL, 消息设置的TTL), 消息过期后则变为死信(Dead Message)</li>
 </ul>
-<p>当一个队列有多个消费者时, 队列中的消息会被平均分摊(Round-Robin,
-即轮询) 给多个消费者进行处理,
-而不是每个消费者都收到所有的消息并处理.</p>
+<p>当一个队列有多个消费者时, 队列中的消息会被平均分摊(Round-Robin, 即轮询)<br>给多个消费者进行处理, 而不是每个消费者都收到所有的消息并处理.</p>
 <p>通过路由键(Route Key)将Exchange和Queue进行绑定.</p>
 <p>Queue的应用:</p>
 <ul>
-<li>死信队列, 需要配合死信交换器(DLX),
-当消息过期后会被路由到死信队列</li>
+<li>死信队列, 需要配合死信交换器(DLX), 当消息过期后会被路由到死信队列</li>
 <li>延迟队列, 通过死信队列+消息的TTL来实现</li>
 <li>优先级队列</li>
 <li>RPC队列</li>
 </ul>
-<h3 id="备用交换器ae-alternate-exchange">备用交换器(AE, Alternate
-Exchange)</h3>
-<p>为了防止消息丢失, 一般建议配置AE, 当交换器无法路由消息到指定的队列时,
-会将消息路由到AE, 由AE保存到与它绑定的队列中, 之后在修复后,
-通过工具将这些丢失的消息重新入队.</p>
-<h3 id="基本模板">基本模板</h3>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// AE声明</span></span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.AE, BuiltinExchangeType.FANOUT,</span><br><span class="line">    <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">true</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.AE_QUEUE,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.AE_QUEUE, RabbitMQConfig.AE, <span class="string">&quot;&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Exchange和Queue声明</span></span><br><span class="line">Map&lt;String, Object&gt; args = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;&gt;();</span><br><span class="line">args.put(<span class="string">&quot;alternate-exchange&quot;</span>, RabbitMQConfig.AE);</span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.EX, BuiltinExchangeType.DIRECT,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, args);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.EX_QUEUE,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.EX_QUEUE, RabbitMQConfig.EX, </span><br><span class="line">    RabbitMQConfig.EX_QUEUE_ROUTE_KEY);</span><br></pre></td></tr></table></figure>
-<h3 id="message">Message</h3>
-<p>生产者创建的消息分为两部分:</p>
+<h3 id="备用交换器-AE-Alternate-Exchange"><a href="#备用交换器-AE-Alternate-Exchange" class="headerlink" title="备用交换器(AE, Alternate Exchange)"></a>备用交换器(AE, Alternate Exchange)</h3><p>为了防止消息丢失, 一般建议配置AE,<br>当交换器无法路由消息到指定的队列时, 会将消息路由到AE,<br>由AE保存到与它绑定的队列中,<br>之后在修复后, 通过工具将这些丢失的消息重新入队.</p>
+<h3 id="基本模板"><a href="#基本模板" class="headerlink" title="基本模板"></a>基本模板</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// AE声明</span></span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.AE, BuiltinExchangeType.FANOUT,</span><br><span class="line">    <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">true</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.AE_QUEUE,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.AE_QUEUE, RabbitMQConfig.AE, <span class="string">&quot;&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Exchange和Queue声明</span></span><br><span class="line">Map&lt;String, Object&gt; args = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;&gt;();</span><br><span class="line">args.put(<span class="string">&quot;alternate-exchange&quot;</span>, RabbitMQConfig.AE);</span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.EX, BuiltinExchangeType.DIRECT,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, args);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.EX_QUEUE,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.EX_QUEUE, RabbitMQConfig.EX, </span><br><span class="line">    RabbitMQConfig.EX_QUEUE_ROUTE_KEY);</span><br></pre></td></tr></table></figure>
+
+<h3 id="Message"><a href="#Message" class="headerlink" title="Message"></a>Message</h3><p>生产者创建的消息分为两部分:</p>
 <ul>
 <li>消息标签, 包含路由相关的信息</li>
 <li>消息体, 消息的内容, 可以被Queue保存</li>
 </ul>
 <p>消息的常用属性:</p>
 <ul>
-<li>durable, 通过设置deliverMode为2, 可实现消息的持久化;
-对于可靠性/重要性不是那么高的消息不采用持久化处理,
-以提高系统的吞吐量</li>
+<li>durable, 通过设置deliverMode为2, 可实现消息的持久化;<br>对于可靠性&#x2F;重要性不是那么高的消息不采用持久化处理, 以提高系统的吞吐量</li>
 <li>消息的TTL, 通过设置expiration参数</li>
 </ul>
-<h3 id="connect-channel">Connect &amp;&amp; Channel</h3>
-<p>客户端需要和RabbitMQ建立TCP Connection,
-建立后会创建AMQP信道(Channel), 并被指派一个唯一的ID.
-Channel是建立在Connection上的虚拟连接, 用于处理AMQP指令.</p>
-<p>建立/销毁TCP连接是非常大的开销, 高峰时, 性能瓶颈也就随之出现.
-所以RabbitMQ采用类似NIO的做法, 对TCP连接进行复用.</p>
-<p>建议客户端采用连接池, 将Channel均摊到池中的Connection上;
-每个线程持有一个Channel.</p>
-<p>为了当发生阻塞时可以在阻止生产者的同时, 又不影响消费者的运行,
-建议生产者和消费者的逻辑使用不同的Connection.</p>
-<h2 id="实现publisher">实现Publisher</h2>
-<p>为了避免发送方的消息丢失, RabbitMQ提供了以下几种机制:</p>
+<h3 id="Connect-Channel"><a href="#Connect-Channel" class="headerlink" title="Connect &amp;&amp; Channel"></a>Connect &amp;&amp; Channel</h3><p>客户端需要和RabbitMQ建立TCP Connection, 建立后会创建AMQP信道(Channel),<br>并被指派一个唯一的ID.<br>Channel是建立在Connection上的虚拟连接, 用于处理AMQP指令.</p>
+<p>建立&#x2F;销毁TCP连接是非常大的开销, 高峰时, 性能瓶颈也就随之出现.<br>所以RabbitMQ采用类似NIO的做法, 对TCP连接进行复用.</p>
+<p>建议客户端采用连接池, 将Channel均摊到池中的Connection上;<br>每个线程持有一个Channel.</p>
+<p>为了当发生阻塞时可以在阻止生产者的同时, 又不影响消费者的运行,<br>建议生产者和消费者的逻辑使用不同的Connection.</p>
+<h2 id="实现Publisher"><a href="#实现Publisher" class="headerlink" title="实现Publisher"></a>实现Publisher</h2><p>为了避免发送方的消息丢失, RabbitMQ提供了以下几种机制:</p>
 <ul>
-<li>发送消息时设置mandatory, 当交换器无法找到复合条件的队列时,
-通过Basic.Return将消息返回给生产者; 如果交换器存在AE,
-则mandatory失效.</li>
-<li>事务机制, txSelect/txCommit/txRollback, 每次只能处理一条消息,
-在消息发送后会<strong>阻塞</strong>发送端, 等待RabbitMQ的回应,
-回应提交成功, 则表明消息已经到达RabbitMQ; 如果发生任何异常,
-发送端可以捕获异常并进行回滚;
-它<strong>严重降低了RabbitMQ的消息吞吐量</strong>.</li>
-<li>发送方确认机制, confirmSelect该模式下, 发布的消息都会被指派唯一ID,
-消息到达匹配队列后, RabbitMQ会发送Basic.Ack并携带消息的唯一ID,
-使发送方知道消息已经正确到达; 如果内部发生错误,
-则会发送Basic.Nack告知发送方.</li>
+<li>发送消息时设置mandatory, 当交换器无法找到复合条件的队列时, 通过Basic.Return将消息返回给生产者; 如果交换器存在AE, 则mandatory失效.</li>
+<li>事务机制, txSelect&#x2F;txCommit&#x2F;txRollback, 每次只能处理一条消息, 在消息发送后会<strong>阻塞</strong>发送端,<br>等待RabbitMQ的回应, 回应提交成功, 则表明消息已经到达RabbitMQ;<br>如果发生任何异常, 发送端可以捕获异常并进行回滚;<br>它<strong>严重降低了RabbitMQ的消息吞吐量</strong>.</li>
+<li>发送方确认机制, confirmSelect该模式下, 发布的消息都会被指派唯一ID,<br>消息到达匹配队列后, RabbitMQ会发送Basic.Ack并携带消息的唯一ID, 使发送方知道消息已经正确到达;<br>如果内部发生错误, 则会发送Basic.Nack告知发送方.</li>
 </ul>
 <p>推荐使用<strong>异步的发送方确认机制</strong>的方式来批量发送消息.</p>
-<h2 id="实现consumer">实现Consumer</h2>
-<p>消费端有两种消费模式:</p>
+<h2 id="实现Consumer"><a href="#实现Consumer" class="headerlink" title="实现Consumer"></a>实现Consumer</h2><p>消费端有两种消费模式:</p>
 <ul>
-<li>Push模式, RabbitMQ主动向订阅的消费者推送消息, 适用于吞吐量大的情况;
-不同的订阅消费者采用唯一标签(consumerTag)来区分.</li>
+<li>Push模式, RabbitMQ主动向订阅的消费者推送消息, 适用于吞吐量大的情况;<br>不同的订阅消费者采用唯一标签(consumerTag)来区分.</li>
 <li>Pull模式, 消费者从RabbitMQ拉取消息, 适用于吞吐量少的情况</li>
 </ul>
-<p>为了保证消息从队列可靠的到达消费者,
-RabbitMQ提供了消息确认机制(Message Acknowledge). 通过设置auto
-ack为false, 让消费者有足够的时间处理消息,
-处理完毕后再显式的发送Basic.Ack给RabbitMQ,
-然后RabbitMQ才从内存/磁盘中移除消息(实际上是先打上删除标记, 之后再删除).
-如果设置为true, 则RabbitMQ发送消息后就会将其从内存/磁盘中移除.</p>
+<p>为了保证消息从队列可靠的到达消费者, RabbitMQ提供了消息确认机制(Message Acknowledge).<br>通过设置auto ack为false, 让消费者有足够的时间处理消息,<br>处理完毕后再显式的发送Basic.Ack给RabbitMQ,<br>然后RabbitMQ才从内存&#x2F;磁盘中移除消息(实际上是先打上删除标记, 之后再删除).<br>如果设置为true, 则RabbitMQ发送消息后就会将其从内存&#x2F;磁盘中移除.</p>
 <p>RabbitMQ队列中的消息分为两个部分:</p>
 <ul>
 <li>Ready, 等待投递给消费者的消息</li>
 <li>Unacked, 已经投递给消费者, 但还没有收到确认信号的消息</li>
 </ul>
-<p>如果一直没有收到消费者的确认信号, 并且消费者断开了连接,
-RabbitMQ则会安排该消息重新进入队列, 等待投递给下一个消费者,
-确保消息被正确的消费.</p>
-<p>RabbitMQ判断此消息是否重新投递给消费者的唯一依据是消费该消息的消费者连接是否断开,
-因为RabbitMQ允许消费者消费一条消息的时间可以很久.</p>
+<p>如果一直没有收到消费者的确认信号, 并且消费者断开了连接,<br>RabbitMQ则会安排该消息重新进入队列, 等待投递给下一个消费者,<br>确保消息被正确的消费.</p>
+<p>RabbitMQ判断此消息是否重新投递给消费者的唯一依据是消费该消息的消费者连接是否断开,<br>因为RabbitMQ允许消费者消费一条消息的时间可以很久.</p>
 <p>通过Basic.Qos来对消费者端的吞吐量进行控制,</p>
 <ul>
 <li>global为false模式时, 针对每个消费者进行限制</li>
 <li>global为true模式时, 针对一个Channle中所有的消费者做限制</li>
 </ul>
-<p>如果同时设置了两种模式, 则同时生效, 即对信道中的每一个消费者做限制,
-也对信道中的总数做限制. 一般需要根据节点的性能进行配置.</p>
-<h2 id="reference">Reference</h2>
-<ul>
-<li><a
-target="_blank" rel="noopener" href="https://book.douban.com/subject/27591386/">RabbitMQ实战指南</a></li>
-<li><a target="_blank" rel="noopener" href="https://www.rabbitmq.com/getstarted.html">RabbitMQ
-Tutorials</a></li>
+<p>如果同时设置了两种模式, 则同时生效,<br>即对信道中的每一个消费者做限制, 也对信道中的总数做限制.<br>一般需要根据节点的性能进行配置.</p>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://book.douban.com/subject/27591386/">RabbitMQ实战指南</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.rabbitmq.com/getstarted.html">RabbitMQ Tutorials</a></li>
 </ul>
 
     </div>
@@ -478,7 +425,7 @@ Tutorials</a></li>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.33/fancybox/fancybox.umd.js" integrity="sha256-+2+qOqR8CKoHh/AsVR9k2qaDBKWjYNC2nozhYmv5j9k=" crossorigin="anonymous"></script>
-<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/next-boot.js"></script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous"></script>
 <script src="/js/third-party/search/local-search.js"></script>

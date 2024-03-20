@@ -1,6 +1,168 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>Airflow介绍</title>
+    <url>/2020/08/airflow%E4%BB%8B%E7%BB%8D/</url>
+    <content><![CDATA[<p>了解airflow的基本元素以及并发控制</p>
+<span id="more"></span>
+
+<h2 id="基本元素"><a href="#基本元素" class="headerlink" title="基本元素"></a>基本元素</h2><ul>
+<li>DAG, 有向无环图, 用于描述整个处理流程中的任务之间的关系和依赖,<br>只有定义在globals(全局作用域)的dag才会被airflow扫描到并加载</li>
+<li>Operator, 用于定义任务要去做什么, 尽量保证每个Operator可以独立运行, 没有依赖;<br>如果不能避免依赖, 则通过xcom&#x2F;其他存储方式进行参数传递</li>
+<li>default_args, 可被所有相关dag的Operator共享使用</li>
+<li>DAG Run, DAG被触发后生成的具体执行的DAG实例<ul>
+<li>创建时间</li>
+<li>execution_date, DAG Run的开始执行时间,<br>在同一个DAG中必须保持唯一, 即在同一个DAG在同一时间只能有一个DAG Run.</li>
+</ul>
+</li>
+<li>Task, Operator实例</li>
+<li>Task instance, 每次触发Task都会生成一个task instance, 用于记录这次的task运行.<br>它拥有很多的状态, 状态的完成生命周期:<ol>
+<li>no status</li>
+<li>scheduled, scheduler已计划将要运行对应的task instance</li>
+<li>queued, dispatch将task instance发送对相关的队列上进行排队</li>
+<li>Running, worker拿到队列中的任务进行执行</li>
+<li>success&#x2F;failed, 任务完成后</li>
+</ol>
+</li>
+</ul>
+<p><img src="/2020/08/airflow%E4%BB%8B%E7%BB%8D/airflow-status-flow.png"></p>
+<h2 id="DAG调度"><a href="#DAG调度" class="headerlink" title="DAG调度"></a>DAG调度</h2><p>通过在DAG中定义schedule_interval来指定如何调度,<br>schedule_interval最好指定为预定义的值或者cron表达式</p>
+<p>DAG的调度分为:</p>
+<ul>
+<li>手动触发, 即schedule_interval&#x3D;None</li>
+<li>周期性调度<ul>
+<li>backfill and catchup, 根据start_date到现在为止, 来创建过去的Dag Run并依次执行.<br>针对以时间为周期的数据集非常有用.</li>
+<li>非回填追赶模式, 即DAG的catchup&#x3D;False, 不会为过去创建Dag Run.</li>
+</ul>
+</li>
+</ul>
+<p>关于周期性调度的DAG, 它的创建时间为<code>上一个DAG Run的创建时间+schedule_interval</code>,<br>而第一个DAG Run的创建时间为min(start_date),<br>务必将start_date设置为一个指定的值</p>
+<h2 id="并发控制"><a href="#并发控制" class="headerlink" title="并发控制"></a>并发控制</h2><ul>
+<li>Pools, 用于控制task instance的并行数,<br>它由以下元素组成, 默认任务会被分配到default_pool池中, 它的工作槽有128个位置:<ul>
+<li>工作槽, 用于指定可同时运行的任务数</li>
+<li>等待队列, 当工作槽满时, 任务就进入等待队列, 直到工作槽有空闲位置</li>
+<li>priority_weight, 用于定义队列中的任务优先级以及在工作槽有空闲位置时优先执行哪些任务,<br>默认任务本身的priority_weight为1, 但在评估任务优先级时会计算任务本身及其下游任务的总和.</li>
+</ul>
+</li>
+<li>Celery Queue, 只在使用CeleryExecutor时才有用, 用于给任务贴标签,<br>这样工作节点就可以通过标签来筛选要执行哪些任务. 默认任务会被分配到default_queue.</li>
+</ul>
+<p><img src="/2020/08/airflow%E4%BB%8B%E7%BB%8D/airflwo-with-celery.png"></p>
+<p>DAG的多维度并发控制的参数:</p>
+<ul>
+<li>airflow.cfg的parallelism, airflow集群中同时运行的最大task instance数量</li>
+<li>airflow.cfg的dag_concurrency, 一个dag run中可以同时执行的task instance数量, 超出则排队;<br>可以通过DAG的concurrency进行自定义</li>
+<li>max_active_runs, 针对同一个DAG, 同一时间最多运行几个DAG Run,<br>如果没有设置, 默认读取airflow.cfg的max_active_runs_per_dag</li>
+<li>task_concurrency, 控制Operator对应的task同一时间最多运行几个task instance</li>
+<li>pool, 指定task的Pools, 通过Pools来控制某类task的最大并发数</li>
+</ul>
+<p>调度的并发控制参数:</p>
+<ul>
+<li>airflow.cfg的max_threads, 调度线程数, 可以设置为CPU数-1</li>
+<li>airflow.cfg的scheduler_heartbeat_sec, scheduler扫描task并将task调度起来的频率</li>
+</ul>
+]]></content>
+      <categories>
+        <category>ETL</category>
+      </categories>
+      <tags>
+        <tag>ETL</tag>
+        <tag>airflow</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>RabbitMQ 开发实践</title>
+    <url>/2021/12/rabbitmq-%E5%BC%80%E5%8F%91%E5%AE%9E%E8%B7%B5/</url>
+    <content><![CDATA[<p>快速熟悉RabbitMQ的元素, 以及开发相关的最佳实践总结.</p>
+<span id="more"></span>
+
+<p><img src="/2021/12/rabbitmq-%E5%BC%80%E5%8F%91%E5%AE%9E%E8%B7%B5/rmq-modal.png"></p>
+<h2 id="声明Exchange和Queue"><a href="#声明Exchange和Queue" class="headerlink" title="声明Exchange和Queue"></a>声明Exchange和Queue</h2><p>Exchange负责对消息的路由, 而Queue负责对消息的存储.</p>
+<h3 id="Exchange"><a href="#Exchange" class="headerlink" title="Exchange"></a>Exchange</h3><p>Exchange主要有以下几种路由方式:</p>
+<ul>
+<li>fanout, 分发到所有绑定的Queue中</li>
+<li>direct, 只分发到路由键完全匹配的Queue中</li>
+<li>topic, 分发到和路由键匹配的Queue中</li>
+</ul>
+<p>Exchange的常用属性:</p>
+<ul>
+<li>durable, 对于长期使用的交换器设置为true, 保证服务重启后仍然存在.</li>
+<li>auto delete, 对于长期使用的交换器设置为false</li>
+<li>internal, 用于Broker内部的路由, 对于同客户端连接的交换器设置为false, AE可设置为true.</li>
+</ul>
+<h3 id="Queue"><a href="#Queue" class="headerlink" title="Queue"></a>Queue</h3><p>交换器的使用并不真正消耗服务器的性能,<br>但队列会, 所以需要更加关注队列的设计,<br>需要对队列的流量, 内存占用以及网卡占用要有一个清晰的评估,<br>预估其平均值和峰值, 以便合理分配硬件资源.</p>
+<p>Queue的主要属性:</p>
+<ul>
+<li>durable, 设置为true, 则服务重启后队列信息仍然存在; 配合消息的持久化, 可以保证服务重启后消息不丢失.</li>
+<li>exclusive, true则仅对声明它的连接可见, 断开时自动删除; 一般情况下设置为false</li>
+<li>auto delete, 一般设置为false</li>
+<li>队列中消息的TTL, 通过x-message-ttl来设置, 最终消息的TTL&#x3D;min(队列中消息的TTL, 消息设置的TTL), 消息过期后则变为死信(Dead Message)</li>
+</ul>
+<p>当一个队列有多个消费者时, 队列中的消息会被平均分摊(Round-Robin, 即轮询)<br>给多个消费者进行处理, 而不是每个消费者都收到所有的消息并处理.</p>
+<p>通过路由键(Route Key)将Exchange和Queue进行绑定.</p>
+<p>Queue的应用:</p>
+<ul>
+<li>死信队列, 需要配合死信交换器(DLX), 当消息过期后会被路由到死信队列</li>
+<li>延迟队列, 通过死信队列+消息的TTL来实现</li>
+<li>优先级队列</li>
+<li>RPC队列</li>
+</ul>
+<h3 id="备用交换器-AE-Alternate-Exchange"><a href="#备用交换器-AE-Alternate-Exchange" class="headerlink" title="备用交换器(AE, Alternate Exchange)"></a>备用交换器(AE, Alternate Exchange)</h3><p>为了防止消息丢失, 一般建议配置AE,<br>当交换器无法路由消息到指定的队列时, 会将消息路由到AE,<br>由AE保存到与它绑定的队列中,<br>之后在修复后, 通过工具将这些丢失的消息重新入队.</p>
+<h3 id="基本模板"><a href="#基本模板" class="headerlink" title="基本模板"></a>基本模板</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// AE声明</span></span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.AE, BuiltinExchangeType.FANOUT,</span><br><span class="line">    <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">true</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.AE_QUEUE,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.AE_QUEUE, RabbitMQConfig.AE, <span class="string">&quot;&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Exchange和Queue声明</span></span><br><span class="line">Map&lt;String, Object&gt; args = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;&gt;();</span><br><span class="line">args.put(<span class="string">&quot;alternate-exchange&quot;</span>, RabbitMQConfig.AE);</span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.EX, BuiltinExchangeType.DIRECT,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, args);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.EX_QUEUE,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.EX_QUEUE, RabbitMQConfig.EX, </span><br><span class="line">    RabbitMQConfig.EX_QUEUE_ROUTE_KEY);</span><br></pre></td></tr></table></figure>
+
+<h3 id="Message"><a href="#Message" class="headerlink" title="Message"></a>Message</h3><p>生产者创建的消息分为两部分:</p>
+<ul>
+<li>消息标签, 包含路由相关的信息</li>
+<li>消息体, 消息的内容, 可以被Queue保存</li>
+</ul>
+<p>消息的常用属性:</p>
+<ul>
+<li>durable, 通过设置deliverMode为2, 可实现消息的持久化;<br>对于可靠性&#x2F;重要性不是那么高的消息不采用持久化处理, 以提高系统的吞吐量</li>
+<li>消息的TTL, 通过设置expiration参数</li>
+</ul>
+<h3 id="Connect-Channel"><a href="#Connect-Channel" class="headerlink" title="Connect &amp;&amp; Channel"></a>Connect &amp;&amp; Channel</h3><p>客户端需要和RabbitMQ建立TCP Connection, 建立后会创建AMQP信道(Channel),<br>并被指派一个唯一的ID.<br>Channel是建立在Connection上的虚拟连接, 用于处理AMQP指令.</p>
+<p>建立&#x2F;销毁TCP连接是非常大的开销, 高峰时, 性能瓶颈也就随之出现.<br>所以RabbitMQ采用类似NIO的做法, 对TCP连接进行复用.</p>
+<p>建议客户端采用连接池, 将Channel均摊到池中的Connection上;<br>每个线程持有一个Channel.</p>
+<p>为了当发生阻塞时可以在阻止生产者的同时, 又不影响消费者的运行,<br>建议生产者和消费者的逻辑使用不同的Connection.</p>
+<h2 id="实现Publisher"><a href="#实现Publisher" class="headerlink" title="实现Publisher"></a>实现Publisher</h2><p>为了避免发送方的消息丢失, RabbitMQ提供了以下几种机制:</p>
+<ul>
+<li>发送消息时设置mandatory, 当交换器无法找到复合条件的队列时, 通过Basic.Return将消息返回给生产者; 如果交换器存在AE, 则mandatory失效.</li>
+<li>事务机制, txSelect&#x2F;txCommit&#x2F;txRollback, 每次只能处理一条消息, 在消息发送后会<strong>阻塞</strong>发送端,<br>等待RabbitMQ的回应, 回应提交成功, 则表明消息已经到达RabbitMQ;<br>如果发生任何异常, 发送端可以捕获异常并进行回滚;<br>它<strong>严重降低了RabbitMQ的消息吞吐量</strong>.</li>
+<li>发送方确认机制, confirmSelect该模式下, 发布的消息都会被指派唯一ID,<br>消息到达匹配队列后, RabbitMQ会发送Basic.Ack并携带消息的唯一ID, 使发送方知道消息已经正确到达;<br>如果内部发生错误, 则会发送Basic.Nack告知发送方.</li>
+</ul>
+<p>推荐使用<strong>异步的发送方确认机制</strong>的方式来批量发送消息.</p>
+<h2 id="实现Consumer"><a href="#实现Consumer" class="headerlink" title="实现Consumer"></a>实现Consumer</h2><p>消费端有两种消费模式:</p>
+<ul>
+<li>Push模式, RabbitMQ主动向订阅的消费者推送消息, 适用于吞吐量大的情况;<br>不同的订阅消费者采用唯一标签(consumerTag)来区分.</li>
+<li>Pull模式, 消费者从RabbitMQ拉取消息, 适用于吞吐量少的情况</li>
+</ul>
+<p>为了保证消息从队列可靠的到达消费者, RabbitMQ提供了消息确认机制(Message Acknowledge).<br>通过设置auto ack为false, 让消费者有足够的时间处理消息,<br>处理完毕后再显式的发送Basic.Ack给RabbitMQ,<br>然后RabbitMQ才从内存&#x2F;磁盘中移除消息(实际上是先打上删除标记, 之后再删除).<br>如果设置为true, 则RabbitMQ发送消息后就会将其从内存&#x2F;磁盘中移除.</p>
+<p>RabbitMQ队列中的消息分为两个部分:</p>
+<ul>
+<li>Ready, 等待投递给消费者的消息</li>
+<li>Unacked, 已经投递给消费者, 但还没有收到确认信号的消息</li>
+</ul>
+<p>如果一直没有收到消费者的确认信号, 并且消费者断开了连接,<br>RabbitMQ则会安排该消息重新进入队列, 等待投递给下一个消费者,<br>确保消息被正确的消费.</p>
+<p>RabbitMQ判断此消息是否重新投递给消费者的唯一依据是消费该消息的消费者连接是否断开,<br>因为RabbitMQ允许消费者消费一条消息的时间可以很久.</p>
+<p>通过Basic.Qos来对消费者端的吞吐量进行控制,</p>
+<ul>
+<li>global为false模式时, 针对每个消费者进行限制</li>
+<li>global为true模式时, 针对一个Channle中所有的消费者做限制</li>
+</ul>
+<p>如果同时设置了两种模式, 则同时生效,<br>即对信道中的每一个消费者做限制, 也对信道中的总数做限制.<br>一般需要根据节点的性能进行配置.</p>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a href="https://book.douban.com/subject/27591386/">RabbitMQ实战指南</a></li>
+<li><a href="https://www.rabbitmq.com/getstarted.html">RabbitMQ Tutorials</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>MQ</category>
+      </categories>
+      <tags>
+        <tag>MQ</tag>
+        <tag>event</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>HTTPS的安全性</title>
     <url>/2023/11/https%E7%9A%84%E5%AE%89%E5%85%A8%E6%80%A7/</url>
     <content><![CDATA[<p>Https相较于Htp主要增加了通信的安全性。主要指：</p>
@@ -88,6 +250,335 @@
       <tags>
         <tag>https</tag>
         <tag>ssl</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MySQL Schema与数据类型优化</title>
+    <url>/2018/06/mysql-schema%E4%B8%8E%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E4%BC%98%E5%8C%96/</url>
+    <content><![CDATA[<ul>
+<li>学习如何选择合适的数据类型</li>
+<li>特殊数据的类型选择</li>
+<li>Schema的设计</li>
+</ul>
+<span id="more"></span>
+
+<h2 id="MySQL基础数据类型"><a href="#MySQL基础数据类型" class="headerlink" title="MySQL基础数据类型"></a>MySQL基础数据类型</h2><ul>
+<li>数字<ul>
+<li>整数<ul>
+<li>tinyint&#x2F;smallint&#x2F;mediumint&#x2F;int&#x2F;bigint</li>
+<li>unsigned可选</li>
+</ul>
+</li>
+<li>实数<ul>
+<li>Float&#x2F;Double, 浮点计算</li>
+<li>DECIMAL, 存储精确的小数, 一般可使用bigint来代替decimal, 通过乘以相应的倍数即可</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>字符串<ul>
+<li>char, 定长, 适合更新频繁的列或者长度固定的列</li>
+<li>varchar, 变长, 需要额外的1或2个字节来存储长度, 小于等于255则1个字节, 大于则2个字节; 不适合更新频繁的列, 会导致碎片化</li>
+<li>text, 很长的字符串</li>
+</ul>
+</li>
+<li>二进制字符串, 比较时以字节为单位进行比较, 效率要比普通字符串要高<ul>
+<li>binary, 定长</li>
+<li>varbinary, 变长</li>
+<li>blob, 很长的二进制字符串</li>
+</ul>
+</li>
+<li>时间<ul>
+<li>datetime, 从1001到9999年, 精度为秒, 把日期和时间封装到格式为<strong>YYYYMMDDHHMMSS的整数</strong>中, 显示<strong>与时区无关, 使用8字节存储</strong></li>
+<li>timestamp, 同unit时间戳, 从新纪元时间(1970-01-01T00:00:00)以来的秒数, 使用<strong>4字节存储</strong>, 只能表示1970到2038年, 显示依赖于时区, 会根据时区不同, 显示对应的时间; 对应的列默认为NOT NULL.</li>
+</ul>
+</li>
+</ul>
+<h2 id="特殊数据类型的处理"><a href="#特殊数据类型的处理" class="headerlink" title="特殊数据类型的处理"></a>特殊数据类型的处理</h2><h3 id="uuid数据"><a href="#uuid数据" class="headerlink" title="uuid数据"></a>uuid数据</h3><p>uuid数据的处理</p>
+<ol>
+<li>移除uuid中的**-**</li>
+<li>使用unhex函数将uuid字符串转换为16字节的数字, 存储到binary(16)中</li>
+<li>使用hex函数将16字节的数字转换为uuid字符串</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">mysql&gt; <span class="keyword">select</span> uuid();</span><br><span class="line">+--------------------------------------+</span><br><span class="line">| uuid()                               |</span><br><span class="line">+--------------------------------------+</span><br><span class="line">| e8dc60bb-6df3-11e8-8915-0800273063ab |</span><br><span class="line">+--------------------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br><span class="line"></span><br><span class="line">mysql&gt; <span class="keyword">select</span> unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>);</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">| unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>) |</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">| ��`�m��</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br><span class="line"></span><br><span class="line">mysql&gt; <span class="keyword">select</span> hex(unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>));</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">| hex(unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>)) |</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">| E8DC60BB6DF311E889150800273063AB               |</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="ip数据"><a href="#ip数据" class="headerlink" title="ip数据"></a>ip数据</h3><p>ip数据需要转换为数字存储</p>
+<ol>
+<li>使用<strong>无符号整数</strong>存储ip列</li>
+<li>使用inet_aton将ip字符串转换为整数</li>
+<li>使用inet_ntoa将数字转换为ip字符串</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">mysql&gt; <span class="keyword">select</span> inet_aton(<span class="string">&#x27;192.168.0.1&#x27;</span>);</span><br><span class="line">+--------------------------+</span><br><span class="line">| inet_aton(<span class="string">&#x27;192.168.0.1&#x27;</span>) |</span><br><span class="line">+--------------------------+</span><br><span class="line">|               3232235521 |</span><br><span class="line">+--------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br><span class="line"></span><br><span class="line">mysql&gt; <span class="keyword">select</span> inet_ntoa(3232235521);</span><br><span class="line">+-----------------------+</span><br><span class="line">| inet_ntoa(3232235521) |</span><br><span class="line">+-----------------------+</span><br><span class="line">| 192.168.0.1           |</span><br><span class="line">+-----------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="id列的数据类型"><a href="#id列的数据类型" class="headerlink" title="id列的数据类型"></a>id列的数据类型</h3><p>id列的数据类型尽量选择<strong>递增型整数</strong></p>
+<p>因为随机值会分布在很大的空间中, 导致insert和select变慢.<br>而且随机值的插入会随机写到索引的不同位置, 导致insert语句变慢;<br>由于数据分布在很大的空间中, 也就导致了select指定的数据会变慢;<br>还会导致缓存失效.</p>
+<p><strong>由于InnoDB的索引是一个B+Tree, 所以按顺序的插入能够保证数据很快插入,<br>并保证数据集中在一定的范围之内. 递增插入是比较好的选择.</strong></p>
+<p>不建议使用字符串类型作为id列, 查询性能很差.</p>
+<p>一般情况下尽量使用默认值方案来替换NULL, 因为NULL会增加查询的复杂度.</p>
+<h2 id="范式与反范式"><a href="#范式与反范式" class="headerlink" title="范式与反范式"></a>范式与反范式</h2><p>范式的主要目的:</p>
+<ul>
+<li>减少数据冗余</li>
+<li>消除插入&#x2F;删除&#x2F;更新的异常</li>
+</ul>
+<p>关键概念:</p>
+<ul>
+<li>码&#x2F;键(候选码), 表中的一个或多个属性组K, 除开K中的属性外的其他所有属性都完全函数依赖于K, 则K为候选码; 一个表可能存在多个码</li>
+<li>主属性, 包含在各个候选码中的属性, 主属性不可为空</li>
+</ul>
+<p>通常使用的范式:</p>
+<ul>
+<li>1NF(Normal Form)第一范式, 属性的原子性保证不可再分割, 每个属性都只能存储一个值</li>
+<li>2NF第二范式, 基于1NF, 定义候选码, 非主属性必须完全依赖于候选码, 即通过候选码可以确定实体的唯一性</li>
+<li>3NF第三范式, 基于2NF, 消除传递依赖, 即任何非主属性不能由其他属性派生, 要求属性没有冗余</li>
+<li>BCNF, 基于3NF的改进范式, 消除主属性对码的部分与传递依赖</li>
+</ul>
+<p>一般情况下, 关系型数据库的表设计只要达到3NF&#x2F;BCNF就够了.</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">// 不符合1NF, 电话列可继续拆分</span><br><span class="line">学生|课程|老师|电话(手机, 座机)|教材|教室|上课时间 </span><br><span class="line"></span><br><span class="line">// 符合1NF, 候选码为(学生, 课程), 但不符合2NF, 教材只部分依赖于主键列中的课程</span><br><span class="line">学生|课程|老师|手机|座机|教材|教室|上课时间 </span><br><span class="line"></span><br><span class="line">// 符合2NF, 但不符合3NF, (学生, 课程) =&gt; 老师 =&gt; 手机|座机, 存在传递依赖</span><br><span class="line">学生|课程|老师|手机|座机|教室|上课时间</span><br><span class="line"></span><br><span class="line">课程|教材</span><br><span class="line"></span><br><span class="line">// 符合3NF</span><br><span class="line">学生|课程|老师|教室|上课时间</span><br><span class="line"></span><br><span class="line">课程|教材</span><br><span class="line"></span><br><span class="line">老师|手机|座机</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2018/06/mysql-schema%E4%B8%8E%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E4%BC%98%E5%8C%96/3nf-diagram.png"></p>
+<p>针对<strong>写密集</strong>的场景尤其需要对schema进行范式化, 而针对读密集的场景可以使用反范式.</p>
+<p>范式化的表能够更好更快的进行更新操作, 但是查询往往需要多表join;<br>然而单独的表能够更有效的利用索引.</p>
+<h2 id="缓存表-汇总表"><a href="#缓存表-汇总表" class="headerlink" title="缓存表 &amp;&amp; 汇总表"></a>缓存表 &amp;&amp; 汇总表</h2><p>通过缓存表和汇总表来缓存源数据经过逻辑计算后的冗余数据, 可以提升相应业务逻辑场景的查询性能.</p>
+<ul>
+<li>非实时性数据, 定时计算更新的不严格计数</li>
+<li>实时性数据, 通过小范围查询填满间隙的严格计数</li>
+</ul>
+<p>在使用缓存表和汇总表时, 对数据的维护有两种方式:</p>
+<ul>
+<li>实时维护, 成本较高, 数据容易碎片化</li>
+<li>定期重建, 可以保持表不会有很多碎片, 而且能保证顺序组织索引, 更加高效</li>
+</ul>
+<p>重建表可以通过影子表的技巧</p>
+<ol>
+<li>创建相同结构的新表, create table test_table_new like test_table</li>
+<li>填充数据, 数据有可能时老数据, 也可能时重新整理后的数据</li>
+<li>通过重命名来交换新表和旧表的名字, rename table test_table to test_table_old, test_table_new to test_table</li>
+<li>如果出问题了, 可以很容易回滚旧表</li>
+</ol>
+<h2 id="计数表"><a href="#计数表" class="headerlink" title="计数表"></a>计数表</h2><p>为了提升技术表的并发处理能力, 在更新时随机到相应的slot行插入, 查询时汇总结果.</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 多slot的计数表</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> if <span class="keyword">not</span> <span class="keyword">exists</span> counter_tb (</span><br><span class="line">slot tinyint unsigned <span class="keyword">not</span> <span class="keyword">null</span> <span class="keyword">primary</span> key, </span><br><span class="line">cnt <span class="type">int</span> unsigned <span class="keyword">not</span> <span class="keyword">null</span></span><br><span class="line">) engine<span class="operator">=</span>InnoDB <span class="keyword">default</span> charset<span class="operator">=</span>utf8mb4;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 更新时随机slot更新</span></span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> counter_tb (slot, cnt)</span><br><span class="line"><span class="keyword">values</span> (rand() <span class="operator">*</span> <span class="number">10</span>, <span class="number">1</span>)</span><br><span class="line"><span class="keyword">on</span> duplicate key <span class="keyword">update</span> cnt <span class="operator">=</span> cnt <span class="operator">+</span> <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 查询时汇总</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> counter_tb;</span><br><span class="line"></span><br><span class="line"><span class="keyword">select</span> <span class="built_in">sum</span>(cnt)</span><br><span class="line"><span class="keyword">from</span> counter_tb;</span><br></pre></td></tr></table></figure>
+
+<h2 id="schema的修改"><a href="#schema的修改" class="headerlink" title="schema的修改"></a>schema的修改</h2><p>MySQL中大部分执行alter table来修改表结构的操作都会导致重建表, 即用新的结构创建新表, 将旧表数据导入新表, 最后删除旧表.<br>这对大表来说需要花费很大的时间和代价.</p>
+<p>大部分的alter table操作都会导致MySQL服务中断.<br>对于在生产环境中修改表结构, 一般可采用以下方法:</p>
+<ul>
+<li>在备用数据库上修改结构后, 和主库进行切换</li>
+<li>影子拷贝, 操作同创建影子表的操作; 也可借助一些第三方工具来进行影子拷贝</li>
+</ul>
+<p>.frm文件存储着表的结构, 它存放在mysql的data目录下对应的schema目录里, 默认的data目录为&#x2F;var&#x2F;lib&#x2F;mysql.<br>以下情况可通过修改**.frm文件**的结构来更新表结构, 但对.frm文件的修改存在风险, 需要做好备份:</p>
+<ul>
+<li>列的默认值</li>
+<li>NULL&#x2F;NOT Null</li>
+</ul>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a href="https://book.douban.com/subject/23008813/">高性能MySQL</a>, 第4章 Schema与数据类型优化</li>
+<li><a href="https://www.zhihu.com/question/24696366">解释一下关系数据库的第一第二第三范式</a></li>
+<li><a href="https://www.cnblogs.com/ybwang/archive/2010/06/04/1751279.html">数据库设计三大范式与BCNF，学习笔记</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>DB</category>
+      </categories>
+      <tags>
+        <tag>DB</tag>
+        <tag>mysql</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MySQL备份和恢复</title>
+    <url>/2021/06/mysql%E5%A4%87%E4%BB%BD%E5%92%8C%E6%81%A2%E5%A4%8D/</url>
+    <content><![CDATA[<p>本文主要针对MySQL的InnoDB数据库，本文的目标:</p>
+<ul>
+<li>对数据进行备份</li>
+<li>将数据恢复到某一个时间点</li>
+</ul>
+<span id="more"></span>
+
+<h2 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h2><p>规划备份和恢复策略时, 可以根据一些需求来考虑:</p>
+<ul>
+<li>恢复点目标(RPO), 指恢复到哪个时间点, 可以容许丢失多少数据</li>
+<li>恢复时间目标(RTO), 指恢复可以容许的恢复时间长度</li>
+<li>备份到目的地的时间, 比如本地, NFS等</li>
+</ul>
+<p>备份的内容：</p>
+<ul>
+<li>MySQL配置</li>
+<li>schema和数据</li>
+<li>二进制日志</li>
+</ul>
+<p>Innodb是一个ACID系统， 任何时刻， 每个提交的事务<br>要么在<strong>Innodb数据文件</strong>中， 要么在<strong>二进制日志文件</strong>中。<br>所以为了保证一致性， 即属于同一个时间点， 备份Innodb时需要对数据和二进制日志都进行备份。</p>
+<p>关闭MySQL备份是最简单安全的, 也是获取一致性的最好的方法, 并且损坏的风险最小.<br>但对于在线系统来说, 停机备份的代价太大.</p>
+<p>如果使用了全局读锁FLUSH TABLE WITH READ LOCK, 并且备份的事务执行需要很长的时间,<br>则全局读锁需要等待备份的事务完成提交后才释放, 在这期间的所有操作很可能会被阻塞和积压,<br>即当发生一些修改操作需要等待表的写锁时, 之后的所有读写操作都会被阻塞.<br>而<strong>避免全局读锁的最好方法就是只使用InnoDB, 如果使用少量的MyISAM表, 则只需要锁住它们即可</strong>，<br>因为InnoDB支持事务， 能报保证在一个事务中的的数据的一致性。</p>
+<p>建议混合使用物理和逻辑两种方式进行备份:<br>先使用物理复制, 然后启动一个测试的MySQL实例并运行mysqlcheck来检查;<br>然后周期性的使用mysqldump来执行逻辑备份.</p>
+<h2 id="备份"><a href="#备份" class="headerlink" title="备份"></a>备份</h2><h3 id="逻辑备份"><a href="#逻辑备份" class="headerlink" title="逻辑备份"></a>逻辑备份</h3><p>逻辑备份只用于数据备份, 通过<strong>MySQL服务器</strong>将存储引擎中的数据导出, 与存储引擎无关,<br>并且可以对备份的数据进行裁剪.</p>
+<p>缺点： 需要通过MySQL加载, 转为存储格式, 并且需要重建索引, 过程很慢,<br>尤其在加载一个巨大的导出文件的代价很大</p>
+<p>需要尽量控制导出的数据文件大小，在保证一致性的前提下，<br>按照业务逻辑导出到多个文件中，以控制导出到粒度。</p>
+<p>导出方式:</p>
+<ul>
+<li>导出sql格式的schema和数据</li>
+<li>导出sql格式的schema和csv格式的数据,<br>必须保证secure_file_priv变量不为NULL, 以及相应的路径必须存在.<br>需要在MySQL启动前在my.conf中配置</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">-- 将schema导出</span><br><span class="line">$ mysqldump --single-transaction -d --databases &lt;database_name&gt; &gt; schema.sql</span><br><span class="line">-- 将相关连的表的数据导到sql文件中</span><br><span class="line">$ mysqldump --single-transaction -t --databases &lt;database_name&gt; &gt; data.sql</span><br><span class="line">-- 每张表都会导出一个sql格式的表结构文件, csv格式的数据导文件</span><br><span class="line">$ mysqldump --single-transaction --tab=&lt;backup_dirname&gt; &lt;database_name&gt; [table1, ...]</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="物理备份"><a href="#物理备份" class="headerlink" title="物理备份"></a>物理备份</h3><p>优点:</p>
+<ul>
+<li>物理备份的方式更加简单高效</li>
+<li>恢复往往要比逻辑备份要快, 省去了加载和重建过程</li>
+</ul>
+<p>缺点:</p>
+<ul>
+<li>往往备份的大小要比逻辑备份大得多</li>
+</ul>
+<p>物理备份方式:</p>
+<ul>
+<li>基于文件拷贝的备份, 适用于关机下备份， 配置文件备份， 日志备份等</li>
+<li>通过快照进行备份</li>
+</ul>
+<h4 id="快照备份"><a href="#快照备份" class="headerlink" title="快照备份"></a>快照备份</h4><p>物理数据存放在<code>/var/lib/mysql</code>目录下， 每个数据库存储在相同名字的目录下，<br>同时也包含服务器配置和二进制日志文件。</p>
+<p>快照备份是非常好的在线备份方法, 并且可以减少持有锁的时间。<br>又分为：</p>
+<ul>
+<li>最小化锁快照备份, 只锁MyISAM表，InnoDB不需要锁</li>
+<li>无锁快照备份, 如果MyISAM不会发生修改, 就可以不锁表</li>
+</ul>
+<p>快照备份后， 通过挂在快照， 拷贝数据文件到备份的地方。</p>
+<p>但使用快照备份需要额外的磁盘空间， 用于快照需要的写时复制空间。<br>并且要求将MySQL的数据相关文件（&#x2F;var&#x2F;lib&#x2F;mysql&#x2F;）部署在同一个专有卷上。<br>而且会导致原始卷和快照比正常读写性能要差， 尤其在过多使用写时复制空间时。</p>
+<p>对数据进行物理快照备份后, 需要构建一个MySQL实例并加载物理备份,<br>然后使用mysqlcheck可以对所有的表执行<code>CHECK TABLES</code>操作,<br>检查物理备份的正确性.</p>
+<h4 id="MySQL配置备份"><a href="#MySQL配置备份" class="headerlink" title="MySQL配置备份"></a>MySQL配置备份</h4><ul>
+<li>&#x2F;etc&#x2F;mysql&#x2F;my.cnf, 默认配置文件</li>
+<li>&#x2F;etc&#x2F;mysql&#x2F;conf.d, 自定义配置目录, 会覆盖默认配置中的设置.</li>
+</ul>
+<h4 id="二进制日志备份"><a href="#二进制日志备份" class="headerlink" title="二进制日志备份"></a>二进制日志备份</h4><p>二进制日志默认存储在<code>/var/lib/mysql/</code>目录下, 格式为<code>binlog.*</code>,<br>可通过命令<code>mysqlbinlog -d &lt;database_name&gt; &lt;binlog&gt;</code>来查看指定数据库的二进制日志</p>
+<p>常用命令：</p>
+<ul>
+<li>查看二进制日志， <code>show binary logs</code>;</li>
+<li>创建新的二进制日志文件, <code>flush logs</code>;</li>
+<li>清理指定二进制日志文件之前的日志文件, <code>purge binary logs to &#39;binlog.000005&#39;</code>;</li>
+</ul>
+<p>在备份数据之前， 建议flush logs生成新的日志，<br>可保证备份期间的操作被清楚的记录在最新的日志文件里。</p>
+<h3 id="最佳实践"><a href="#最佳实践" class="headerlink" title="最佳实践"></a>最佳实践</h3><p>一般情况下备份策略采用长周期的逻辑全备份（保底恢复，但加载慢） + 短周期的快照物理备份（快速恢复） + 二进制日志文件定时备份（恢复到某个时间点）。<br>如果数据量不大， 则只需要逻辑全备份 + 二进制日志文件备份就可以。</p>
+<p>逻辑全备份流程：</p>
+<ol>
+<li>在进行全备份之前， 创建新二进制日志， 保证在备份期间的操作会被记录到新二进制日志中</li>
+<li>进行全备份</li>
+<li>清理老的二进制日志， 只保留最新二进制日志</li>
+<li>在下一次全备份之前， 定时备份二进制日志</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ mysql -e <span class="string">&quot;flush logs;&quot;</span></span><br><span class="line">$ mysql -e <span class="string">&quot;show binary logs;&quot;</span></span><br><span class="line">$ <span class="built_in">mkdir</span> &lt;backup_dir_path&gt;</span><br><span class="line">$ mysqldump --single-transaction -d &lt;database_name&gt;</span><br><span class="line">$ mysqldump --single-transaction --tab=&lt;backup_dir_path&gt; &lt;database_name&gt;</span><br><span class="line">$ mysql -e <span class="string">&quot;purge binary logs to ‘&lt;最新的二进制日志&gt;&#x27;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>二进制日志文件备份流程：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ mysql -e <span class="string">&quot;flush logs;&quot;</span></span><br><span class="line">$ <span class="built_in">cp</span> binlog.* &lt;backup_dir_path&gt;</span><br><span class="line">$ mysql -e <span class="string">&quot;purge binary logs to ‘&lt;最新的二进制日志&gt;&#x27;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="恢复"><a href="#恢复" class="headerlink" title="恢复"></a>恢复</h2><p>在恢复过程中， 要保证MySQL除了恢复进程外不接受其他访问， 直到恢复并检测完毕， 重新提供服务为止。</p>
+<h3 id="基于时间点的逻辑备份的恢复"><a href="#基于时间点的逻辑备份的恢复" class="headerlink" title="基于时间点的逻辑备份的恢复"></a>基于时间点的逻辑备份的恢复</h3><p>基于时间点的恢复要求建立日常备份, 并保证所需要的二进制日志有效.<br>这样才能基于某一次全备份, 然后从那个时间点开始重放二进制日志,<br>将数据来恢复到指定时间.</p>
+<p>基于逻辑备份恢复和二进制重放都是一个很慢的过程, 在开始恢复之前， 建议通过<code>set sql_log_bin=0;</code>关闭二进制日志。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 禁用二进制日志</span></span><br><span class="line">$ mysql -e <span class="string">&quot;set sql_log_bin=0;&quot;</span></span><br><span class="line"><span class="comment"># 创建schema</span></span><br><span class="line">$ mysql &lt; schema.sql</span><br><span class="line"><span class="comment"># 导入数据, mysqlimporter是对load data infile命令的封装</span></span><br><span class="line">$ mysqlimportor &lt;database_name&gt; &lt;csv数据文件路径&gt;</span><br><span class="line"><span class="comment"># 重放从那个时间点之后的二进制日志</span></span><br><span class="line">$ mysqlbinlog --database=&lt;database_name&gt; &lt;binlog二进制文件路径&gt; | mysql</span><br><span class="line"><span class="comment"># 打开二进制日志</span></span><br><span class="line">$ mysql -e <span class="string">&quot;set sql_log_bin=1;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li>高性能MySQL — 第15章备份与恢复</li>
+</ul>
+]]></content>
+      <categories>
+        <category>DB</category>
+      </categories>
+      <tags>
+        <tag>DB</tag>
+        <tag>mysql</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring MVC请求处理流程</title>
+    <url>/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/</url>
+    <content><![CDATA[<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">环境: </span><br><span class="line">- org.springframework:spring-webmvc:5.3.10</span><br><span class="line">- org.springframework.boot:spring-boot:2.5.5</span><br></pre></td></tr></table></figure>
+
+<p>web程序启动时的初始化顺序: ServletContext -&gt; listener -&gt; filter -&gt; servlet<br>spring bean的初始化是在listener中声明的, 可以在后面使用.</p>
+<span id="more"></span>
+
+<p><img src="/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/request-workflow.jpg"></p>
+<h2 id="Filter"><a href="#Filter" class="headerlink" title="Filter"></a>Filter</h2><ul>
+<li>Servlet规范规定的，只能用于Web程序中, 由Servlet容器提供支持</li>
+<li>作用于Servlet执行前后</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Order(1)</span></span><br><span class="line"><span class="meta">@WebFilter(filterName = &quot;customized&quot;, urlPatterns = &quot;/*&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">CustomizedFilter</span> <span class="keyword">implements</span> <span class="title class_">Filter</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">init</span><span class="params">(FilterConfig filterConfig)</span> <span class="keyword">throws</span> ServletException &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter Init&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">doFilter</span><span class="params">(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)</span> <span class="keyword">throws</span> IOException, ServletException &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter doFilter before&quot;</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 执行Servlet</span></span><br><span class="line">        filterChain.doFilter(servletRequest, servletResponse);</span><br><span class="line"></span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter doFilter after&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">destroy</span><span class="params">()</span> &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter destroy&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>必须要注解<strong>ServletComponentScan</strong>才能让自定义的Filter其效果.</p>
+<p>在filterChain.doFilter调用的前后来执行操作, 作用于Servlet之前的前后.</p>
+<h2 id="DispatcherServlet"><a href="#DispatcherServlet" class="headerlink" title="DispatcherServlet"></a>DispatcherServlet</h2><p>为Spring框架定制的Servlet, 用来对请求进行处理</p>
+<ul>
+<li>获取请求处理链HandlerExecutionChain以及相应的HandlerAdapter</li>
+<li>通过HandlerAdapter对请求进行处理</li>
+<li>使用Interceptor对request&#x2F;response进行拦截</li>
+<li>对异常进行处理</li>
+</ul>
+<p>Spring MVC中的各种相关配置可参考<code>WebMvcAutoConfigurationAdapter</code>.<br>通过定义一个或者多个<code>WebMvcConfigurer</code>来扩展Spring MVC中的配置</p>
+<h2 id="获取Handler"><a href="#获取Handler" class="headerlink" title="获取Handler"></a>获取Handler</h2><p><img src="/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/request-mapping.png"></p>
+<p>通过<code>@RequestMapping</code>注解定义方法Handler的匹配要求，<br>生成对应的<code>RequestMappingInfo</code>和多个<code>RequestCondition</code>，<br>用于请求匹配, 匹配成功后调用对应的方法Handler。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@RequestMapping(value = &quot;/&#123;ping&#125;&quot;, method = RequestMethod.GET)</span></span><br><span class="line"><span class="keyword">public</span> String <span class="title function_">getPingPong</span><span class="params">( String ping)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> ping;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@GetMapping(value = &quot;/&#123;ping&#125;&quot;, params = &quot;ex=1&quot;)</span></span><br><span class="line"><span class="keyword">public</span> String <span class="title function_">getPingPongEx</span><span class="params">( String ping)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> ping + <span class="string">&quot; Ex&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>DispatcherServlet::getHandler</code>用于获取请求处理链HandlerExecutionChain，<br>通过比较RequestMappingInfo和RequestCondition，查找最匹配的方法Handler。<br>定义的RequestCondition越多，则方法Handler的针对性越强；反之，则方法Handler越通用。</p>
+<h2 id="通过HandlerAdapter处理请求"><a href="#通过HandlerAdapter处理请求" class="headerlink" title="通过HandlerAdapter处理请求"></a>通过HandlerAdapter处理请求</h2><p><code>HandlerAdapter.handle</code>主要做以下几件事：</p>
+<ul>
+<li><code>HandlerMethodArgumentResolver</code>对输入参数进行解析</li>
+<li>调用handler对请求进行处理</li>
+<li><code>HandlerMethodReturnValueHandler</code>对返回进行处理</li>
+<li>ExceptionHandler异常统一处理</li>
+</ul>
+<h3 id="基于String输入的参数解析"><a href="#基于String输入的参数解析" class="headerlink" title="基于String输入的参数解析"></a>基于String输入的参数解析</h3><p><img src="/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/string-param-resolver.png"></p>
+<p>通过定义Converters中的bean，就可以在启动时<br>通过<code>WebMvcAutoConfigurationAdapter#addFormatters</code>添加进来，<br>用于<code>AbstractNamedValueMethodArgumentResolver</code>的输入类型转换。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Money.java</span></span><br><span class="line"><span class="meta">@Getter</span></span><br><span class="line"><span class="meta">@Setter</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Money</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="type">String</span> <span class="variable">currency</span> <span class="operator">=</span> <span class="string">&quot;CNY&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> String value;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">toString</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> currency + <span class="string">&quot; &quot;</span> + value;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// MoneyFormatter.java</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">MoneyFormatter</span> <span class="keyword">implements</span> <span class="title class_">Formatter</span>&lt;Money&gt; &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> Money <span class="title function_">parse</span><span class="params">(String text, Locale locale)</span> <span class="keyword">throws</span> ParseException &#123;</span><br><span class="line">        String[] input = text.split(<span class="string">&quot; &quot;</span>);</span><br><span class="line">        <span class="type">Money</span> <span class="variable">money</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Money</span>();</span><br><span class="line">        <span class="keyword">if</span> (input.length == <span class="number">1</span>) &#123;</span><br><span class="line">            money.setValue(input[<span class="number">0</span>]);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            money.setCurrency(input[<span class="number">0</span>]);</span><br><span class="line">            money.setValue(input[<span class="number">1</span>]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> money;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">print</span><span class="params">(Money object, Locale locale)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> object.getCurrency()</span><br><span class="line">                + <span class="string">&quot; &quot;</span> + object.getValue();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// IndexController.java</span></span><br><span class="line"><span class="meta">@GetMapping(value = &quot;/price&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Money <span class="title function_">price</span><span class="params">( Money money)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> money;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="针对Body的输入和输出处理"><a href="#针对Body的输入和输出处理" class="headerlink" title="针对Body的输入和输出处理"></a>针对Body的输入和输出处理</h3><p><img src="/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/body-param-resolver.png"></p>
+<p>通过<code>HttpMessageConverter</code>对body进行序列化和反序列化,<br>其中最常用的就是json的处理模块<code>MappingJackson2HttpMessageConverter</code>.</p>
+<p>通过定义<code>HttpMessageConverters</code>的bean，将自定义的<code>HttpMessageConverter</code>添加进来，<br>通过<code>WebMvcAutoConfigurationAdapter#configureMessageConverters</code>进行注册</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// StringConverter.java</span></span><br><span class="line"><span class="keyword">public</span> StringConverter <span class="keyword">implements</span> <span class="title class_">HttpMessageConverter</span>&lt;String&gt; &#123;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// ConverterConfig.java</span></span><br><span class="line"><span class="meta">@Bean</span></span><br><span class="line"><span class="keyword">public</span> HttpMessageConverters <span class="title function_">converters</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">HttpMessageConverters</span>(<span class="keyword">new</span> <span class="title class_">StringConverter</span>());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="JacksonJson序列化的支持"><a href="#JacksonJson序列化的支持" class="headerlink" title="JacksonJson序列化的支持"></a>JacksonJson序列化的支持</h3><p>Spring MVC中提供了<code>MappingJackson2HttpMessageConverter</code>对json对象进行序列化处理。<br>通过JsonComponnet相关的bean来注册JSON序列化组件</p>
+<ul>
+<li>JsonSerializer</li>
+<li>JsonDeserializer</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@JsonComponent</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">MoneyJson</span> <span class="keyword">extends</span> <span class="title class_">StdSerializer</span>&lt;Money&gt; &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">protected</span> <span class="title function_">MoneyJson</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="built_in">super</span>(Money.class);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">serialize</span><span class="params">(Money money, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)</span> <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">        jsonGenerator.writeString(money.toString());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="Interceptor"><a href="#Interceptor" class="headerlink" title="Interceptor"></a>Interceptor</h2><p>Interceptor用于对Controller层进行拦截，<br>处理一些和controller没有依赖的业务，比如鉴权，日志等</p>
+<ul>
+<li>作用于Controller前后执行</li>
+<li>不能修改request</li>
+<li>spring中优先使用Interceptor, 而不是filter</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">CustomizedInterceptor</span> <span class="keyword">extends</span> <span class="title class_">HandlerInterceptorAdapter</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">preHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler)</span></span><br><span class="line">            <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedInterceptor prehandle&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">postHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler,</span></span><br><span class="line"><span class="params">			<span class="meta">@Nullable</span> ModelAndView modelAndView)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">		log.info(<span class="string">&quot;CustomizedInterceptor postHandle&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">afterCompletion</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler,</span></span><br><span class="line"><span class="params">			<span class="meta">@Nullable</span> Exception ex)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">		log.info(<span class="string">&quot;CustomizedInterceptor afterCompletion&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 添加interceptor</span></span><br><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">AppServiceConfig</span> <span class="keyword">extends</span> <span class="title class_">WebMvcConfigurationSupport</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> CustomizedInterceptor customizedInterceptor;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">addInterceptors</span><span class="params">(InterceptorRegistry registry)</span> &#123;</span><br><span class="line">        registry.addInterceptor(customizedInterceptor).addPathPatterns(<span class="string">&quot;/**&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="Exception处理"><a href="#Exception处理" class="headerlink" title="Exception处理"></a>Exception处理</h2><p>对Request Mapping Handler方法抛出的异常进行处理。</p>
+<ul>
+<li>ExceptionHandler<ul>
+<li>Controller层异常处理</li>
+<li>ControllerAdvice全局异常处理</li>
+</ul>
+</li>
+</ul>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a href="https://jcp.org/en/jsr/detail?id=340">JSR 340: Java Servlet 3.1 Specification</a></li>
+<li><a href="https://waylau.gitbooks.io/servlet-3-1-specification/content/">中文翻译</a></li>
+<li><a href="https://docs.spring.io/spring-framework/reference/">Spring MVC</a></li>
+<li><a href="https://time.geekbang.org/course/detail/100023501-85504">玩转Spring全家桶 — 46 | Spring MVC中的常用视图（上）</a></li>
+<li><a href="https://blog.csdn.net/zhaolijing2012/article/details/41596803">SpringMVC系列（一）核心：处理请求流程</a></li>
+<li><a href="http://www.cnblogs.com/cnndevelop/p/7255622.html">Spring Boot :Request请求处理流程</a></li>
+<li><a href="http://www.51gjie.com/javaweb/909.html">Spring MVC工作流程以及请求处理流程</a></li>
+<li><a href="https://blog.csdn.net/u012881904/article/details/51292211">码农小汪-Spring MVC -DispatcherServlet 详解</a></li>
+<li><a href="https://www.ibm.com/developerworks/cn/java/j-lo-servlet/index.html">Servlet 工作原理解析</a></li>
+<li><a href="https://www.cnblogs.com/ycpanda/p/3637312.html">Spring filter和拦截器(Interceptor)的区别和执行顺序</a></li>
+<li><a href="http://fanlychie.github.io/post/spring-boot-servlet-filter-listener-usage.html">Spring Boot 使用 Servlet、Filter、Listener</a></li>
+<li><a href="https://my.oschina.net/lichhao/blog/172562">SpringMVC源码剖析（五)-消息转换器HttpMessageConverter</a></li>
+<li><a href="https://leokongwq.github.io/2015/04/17/springMVCOutlines.html">Spring MVC HandlerMapping HandlerAdapter</a></li>
+<li><a href="https://blog.csdn.net/hongxingxiaonan/article/details/50282001">SpringMVC中WebDataBinder的应用及原理</a></li>
+<li><a href="https://blog.csdn.net/u010913106/article/details/50855691">说说Spring中的WebDataBinder</a></li>
+<li><a href="https://www.jianshu.com/p/ffe56d9553fd">Spring Boot：定制HTTP消息转换器</a></li>
+<li><a href="https://cloud.tencent.com/developer/article/1561782">Spring Boot 统一异常处理最佳实践 – 拓展篇</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>spring</category>
+      </categories>
+      <tags>
+        <tag>spring</tag>
+        <tag>web</tag>
       </tags>
   </entry>
   <entry>
@@ -280,656 +771,6 @@
         <tag>spring</tag>
         <tag>web</tag>
         <tag>spring security</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring MVC请求处理流程</title>
-    <url>/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/</url>
-    <content><![CDATA[<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">环境: </span><br><span class="line">- org.springframework:spring-webmvc:5.3.10</span><br><span class="line">- org.springframework.boot:spring-boot:2.5.5</span><br></pre></td></tr></table></figure>
-
-<p>web程序启动时的初始化顺序: ServletContext -&gt; listener -&gt; filter -&gt; servlet<br>spring bean的初始化是在listener中声明的, 可以在后面使用.</p>
-<span id="more"></span>
-
-<p><img src="/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/request-workflow.jpg"></p>
-<h2 id="Filter"><a href="#Filter" class="headerlink" title="Filter"></a>Filter</h2><ul>
-<li>Servlet规范规定的，只能用于Web程序中, 由Servlet容器提供支持</li>
-<li>作用于Servlet执行前后</li>
-</ul>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Order(1)</span></span><br><span class="line"><span class="meta">@WebFilter(filterName = &quot;customized&quot;, urlPatterns = &quot;/*&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">CustomizedFilter</span> <span class="keyword">implements</span> <span class="title class_">Filter</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">init</span><span class="params">(FilterConfig filterConfig)</span> <span class="keyword">throws</span> ServletException &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter Init&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">doFilter</span><span class="params">(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)</span> <span class="keyword">throws</span> IOException, ServletException &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter doFilter before&quot;</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 执行Servlet</span></span><br><span class="line">        filterChain.doFilter(servletRequest, servletResponse);</span><br><span class="line"></span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter doFilter after&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">destroy</span><span class="params">()</span> &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter destroy&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>必须要注解<strong>ServletComponentScan</strong>才能让自定义的Filter其效果.</p>
-<p>在filterChain.doFilter调用的前后来执行操作, 作用于Servlet之前的前后.</p>
-<h2 id="DispatcherServlet"><a href="#DispatcherServlet" class="headerlink" title="DispatcherServlet"></a>DispatcherServlet</h2><p>为Spring框架定制的Servlet, 用来对请求进行处理</p>
-<ul>
-<li>获取请求处理链HandlerExecutionChain以及相应的HandlerAdapter</li>
-<li>通过HandlerAdapter对请求进行处理</li>
-<li>使用Interceptor对request&#x2F;response进行拦截</li>
-<li>对异常进行处理</li>
-</ul>
-<p>Spring MVC中的各种相关配置可参考<code>WebMvcAutoConfigurationAdapter</code>.<br>通过定义一个或者多个<code>WebMvcConfigurer</code>来扩展Spring MVC中的配置</p>
-<h2 id="获取Handler"><a href="#获取Handler" class="headerlink" title="获取Handler"></a>获取Handler</h2><p><img src="/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/request-mapping.png"></p>
-<p>通过<code>@RequestMapping</code>注解定义方法Handler的匹配要求，<br>生成对应的<code>RequestMappingInfo</code>和多个<code>RequestCondition</code>，<br>用于请求匹配, 匹配成功后调用对应的方法Handler。</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@RequestMapping(value = &quot;/&#123;ping&#125;&quot;, method = RequestMethod.GET)</span></span><br><span class="line"><span class="keyword">public</span> String <span class="title function_">getPingPong</span><span class="params">( String ping)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> ping;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@GetMapping(value = &quot;/&#123;ping&#125;&quot;, params = &quot;ex=1&quot;)</span></span><br><span class="line"><span class="keyword">public</span> String <span class="title function_">getPingPongEx</span><span class="params">( String ping)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> ping + <span class="string">&quot; Ex&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><code>DispatcherServlet::getHandler</code>用于获取请求处理链HandlerExecutionChain，<br>通过比较RequestMappingInfo和RequestCondition，查找最匹配的方法Handler。<br>定义的RequestCondition越多，则方法Handler的针对性越强；反之，则方法Handler越通用。</p>
-<h2 id="通过HandlerAdapter处理请求"><a href="#通过HandlerAdapter处理请求" class="headerlink" title="通过HandlerAdapter处理请求"></a>通过HandlerAdapter处理请求</h2><p><code>HandlerAdapter.handle</code>主要做以下几件事：</p>
-<ul>
-<li><code>HandlerMethodArgumentResolver</code>对输入参数进行解析</li>
-<li>调用handler对请求进行处理</li>
-<li><code>HandlerMethodReturnValueHandler</code>对返回进行处理</li>
-<li>ExceptionHandler异常统一处理</li>
-</ul>
-<h3 id="基于String输入的参数解析"><a href="#基于String输入的参数解析" class="headerlink" title="基于String输入的参数解析"></a>基于String输入的参数解析</h3><p><img src="/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/string-param-resolver.png"></p>
-<p>通过定义Converters中的bean，就可以在启动时<br>通过<code>WebMvcAutoConfigurationAdapter#addFormatters</code>添加进来，<br>用于<code>AbstractNamedValueMethodArgumentResolver</code>的输入类型转换。</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Money.java</span></span><br><span class="line"><span class="meta">@Getter</span></span><br><span class="line"><span class="meta">@Setter</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Money</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="type">String</span> <span class="variable">currency</span> <span class="operator">=</span> <span class="string">&quot;CNY&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> String value;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">toString</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> currency + <span class="string">&quot; &quot;</span> + value;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// MoneyFormatter.java</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">MoneyFormatter</span> <span class="keyword">implements</span> <span class="title class_">Formatter</span>&lt;Money&gt; &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> Money <span class="title function_">parse</span><span class="params">(String text, Locale locale)</span> <span class="keyword">throws</span> ParseException &#123;</span><br><span class="line">        String[] input = text.split(<span class="string">&quot; &quot;</span>);</span><br><span class="line">        <span class="type">Money</span> <span class="variable">money</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Money</span>();</span><br><span class="line">        <span class="keyword">if</span> (input.length == <span class="number">1</span>) &#123;</span><br><span class="line">            money.setValue(input[<span class="number">0</span>]);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            money.setCurrency(input[<span class="number">0</span>]);</span><br><span class="line">            money.setValue(input[<span class="number">1</span>]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> money;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">print</span><span class="params">(Money object, Locale locale)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> object.getCurrency()</span><br><span class="line">                + <span class="string">&quot; &quot;</span> + object.getValue();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// IndexController.java</span></span><br><span class="line"><span class="meta">@GetMapping(value = &quot;/price&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Money <span class="title function_">price</span><span class="params">( Money money)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> money;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="针对Body的输入和输出处理"><a href="#针对Body的输入和输出处理" class="headerlink" title="针对Body的输入和输出处理"></a>针对Body的输入和输出处理</h3><p><img src="/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/body-param-resolver.png"></p>
-<p>通过<code>HttpMessageConverter</code>对body进行序列化和反序列化,<br>其中最常用的就是json的处理模块<code>MappingJackson2HttpMessageConverter</code>.</p>
-<p>通过定义<code>HttpMessageConverters</code>的bean，将自定义的<code>HttpMessageConverter</code>添加进来，<br>通过<code>WebMvcAutoConfigurationAdapter#configureMessageConverters</code>进行注册</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// StringConverter.java</span></span><br><span class="line"><span class="keyword">public</span> StringConverter <span class="keyword">implements</span> <span class="title class_">HttpMessageConverter</span>&lt;String&gt; &#123;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// ConverterConfig.java</span></span><br><span class="line"><span class="meta">@Bean</span></span><br><span class="line"><span class="keyword">public</span> HttpMessageConverters <span class="title function_">converters</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">HttpMessageConverters</span>(<span class="keyword">new</span> <span class="title class_">StringConverter</span>());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="JacksonJson序列化的支持"><a href="#JacksonJson序列化的支持" class="headerlink" title="JacksonJson序列化的支持"></a>JacksonJson序列化的支持</h3><p>Spring MVC中提供了<code>MappingJackson2HttpMessageConverter</code>对json对象进行序列化处理。<br>通过JsonComponnet相关的bean来注册JSON序列化组件</p>
-<ul>
-<li>JsonSerializer</li>
-<li>JsonDeserializer</li>
-</ul>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@JsonComponent</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">MoneyJson</span> <span class="keyword">extends</span> <span class="title class_">StdSerializer</span>&lt;Money&gt; &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">protected</span> <span class="title function_">MoneyJson</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="built_in">super</span>(Money.class);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">serialize</span><span class="params">(Money money, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)</span> <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">        jsonGenerator.writeString(money.toString());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="Interceptor"><a href="#Interceptor" class="headerlink" title="Interceptor"></a>Interceptor</h2><p>Interceptor用于对Controller层进行拦截，<br>处理一些和controller没有依赖的业务，比如鉴权，日志等</p>
-<ul>
-<li>作用于Controller前后执行</li>
-<li>不能修改request</li>
-<li>spring中优先使用Interceptor, 而不是filter</li>
-</ul>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">CustomizedInterceptor</span> <span class="keyword">extends</span> <span class="title class_">HandlerInterceptorAdapter</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">preHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler)</span></span><br><span class="line">            <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedInterceptor prehandle&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">postHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler,</span></span><br><span class="line"><span class="params">			<span class="meta">@Nullable</span> ModelAndView modelAndView)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">		log.info(<span class="string">&quot;CustomizedInterceptor postHandle&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">afterCompletion</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler,</span></span><br><span class="line"><span class="params">			<span class="meta">@Nullable</span> Exception ex)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">		log.info(<span class="string">&quot;CustomizedInterceptor afterCompletion&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 添加interceptor</span></span><br><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">AppServiceConfig</span> <span class="keyword">extends</span> <span class="title class_">WebMvcConfigurationSupport</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> CustomizedInterceptor customizedInterceptor;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">addInterceptors</span><span class="params">(InterceptorRegistry registry)</span> &#123;</span><br><span class="line">        registry.addInterceptor(customizedInterceptor).addPathPatterns(<span class="string">&quot;/**&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="Exception处理"><a href="#Exception处理" class="headerlink" title="Exception处理"></a>Exception处理</h2><p>对Request Mapping Handler方法抛出的异常进行处理。</p>
-<ul>
-<li>ExceptionHandler<ul>
-<li>Controller层异常处理</li>
-<li>ControllerAdvice全局异常处理</li>
-</ul>
-</li>
-</ul>
-<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
-<li><a href="https://jcp.org/en/jsr/detail?id=340">JSR 340: Java Servlet 3.1 Specification</a></li>
-<li><a href="https://waylau.gitbooks.io/servlet-3-1-specification/content/">中文翻译</a></li>
-<li><a href="https://docs.spring.io/spring-framework/reference/">Spring MVC</a></li>
-<li><a href="https://time.geekbang.org/course/detail/100023501-85504">玩转Spring全家桶 — 46 | Spring MVC中的常用视图（上）</a></li>
-<li><a href="https://blog.csdn.net/zhaolijing2012/article/details/41596803">SpringMVC系列（一）核心：处理请求流程</a></li>
-<li><a href="http://www.cnblogs.com/cnndevelop/p/7255622.html">Spring Boot :Request请求处理流程</a></li>
-<li><a href="http://www.51gjie.com/javaweb/909.html">Spring MVC工作流程以及请求处理流程</a></li>
-<li><a href="https://blog.csdn.net/u012881904/article/details/51292211">码农小汪-Spring MVC -DispatcherServlet 详解</a></li>
-<li><a href="https://www.ibm.com/developerworks/cn/java/j-lo-servlet/index.html">Servlet 工作原理解析</a></li>
-<li><a href="https://www.cnblogs.com/ycpanda/p/3637312.html">Spring filter和拦截器(Interceptor)的区别和执行顺序</a></li>
-<li><a href="http://fanlychie.github.io/post/spring-boot-servlet-filter-listener-usage.html">Spring Boot 使用 Servlet、Filter、Listener</a></li>
-<li><a href="https://my.oschina.net/lichhao/blog/172562">SpringMVC源码剖析（五)-消息转换器HttpMessageConverter</a></li>
-<li><a href="https://leokongwq.github.io/2015/04/17/springMVCOutlines.html">Spring MVC HandlerMapping HandlerAdapter</a></li>
-<li><a href="https://blog.csdn.net/hongxingxiaonan/article/details/50282001">SpringMVC中WebDataBinder的应用及原理</a></li>
-<li><a href="https://blog.csdn.net/u010913106/article/details/50855691">说说Spring中的WebDataBinder</a></li>
-<li><a href="https://www.jianshu.com/p/ffe56d9553fd">Spring Boot：定制HTTP消息转换器</a></li>
-<li><a href="https://cloud.tencent.com/developer/article/1561782">Spring Boot 统一异常处理最佳实践 – 拓展篇</a></li>
-</ul>
-]]></content>
-      <categories>
-        <category>spring</category>
-      </categories>
-      <tags>
-        <tag>spring</tag>
-        <tag>web</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>RabbitMQ 开发实践</title>
-    <url>/2021/12/rabbitmq-%E5%BC%80%E5%8F%91%E5%AE%9E%E8%B7%B5/</url>
-    <content><![CDATA[<p>快速熟悉RabbitMQ的元素, 以及开发相关的最佳实践总结.</p>
-<span id="more"></span>
-<p><img src="rmq-modal.png" /></p>
-<h2 id="声明exchange和queue">声明Exchange和Queue</h2>
-<p>Exchange负责对消息的路由, 而Queue负责对消息的存储.</p>
-<h3 id="exchange">Exchange</h3>
-<p>Exchange主要有以下几种路由方式:</p>
-<ul>
-<li>fanout, 分发到所有绑定的Queue中</li>
-<li>direct, 只分发到路由键完全匹配的Queue中</li>
-<li>topic, 分发到和路由键匹配的Queue中</li>
-</ul>
-<p>Exchange的常用属性:</p>
-<ul>
-<li>durable, 对于长期使用的交换器设置为true,
-保证服务重启后仍然存在.</li>
-<li>auto delete, 对于长期使用的交换器设置为false</li>
-<li>internal, 用于Broker内部的路由, 对于同客户端连接的交换器设置为false,
-AE可设置为true.</li>
-</ul>
-<h3 id="queue">Queue</h3>
-<p>交换器的使用并不真正消耗服务器的性能, 但队列会,
-所以需要更加关注队列的设计, 需要对队列的流量,
-内存占用以及网卡占用要有一个清晰的评估, 预估其平均值和峰值,
-以便合理分配硬件资源.</p>
-<p>Queue的主要属性:</p>
-<ul>
-<li>durable, 设置为true, 则服务重启后队列信息仍然存在; 配合消息的持久化,
-可以保证服务重启后消息不丢失.</li>
-<li>exclusive, true则仅对声明它的连接可见, 断开时自动删除;
-一般情况下设置为false</li>
-<li>auto delete, 一般设置为false</li>
-<li>队列中消息的TTL, 通过x-message-ttl来设置,
-最终消息的TTL=min(队列中消息的TTL, 消息设置的TTL),
-消息过期后则变为死信(Dead Message)</li>
-</ul>
-<p>当一个队列有多个消费者时, 队列中的消息会被平均分摊(Round-Robin,
-即轮询) 给多个消费者进行处理,
-而不是每个消费者都收到所有的消息并处理.</p>
-<p>通过路由键(Route Key)将Exchange和Queue进行绑定.</p>
-<p>Queue的应用:</p>
-<ul>
-<li>死信队列, 需要配合死信交换器(DLX),
-当消息过期后会被路由到死信队列</li>
-<li>延迟队列, 通过死信队列+消息的TTL来实现</li>
-<li>优先级队列</li>
-<li>RPC队列</li>
-</ul>
-<h3 id="备用交换器ae-alternate-exchange">备用交换器(AE, Alternate
-Exchange)</h3>
-<p>为了防止消息丢失, 一般建议配置AE, 当交换器无法路由消息到指定的队列时,
-会将消息路由到AE, 由AE保存到与它绑定的队列中, 之后在修复后,
-通过工具将这些丢失的消息重新入队.</p>
-<h3 id="基本模板">基本模板</h3>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// AE声明</span></span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.AE, BuiltinExchangeType.FANOUT,</span><br><span class="line">    <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">true</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.AE_QUEUE,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.AE_QUEUE, RabbitMQConfig.AE, <span class="string">&quot;&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Exchange和Queue声明</span></span><br><span class="line">Map&lt;String, Object&gt; args = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;&gt;();</span><br><span class="line">args.put(<span class="string">&quot;alternate-exchange&quot;</span>, RabbitMQConfig.AE);</span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.EX, BuiltinExchangeType.DIRECT,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, args);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.EX_QUEUE,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.EX_QUEUE, RabbitMQConfig.EX, </span><br><span class="line">    RabbitMQConfig.EX_QUEUE_ROUTE_KEY);</span><br></pre></td></tr></table></figure>
-<h3 id="message">Message</h3>
-<p>生产者创建的消息分为两部分:</p>
-<ul>
-<li>消息标签, 包含路由相关的信息</li>
-<li>消息体, 消息的内容, 可以被Queue保存</li>
-</ul>
-<p>消息的常用属性:</p>
-<ul>
-<li>durable, 通过设置deliverMode为2, 可实现消息的持久化;
-对于可靠性/重要性不是那么高的消息不采用持久化处理,
-以提高系统的吞吐量</li>
-<li>消息的TTL, 通过设置expiration参数</li>
-</ul>
-<h3 id="connect-channel">Connect &amp;&amp; Channel</h3>
-<p>客户端需要和RabbitMQ建立TCP Connection,
-建立后会创建AMQP信道(Channel), 并被指派一个唯一的ID.
-Channel是建立在Connection上的虚拟连接, 用于处理AMQP指令.</p>
-<p>建立/销毁TCP连接是非常大的开销, 高峰时, 性能瓶颈也就随之出现.
-所以RabbitMQ采用类似NIO的做法, 对TCP连接进行复用.</p>
-<p>建议客户端采用连接池, 将Channel均摊到池中的Connection上;
-每个线程持有一个Channel.</p>
-<p>为了当发生阻塞时可以在阻止生产者的同时, 又不影响消费者的运行,
-建议生产者和消费者的逻辑使用不同的Connection.</p>
-<h2 id="实现publisher">实现Publisher</h2>
-<p>为了避免发送方的消息丢失, RabbitMQ提供了以下几种机制:</p>
-<ul>
-<li>发送消息时设置mandatory, 当交换器无法找到复合条件的队列时,
-通过Basic.Return将消息返回给生产者; 如果交换器存在AE,
-则mandatory失效.</li>
-<li>事务机制, txSelect/txCommit/txRollback, 每次只能处理一条消息,
-在消息发送后会<strong>阻塞</strong>发送端, 等待RabbitMQ的回应,
-回应提交成功, 则表明消息已经到达RabbitMQ; 如果发生任何异常,
-发送端可以捕获异常并进行回滚;
-它<strong>严重降低了RabbitMQ的消息吞吐量</strong>.</li>
-<li>发送方确认机制, confirmSelect该模式下, 发布的消息都会被指派唯一ID,
-消息到达匹配队列后, RabbitMQ会发送Basic.Ack并携带消息的唯一ID,
-使发送方知道消息已经正确到达; 如果内部发生错误,
-则会发送Basic.Nack告知发送方.</li>
-</ul>
-<p>推荐使用<strong>异步的发送方确认机制</strong>的方式来批量发送消息.</p>
-<h2 id="实现consumer">实现Consumer</h2>
-<p>消费端有两种消费模式:</p>
-<ul>
-<li>Push模式, RabbitMQ主动向订阅的消费者推送消息, 适用于吞吐量大的情况;
-不同的订阅消费者采用唯一标签(consumerTag)来区分.</li>
-<li>Pull模式, 消费者从RabbitMQ拉取消息, 适用于吞吐量少的情况</li>
-</ul>
-<p>为了保证消息从队列可靠的到达消费者,
-RabbitMQ提供了消息确认机制(Message Acknowledge). 通过设置auto
-ack为false, 让消费者有足够的时间处理消息,
-处理完毕后再显式的发送Basic.Ack给RabbitMQ,
-然后RabbitMQ才从内存/磁盘中移除消息(实际上是先打上删除标记, 之后再删除).
-如果设置为true, 则RabbitMQ发送消息后就会将其从内存/磁盘中移除.</p>
-<p>RabbitMQ队列中的消息分为两个部分:</p>
-<ul>
-<li>Ready, 等待投递给消费者的消息</li>
-<li>Unacked, 已经投递给消费者, 但还没有收到确认信号的消息</li>
-</ul>
-<p>如果一直没有收到消费者的确认信号, 并且消费者断开了连接,
-RabbitMQ则会安排该消息重新进入队列, 等待投递给下一个消费者,
-确保消息被正确的消费.</p>
-<p>RabbitMQ判断此消息是否重新投递给消费者的唯一依据是消费该消息的消费者连接是否断开,
-因为RabbitMQ允许消费者消费一条消息的时间可以很久.</p>
-<p>通过Basic.Qos来对消费者端的吞吐量进行控制,</p>
-<ul>
-<li>global为false模式时, 针对每个消费者进行限制</li>
-<li>global为true模式时, 针对一个Channle中所有的消费者做限制</li>
-</ul>
-<p>如果同时设置了两种模式, 则同时生效, 即对信道中的每一个消费者做限制,
-也对信道中的总数做限制. 一般需要根据节点的性能进行配置.</p>
-<h2 id="reference">Reference</h2>
-<ul>
-<li><a
-href="https://book.douban.com/subject/27591386/">RabbitMQ实战指南</a></li>
-<li><a href="https://www.rabbitmq.com/getstarted.html">RabbitMQ
-Tutorials</a></li>
-</ul>
-]]></content>
-      <categories>
-        <category>MQ</category>
-      </categories>
-      <tags>
-        <tag>MQ</tag>
-        <tag>event</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Airflow介绍</title>
-    <url>/2020/08/airflow%E4%BB%8B%E7%BB%8D/</url>
-    <content><![CDATA[<p>了解airflow的基本元素以及并发控制</p>
-<span id="more"></span>
-<h2 id="基本元素">基本元素</h2>
-<ul>
-<li>DAG, 有向无环图, 用于描述整个处理流程中的任务之间的关系和依赖,
-只有定义在globals(全局作用域)的dag才会被airflow扫描到并加载</li>
-<li>Operator, 用于定义任务要去做什么, 尽量保证每个Operator可以独立运行,
-没有依赖; 如果不能避免依赖, 则通过xcom/其他存储方式进行参数传递</li>
-<li>default_args, 可被所有相关dag的Operator共享使用</li>
-<li>DAG Run, DAG被触发后生成的具体执行的DAG实例
-<ul>
-<li>创建时间</li>
-<li>execution_date, DAG Run的开始执行时间, 在同一个DAG中必须保持唯一,
-即在同一个DAG在同一时间只能有一个DAG Run.</li>
-</ul></li>
-<li>Task, Operator实例</li>
-<li>Task instance, 每次触发Task都会生成一个task instance,
-用于记录这次的task运行. 它拥有很多的状态, 状态的完成生命周期:
-<ol type="1">
-<li>no status</li>
-<li>scheduled, scheduler已计划将要运行对应的task instance</li>
-<li>queued, dispatch将task instance发送对相关的队列上进行排队</li>
-<li>Running, worker拿到队列中的任务进行执行</li>
-<li>success/failed, 任务完成后</li>
-</ol></li>
-</ul>
-<p><img src="airflow-status-flow.png" /></p>
-<h2 id="dag调度">DAG调度</h2>
-<p>通过在DAG中定义schedule_interval来指定如何调度,
-schedule_interval最好指定为预定义的值或者cron表达式</p>
-<p>DAG的调度分为:</p>
-<ul>
-<li>手动触发, 即schedule_interval=None</li>
-<li>周期性调度
-<ul>
-<li>backfill and catchup, 根据start_date到现在为止, 来创建过去的Dag
-Run并依次执行. 针对以时间为周期的数据集非常有用.</li>
-<li>非回填追赶模式, 即DAG的catchup=False, 不会为过去创建Dag Run.</li>
-</ul></li>
-</ul>
-<p>关于周期性调度的DAG,
-它的创建时间为<code>上一个DAG Run的创建时间+schedule_interval</code>,
-而第一个DAG Run的创建时间为min(start_date),
-务必将start_date设置为一个指定的值</p>
-<h2 id="并发控制">并发控制</h2>
-<ul>
-<li>Pools, 用于控制task instance的并行数, 它由以下元素组成,
-默认任务会被分配到default_pool池中, 它的工作槽有128个位置:
-<ul>
-<li>工作槽, 用于指定可同时运行的任务数</li>
-<li>等待队列, 当工作槽满时, 任务就进入等待队列,
-直到工作槽有空闲位置</li>
-<li>priority_weight,
-用于定义队列中的任务优先级以及在工作槽有空闲位置时优先执行哪些任务,
-默认任务本身的priority_weight为1,
-但在评估任务优先级时会计算任务本身及其下游任务的总和.</li>
-</ul></li>
-<li>Celery Queue, 只在使用CeleryExecutor时才有用, 用于给任务贴标签,
-这样工作节点就可以通过标签来筛选要执行哪些任务.
-默认任务会被分配到default_queue.</li>
-</ul>
-<p><img src="airflwo-with-celery.png" /></p>
-<p>DAG的多维度并发控制的参数:</p>
-<ul>
-<li>airflow.cfg的parallelism, airflow集群中同时运行的最大task
-instance数量</li>
-<li>airflow.cfg的dag_concurrency, 一个dag run中可以同时执行的task
-instance数量, 超出则排队; 可以通过DAG的concurrency进行自定义</li>
-<li>max_active_runs, 针对同一个DAG, 同一时间最多运行几个DAG Run,
-如果没有设置, 默认读取airflow.cfg的max_active_runs_per_dag</li>
-<li>task_concurrency, 控制Operator对应的task同一时间最多运行几个task
-instance</li>
-<li>pool, 指定task的Pools, 通过Pools来控制某类task的最大并发数</li>
-</ul>
-<p>调度的并发控制参数:</p>
-<ul>
-<li>airflow.cfg的max_threads, 调度线程数, 可以设置为CPU数-1</li>
-<li>airflow.cfg的scheduler_heartbeat_sec,
-scheduler扫描task并将task调度起来的频率</li>
-</ul>
-]]></content>
-      <categories>
-        <category>ETL</category>
-      </categories>
-      <tags>
-        <tag>ETL</tag>
-        <tag>airflow</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>MySQL备份和恢复</title>
-    <url>/2021/06/mysql%E5%A4%87%E4%BB%BD%E5%92%8C%E6%81%A2%E5%A4%8D/</url>
-    <content><![CDATA[<p>本文主要针对MySQL的InnoDB数据库，本文的目标:</p>
-<ul>
-<li>对数据进行备份</li>
-<li>将数据恢复到某一个时间点</li>
-</ul>
-<span id="more"></span>
-<h2 id="原理">原理</h2>
-<p>规划备份和恢复策略时, 可以根据一些需求来考虑:</p>
-<ul>
-<li>恢复点目标(RPO), 指恢复到哪个时间点, 可以容许丢失多少数据</li>
-<li>恢复时间目标(RTO), 指恢复可以容许的恢复时间长度</li>
-<li>备份到目的地的时间, 比如本地, NFS等</li>
-</ul>
-<p>备份的内容：</p>
-<ul>
-<li>MySQL配置</li>
-<li>schema和数据</li>
-<li>二进制日志</li>
-</ul>
-<p>Innodb是一个ACID系统， 任何时刻， 每个提交的事务
-要么在<strong>Innodb数据文件</strong>中，
-要么在<strong>二进制日志文件</strong>中。 所以为了保证一致性，
-即属于同一个时间点， 备份Innodb时需要对数据和二进制日志都进行备份。</p>
-<p>关闭MySQL备份是最简单安全的, 也是获取一致性的最好的方法,
-并且损坏的风险最小. 但对于在线系统来说, 停机备份的代价太大.</p>
-<p>如果使用了全局读锁FLUSH TABLE WITH READ LOCK,
-并且备份的事务执行需要很长的时间,
-则全局读锁需要等待备份的事务完成提交后才释放,
-在这期间的所有操作很可能会被阻塞和积压,
-即当发生一些修改操作需要等待表的写锁时, 之后的所有读写操作都会被阻塞.
-而<strong>避免全局读锁的最好方法就是只使用InnoDB,
-如果使用少量的MyISAM表, 则只需要锁住它们即可</strong>，
-因为InnoDB支持事务， 能报保证在一个事务中的的数据的一致性。</p>
-<p>建议混合使用物理和逻辑两种方式进行备份: 先使用物理复制,
-然后启动一个测试的MySQL实例并运行mysqlcheck来检查;
-然后周期性的使用mysqldump来执行逻辑备份.</p>
-<h2 id="备份">备份</h2>
-<h3 id="逻辑备份">逻辑备份</h3>
-<p>逻辑备份只用于数据备份,
-通过<strong>MySQL服务器</strong>将存储引擎中的数据导出, 与存储引擎无关,
-并且可以对备份的数据进行裁剪.</p>
-<p>缺点： 需要通过MySQL加载, 转为存储格式, 并且需要重建索引, 过程很慢,
-尤其在加载一个巨大的导出文件的代价很大</p>
-<p>需要尽量控制导出的数据文件大小，在保证一致性的前提下，
-按照业务逻辑导出到多个文件中，以控制导出到粒度。</p>
-<p>导出方式:</p>
-<ul>
-<li>导出sql格式的schema和数据</li>
-<li>导出sql格式的schema和csv格式的数据,
-必须保证secure_file_priv变量不为NULL, 以及相应的路径必须存在.
-需要在MySQL启动前在my.conf中配置</li>
-</ul>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">-- 将schema导出</span><br><span class="line">$ mysqldump --single-transaction -d --databases &lt;database_name&gt; &gt; schema.sql</span><br><span class="line">-- 将相关连的表的数据导到sql文件中</span><br><span class="line">$ mysqldump --single-transaction -t --databases &lt;database_name&gt; &gt; data.sql</span><br><span class="line">-- 每张表都会导出一个sql格式的表结构文件, csv格式的数据导文件</span><br><span class="line">$ mysqldump --single-transaction --tab=&lt;backup_dirname&gt; &lt;database_name&gt; [table1, ...]</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<h3 id="物理备份">物理备份</h3>
-<p>优点:</p>
-<ul>
-<li>物理备份的方式更加简单高效</li>
-<li>恢复往往要比逻辑备份要快, 省去了加载和重建过程</li>
-</ul>
-<p>缺点:</p>
-<ul>
-<li>往往备份的大小要比逻辑备份大得多</li>
-</ul>
-<p>物理备份方式:</p>
-<ul>
-<li>基于文件拷贝的备份, 适用于关机下备份， 配置文件备份，
-日志备份等</li>
-<li>通过快照进行备份</li>
-</ul>
-<h4 id="快照备份">快照备份</h4>
-<p>物理数据存放在<code>/var/lib/mysql</code>目录下，
-每个数据库存储在相同名字的目录下，
-同时也包含服务器配置和二进制日志文件。</p>
-<p>快照备份是非常好的在线备份方法, 并且可以减少持有锁的时间。
-又分为：</p>
-<ul>
-<li>最小化锁快照备份, 只锁MyISAM表，InnoDB不需要锁</li>
-<li>无锁快照备份, 如果MyISAM不会发生修改, 就可以不锁表</li>
-</ul>
-<p>快照备份后， 通过挂在快照， 拷贝数据文件到备份的地方。</p>
-<p>但使用快照备份需要额外的磁盘空间， 用于快照需要的写时复制空间。
-并且要求将MySQL的数据相关文件（/var/lib/mysql/）部署在同一个专有卷上。
-而且会导致原始卷和快照比正常读写性能要差，
-尤其在过多使用写时复制空间时。</p>
-<p>对数据进行物理快照备份后, 需要构建一个MySQL实例并加载物理备份,
-然后使用mysqlcheck可以对所有的表执行<code>CHECK TABLES</code>操作,
-检查物理备份的正确性.</p>
-<h4 id="mysql配置备份">MySQL配置备份</h4>
-<ul>
-<li>/etc/mysql/my.cnf, 默认配置文件</li>
-<li>/etc/mysql/conf.d, 自定义配置目录, 会覆盖默认配置中的设置.</li>
-</ul>
-<h4 id="二进制日志备份">二进制日志备份</h4>
-<p>二进制日志默认存储在<code>/var/lib/mysql/</code>目录下,
-格式为<code>binlog.*</code>,
-可通过命令<code>mysqlbinlog -d &lt;database_name&gt; &lt;binlog&gt;</code>来查看指定数据库的二进制日志</p>
-<p>常用命令：</p>
-<ul>
-<li>查看二进制日志， <code>show binary logs</code>;</li>
-<li>创建新的二进制日志文件, <code>flush logs</code>;</li>
-<li>清理指定二进制日志文件之前的日志文件,
-<code>purge binary logs to 'binlog.000005'</code>;</li>
-</ul>
-<p>在备份数据之前， 建议flush logs生成新的日志，
-可保证备份期间的操作被清楚的记录在最新的日志文件里。</p>
-<h3 id="最佳实践">最佳实践</h3>
-<p>一般情况下备份策略采用长周期的逻辑全备份（保底恢复，但加载慢） +
-短周期的快照物理备份（快速恢复） +
-二进制日志文件定时备份（恢复到某个时间点）。 如果数据量不大，
-则只需要逻辑全备份 + 二进制日志文件备份就可以。</p>
-<p>逻辑全备份流程：</p>
-<ol type="1">
-<li>在进行全备份之前， 创建新二进制日志，
-保证在备份期间的操作会被记录到新二进制日志中</li>
-<li>进行全备份</li>
-<li>清理老的二进制日志， 只保留最新二进制日志</li>
-<li>在下一次全备份之前， 定时备份二进制日志</li>
-</ol>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ mysql -e <span class="string">&quot;flush logs;&quot;</span></span><br><span class="line">$ mysql -e <span class="string">&quot;show binary logs;&quot;</span></span><br><span class="line">$ <span class="built_in">mkdir</span> &lt;backup_dir_path&gt;</span><br><span class="line">$ mysqldump --single-transaction -d &lt;database_name&gt;</span><br><span class="line">$ mysqldump --single-transaction --tab=&lt;backup_dir_path&gt; &lt;database_name&gt;</span><br><span class="line">$ mysql -e <span class="string">&quot;purge binary logs to ‘&lt;最新的二进制日志&gt;&#x27;&quot;</span></span><br></pre></td></tr></table></figure>
-<p>二进制日志文件备份流程：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ mysql -e <span class="string">&quot;flush logs;&quot;</span></span><br><span class="line">$ <span class="built_in">cp</span> binlog.* &lt;backup_dir_path&gt;</span><br><span class="line">$ mysql -e <span class="string">&quot;purge binary logs to ‘&lt;最新的二进制日志&gt;&#x27;&quot;</span></span><br></pre></td></tr></table></figure>
-<h2 id="恢复">恢复</h2>
-<p>在恢复过程中， 要保证MySQL除了恢复进程外不接受其他访问，
-直到恢复并检测完毕， 重新提供服务为止。</p>
-<h3 id="基于时间点的逻辑备份的恢复">基于时间点的逻辑备份的恢复</h3>
-<p>基于时间点的恢复要求建立日常备份, 并保证所需要的二进制日志有效.
-这样才能基于某一次全备份, 然后从那个时间点开始重放二进制日志,
-将数据来恢复到指定时间.</p>
-<p>基于逻辑备份恢复和二进制重放都是一个很慢的过程, 在开始恢复之前，
-建议通过<code>set sql_log_bin=0;</code>关闭二进制日志。</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 禁用二进制日志</span></span><br><span class="line">$ mysql -e <span class="string">&quot;set sql_log_bin=0;&quot;</span></span><br><span class="line"><span class="comment"># 创建schema</span></span><br><span class="line">$ mysql &lt; schema.sql</span><br><span class="line"><span class="comment"># 导入数据, mysqlimporter是对load data infile命令的封装</span></span><br><span class="line">$ mysqlimportor &lt;database_name&gt; &lt;csv数据文件路径&gt;</span><br><span class="line"><span class="comment"># 重放从那个时间点之后的二进制日志</span></span><br><span class="line">$ mysqlbinlog --database=&lt;database_name&gt; &lt;binlog二进制文件路径&gt; | mysql</span><br><span class="line"><span class="comment"># 打开二进制日志</span></span><br><span class="line">$ mysql -e <span class="string">&quot;set sql_log_bin=1;&quot;</span></span><br></pre></td></tr></table></figure>
-<h2 id="reference">Reference</h2>
-<ul>
-<li>高性能MySQL — 第15章备份与恢复</li>
-</ul>
-]]></content>
-      <categories>
-        <category>DB</category>
-      </categories>
-      <tags>
-        <tag>DB</tag>
-        <tag>mysql</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>MySQL Schema与数据类型优化</title>
-    <url>/2018/06/mysql-schema%E4%B8%8E%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E4%BC%98%E5%8C%96/</url>
-    <content><![CDATA[<ul>
-<li>学习如何选择合适的数据类型</li>
-<li>特殊数据的类型选择</li>
-<li>Schema的设计</li>
-</ul>
-<span id="more"></span>
-<h2 id="mysql基础数据类型">MySQL基础数据类型</h2>
-<ul>
-<li>数字
-<ul>
-<li>整数
-<ul>
-<li>tinyint/smallint/mediumint/int/bigint</li>
-<li>unsigned可选</li>
-</ul></li>
-<li>实数
-<ul>
-<li>Float/Double, 浮点计算</li>
-<li>DECIMAL, 存储精确的小数, 一般可使用bigint来代替decimal,
-通过乘以相应的倍数即可</li>
-</ul></li>
-</ul></li>
-<li>字符串
-<ul>
-<li>char, 定长, 适合更新频繁的列或者长度固定的列</li>
-<li>varchar, 变长, 需要额外的1或2个字节来存储长度, 小于等于255则1个字节,
-大于则2个字节; 不适合更新频繁的列, 会导致碎片化</li>
-<li>text, 很长的字符串</li>
-</ul></li>
-<li>二进制字符串, 比较时以字节为单位进行比较, 效率要比普通字符串要高
-<ul>
-<li>binary, 定长</li>
-<li>varbinary, 变长</li>
-<li>blob, 很长的二进制字符串</li>
-</ul></li>
-<li>时间
-<ul>
-<li>datetime, 从1001到9999年, 精度为秒,
-把日期和时间封装到格式为<strong>YYYYMMDDHHMMSS的整数</strong>中,
-显示<strong>与时区无关, 使用8字节存储</strong></li>
-<li>timestamp, 同unit时间戳,
-从新纪元时间(1970-01-01T00:00:00)以来的秒数,
-使用<strong>4字节存储</strong>, 只能表示1970到2038年, 显示依赖于时区,
-会根据时区不同, 显示对应的时间; 对应的列默认为NOT NULL.</li>
-</ul></li>
-</ul>
-<h2 id="特殊数据类型的处理">特殊数据类型的处理</h2>
-<h3 id="uuid数据">uuid数据</h3>
-<p>uuid数据的处理</p>
-<ol type="1">
-<li>移除uuid中的<strong>-</strong></li>
-<li>使用unhex函数将uuid字符串转换为16字节的数字, 存储到binary(16)中</li>
-<li>使用hex函数将16字节的数字转换为uuid字符串</li>
-</ol>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">mysql&gt; <span class="keyword">select</span> uuid();</span><br><span class="line">+--------------------------------------+</span><br><span class="line">| uuid()                               |</span><br><span class="line">+--------------------------------------+</span><br><span class="line">| e8dc60bb-6df3-11e8-8915-0800273063ab |</span><br><span class="line">+--------------------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br><span class="line"></span><br><span class="line">mysql&gt; <span class="keyword">select</span> unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>);</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">| unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>) |</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">| ��`�m��</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br><span class="line"></span><br><span class="line">mysql&gt; <span class="keyword">select</span> hex(unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>));</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">| hex(unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>)) |</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">| E8DC60BB6DF311E889150800273063AB               |</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br></pre></td></tr></table></figure>
-<h3 id="ip数据">ip数据</h3>
-<p>ip数据需要转换为数字存储</p>
-<ol type="1">
-<li>使用<strong>无符号整数</strong>存储ip列</li>
-<li>使用inet_aton将ip字符串转换为整数</li>
-<li>使用inet_ntoa将数字转换为ip字符串</li>
-</ol>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">mysql&gt; <span class="keyword">select</span> inet_aton(<span class="string">&#x27;192.168.0.1&#x27;</span>);</span><br><span class="line">+--------------------------+</span><br><span class="line">| inet_aton(<span class="string">&#x27;192.168.0.1&#x27;</span>) |</span><br><span class="line">+--------------------------+</span><br><span class="line">|               3232235521 |</span><br><span class="line">+--------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br><span class="line"></span><br><span class="line">mysql&gt; <span class="keyword">select</span> inet_ntoa(3232235521);</span><br><span class="line">+-----------------------+</span><br><span class="line">| inet_ntoa(3232235521) |</span><br><span class="line">+-----------------------+</span><br><span class="line">| 192.168.0.1           |</span><br><span class="line">+-----------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br></pre></td></tr></table></figure>
-<h3 id="id列的数据类型">id列的数据类型</h3>
-<p>id列的数据类型尽量选择<strong>递增型整数</strong></p>
-<p>因为随机值会分布在很大的空间中, 导致insert和select变慢.
-而且随机值的插入会随机写到索引的不同位置, 导致insert语句变慢;
-由于数据分布在很大的空间中, 也就导致了select指定的数据会变慢;
-还会导致缓存失效.</p>
-<p><strong>由于InnoDB的索引是一个B+Tree,
-所以按顺序的插入能够保证数据很快插入, 并保证数据集中在一定的范围之内.
-递增插入是比较好的选择.</strong></p>
-<p>不建议使用字符串类型作为id列, 查询性能很差.</p>
-<p>一般情况下尽量使用默认值方案来替换NULL,
-因为NULL会增加查询的复杂度.</p>
-<h2 id="范式与反范式">范式与反范式</h2>
-<p>范式的主要目的:</p>
-<ul>
-<li>减少数据冗余</li>
-<li>消除插入/删除/更新的异常</li>
-</ul>
-<p>关键概念:</p>
-<ul>
-<li>码/键(候选码), 表中的一个或多个属性组K,
-除开K中的属性外的其他所有属性都完全函数依赖于K, 则K为候选码;
-一个表可能存在多个码</li>
-<li>主属性, 包含在各个候选码中的属性, 主属性不可为空</li>
-</ul>
-<p>通常使用的范式:</p>
-<ul>
-<li>1NF(Normal Form)第一范式, 属性的原子性保证不可再分割,
-每个属性都只能存储一个值</li>
-<li>2NF第二范式, 基于1NF, 定义候选码, 非主属性必须完全依赖于候选码,
-即通过候选码可以确定实体的唯一性</li>
-<li>3NF第三范式, 基于2NF, 消除传递依赖,
-即任何非主属性不能由其他属性派生, 要求属性没有冗余</li>
-<li>BCNF, 基于3NF的改进范式, 消除主属性对码的部分与传递依赖</li>
-</ul>
-<p>一般情况下, 关系型数据库的表设计只要达到3NF/BCNF就够了.</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">// 不符合1NF, 电话列可继续拆分</span><br><span class="line">学生|课程|老师|电话(手机, 座机)|教材|教室|上课时间 </span><br><span class="line"></span><br><span class="line">// 符合1NF, 候选码为(学生, 课程), 但不符合2NF, 教材只部分依赖于主键列中的课程</span><br><span class="line">学生|课程|老师|手机|座机|教材|教室|上课时间 </span><br><span class="line"></span><br><span class="line">// 符合2NF, 但不符合3NF, (学生, 课程) =&gt; 老师 =&gt; 手机|座机, 存在传递依赖</span><br><span class="line">学生|课程|老师|手机|座机|教室|上课时间</span><br><span class="line"></span><br><span class="line">课程|教材</span><br><span class="line"></span><br><span class="line">// 符合3NF</span><br><span class="line">学生|课程|老师|教室|上课时间</span><br><span class="line"></span><br><span class="line">课程|教材</span><br><span class="line"></span><br><span class="line">老师|手机|座机</span><br></pre></td></tr></table></figure>
-<p><img src="3nf-diagram.png" /></p>
-<p>针对<strong>写密集</strong>的场景尤其需要对schema进行范式化,
-而针对读密集的场景可以使用反范式.</p>
-<p>范式化的表能够更好更快的进行更新操作, 但是查询往往需要多表join;
-然而单独的表能够更有效的利用索引.</p>
-<h2 id="缓存表-汇总表">缓存表 &amp;&amp; 汇总表</h2>
-<p>通过缓存表和汇总表来缓存源数据经过逻辑计算后的冗余数据,
-可以提升相应业务逻辑场景的查询性能.</p>
-<ul>
-<li>非实时性数据, 定时计算更新的不严格计数</li>
-<li>实时性数据, 通过小范围查询填满间隙的严格计数</li>
-</ul>
-<p>在使用缓存表和汇总表时, 对数据的维护有两种方式:</p>
-<ul>
-<li>实时维护, 成本较高, 数据容易碎片化</li>
-<li>定期重建, 可以保持表不会有很多碎片, 而且能保证顺序组织索引,
-更加高效</li>
-</ul>
-<p>重建表可以通过影子表的技巧</p>
-<ol type="1">
-<li>创建相同结构的新表, create table test_table_new like test_table</li>
-<li>填充数据, 数据有可能时老数据, 也可能时重新整理后的数据</li>
-<li>通过重命名来交换新表和旧表的名字, rename table test_table to
-test_table_old, test_table_new to test_table</li>
-<li>如果出问题了, 可以很容易回滚旧表</li>
-</ol>
-<h2 id="计数表">计数表</h2>
-<p>为了提升技术表的并发处理能力, 在更新时随机到相应的slot行插入,
-查询时汇总结果.</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 多slot的计数表</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> if <span class="keyword">not</span> <span class="keyword">exists</span> counter_tb (</span><br><span class="line">slot tinyint unsigned <span class="keyword">not</span> <span class="keyword">null</span> <span class="keyword">primary</span> key, </span><br><span class="line">cnt <span class="type">int</span> unsigned <span class="keyword">not</span> <span class="keyword">null</span></span><br><span class="line">) engine<span class="operator">=</span>InnoDB <span class="keyword">default</span> charset<span class="operator">=</span>utf8mb4;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 更新时随机slot更新</span></span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> counter_tb (slot, cnt)</span><br><span class="line"><span class="keyword">values</span> (rand() <span class="operator">*</span> <span class="number">10</span>, <span class="number">1</span>)</span><br><span class="line"><span class="keyword">on</span> duplicate key <span class="keyword">update</span> cnt <span class="operator">=</span> cnt <span class="operator">+</span> <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 查询时汇总</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> counter_tb;</span><br><span class="line"></span><br><span class="line"><span class="keyword">select</span> <span class="built_in">sum</span>(cnt)</span><br><span class="line"><span class="keyword">from</span> counter_tb;</span><br></pre></td></tr></table></figure>
-<h2 id="schema的修改">schema的修改</h2>
-<p>MySQL中大部分执行alter table来修改表结构的操作都会导致重建表,
-即用新的结构创建新表, 将旧表数据导入新表, 最后删除旧表.
-这对大表来说需要花费很大的时间和代价.</p>
-<p>大部分的alter table操作都会导致MySQL服务中断.
-对于在生产环境中修改表结构, 一般可采用以下方法:</p>
-<ul>
-<li>在备用数据库上修改结构后, 和主库进行切换</li>
-<li>影子拷贝, 操作同创建影子表的操作;
-也可借助一些第三方工具来进行影子拷贝</li>
-</ul>
-<p>.frm文件存储着表的结构, 它存放在mysql的data目录下对应的schema目录里,
-默认的data目录为/var/lib/mysql.
-以下情况可通过修改<strong>.frm文件</strong>的结构来更新表结构,
-但对.frm文件的修改存在风险, 需要做好备份:</p>
-<ul>
-<li>列的默认值</li>
-<li>NULL/NOT Null</li>
-</ul>
-<h2 id="reference">Reference</h2>
-<ul>
-<li><a href="https://book.douban.com/subject/23008813/">高性能MySQL</a>,
-第4章 Schema与数据类型优化</li>
-<li><a
-href="https://www.zhihu.com/question/24696366">解释一下关系数据库的第一第二第三范式</a></li>
-<li><a
-href="https://www.cnblogs.com/ybwang/archive/2010/06/04/1751279.html">数据库设计三大范式与BCNF，学习笔记</a></li>
-</ul>
-]]></content>
-      <categories>
-        <category>DB</category>
-      </categories>
-      <tags>
-        <tag>DB</tag>
-        <tag>mysql</tag>
       </tags>
   </entry>
 </search>
