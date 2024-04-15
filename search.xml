@@ -1,0 +1,868 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>Airflow介绍</title>
+    <url>/2020/08/airflow%E4%BB%8B%E7%BB%8D/</url>
+    <content><![CDATA[<p>了解airflow的基本元素以及并发控制</p>
+<span id="more"></span>
+<h2 id="基本元素">基本元素</h2>
+<ul>
+<li>DAG, 有向无环图, 用于描述整个处理流程中的任务之间的关系和依赖, 只有定义在globals(全局作用域)的dag才会被airflow扫描到并加载</li>
+<li>Operator, 用于定义任务要去做什么, 尽量保证每个Operator可以独立运行, 没有依赖; 如果不能避免依赖, 则通过xcom/其他存储方式进行参数传递</li>
+<li>default_args, 可被所有相关dag的Operator共享使用</li>
+<li>DAG Run, DAG被触发后生成的具体执行的DAG实例
+<ul>
+<li>创建时间</li>
+<li>execution_date, DAG Run的开始执行时间, 在同一个DAG中必须保持唯一, 即在同一个DAG在同一时间只能有一个DAG Run.</li>
+</ul></li>
+<li>Task, Operator实例</li>
+<li>Task instance, 每次触发Task都会生成一个task instance, 用于记录这次的task运行. 它拥有很多的状态, 状态的完成生命周期:
+<ol type="1">
+<li>no status</li>
+<li>scheduled, scheduler已计划将要运行对应的task instance</li>
+<li>queued, dispatch将task instance发送对相关的队列上进行排队</li>
+<li>Running, worker拿到队列中的任务进行执行</li>
+<li>success/failed, 任务完成后</li>
+</ol></li>
+</ul>
+<p><img src="airflow-status-flow.png" /></p>
+<h2 id="dag调度">DAG调度</h2>
+<p>通过在DAG中定义schedule_interval来指定如何调度, schedule_interval最好指定为预定义的值或者cron表达式</p>
+<p>DAG的调度分为:</p>
+<ul>
+<li>手动触发, 即schedule_interval=None</li>
+<li>周期性调度
+<ul>
+<li>backfill and catchup, 根据start_date到现在为止, 来创建过去的Dag Run并依次执行. 针对以时间为周期的数据集非常有用.</li>
+<li>非回填追赶模式, 即DAG的catchup=False, 不会为过去创建Dag Run.</li>
+</ul></li>
+</ul>
+<p>关于周期性调度的DAG, 它的创建时间为<code>上一个DAG Run的创建时间+schedule_interval</code>, 而第一个DAG Run的创建时间为min(start_date), 务必将start_date设置为一个指定的值</p>
+<h2 id="并发控制">并发控制</h2>
+<ul>
+<li>Pools, 用于控制task instance的并行数, 它由以下元素组成, 默认任务会被分配到default_pool池中, 它的工作槽有128个位置:
+<ul>
+<li>工作槽, 用于指定可同时运行的任务数</li>
+<li>等待队列, 当工作槽满时, 任务就进入等待队列, 直到工作槽有空闲位置</li>
+<li>priority_weight, 用于定义队列中的任务优先级以及在工作槽有空闲位置时优先执行哪些任务, 默认任务本身的priority_weight为1, 但在评估任务优先级时会计算任务本身及其下游任务的总和.</li>
+</ul></li>
+<li>Celery Queue, 只在使用CeleryExecutor时才有用, 用于给任务贴标签, 这样工作节点就可以通过标签来筛选要执行哪些任务. 默认任务会被分配到default_queue.</li>
+</ul>
+<p><img src="airflwo-with-celery.png" /></p>
+<p>DAG的多维度并发控制的参数:</p>
+<ul>
+<li>airflow.cfg的parallelism, airflow集群中同时运行的最大task instance数量</li>
+<li>airflow.cfg的dag_concurrency, 一个dag run中可以同时执行的task instance数量, 超出则排队; 可以通过DAG的concurrency进行自定义</li>
+<li>max_active_runs, 针对同一个DAG, 同一时间最多运行几个DAG Run, 如果没有设置, 默认读取airflow.cfg的max_active_runs_per_dag</li>
+<li>task_concurrency, 控制Operator对应的task同一时间最多运行几个task instance</li>
+<li>pool, 指定task的Pools, 通过Pools来控制某类task的最大并发数</li>
+</ul>
+<p>调度的并发控制参数:</p>
+<ul>
+<li>airflow.cfg的max_threads, 调度线程数, 可以设置为CPU数-1</li>
+<li>airflow.cfg的scheduler_heartbeat_sec, scheduler扫描task并将task调度起来的频率</li>
+</ul>
+]]></content>
+      <categories>
+        <category>ETL</category>
+      </categories>
+      <tags>
+        <tag>ETL</tag>
+        <tag>airflow</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>RabbitMQ 开发实践</title>
+    <url>/2021/12/rabbitmq-%E5%BC%80%E5%8F%91%E5%AE%9E%E8%B7%B5/</url>
+    <content><![CDATA[<p>快速熟悉RabbitMQ的元素, 以及开发相关的最佳实践总结.</p>
+<span id="more"></span>
+<p><img src="rmq-modal.png" /></p>
+<h2 id="声明exchange和queue">声明Exchange和Queue</h2>
+<p>Exchange负责对消息的路由, 而Queue负责对消息的存储.</p>
+<h3 id="exchange">Exchange</h3>
+<p>Exchange主要有以下几种路由方式:</p>
+<ul>
+<li>fanout, 分发到所有绑定的Queue中</li>
+<li>direct, 只分发到路由键完全匹配的Queue中</li>
+<li>topic, 分发到和路由键匹配的Queue中</li>
+</ul>
+<p>Exchange的常用属性:</p>
+<ul>
+<li>durable, 对于长期使用的交换器设置为true, 保证服务重启后仍然存在.</li>
+<li>auto delete, 对于长期使用的交换器设置为false</li>
+<li>internal, 用于Broker内部的路由, 对于同客户端连接的交换器设置为false, AE可设置为true.</li>
+</ul>
+<h3 id="queue">Queue</h3>
+<p>交换器的使用并不真正消耗服务器的性能, 但队列会, 所以需要更加关注队列的设计, 需要对队列的流量, 内存占用以及网卡占用要有一个清晰的评估, 预估其平均值和峰值, 以便合理分配硬件资源.</p>
+<p>Queue的主要属性:</p>
+<ul>
+<li>durable, 设置为true, 则服务重启后队列信息仍然存在; 配合消息的持久化, 可以保证服务重启后消息不丢失.</li>
+<li>exclusive, true则仅对声明它的连接可见, 断开时自动删除; 一般情况下设置为false</li>
+<li>auto delete, 一般设置为false</li>
+<li>队列中消息的TTL, 通过x-message-ttl来设置, 最终消息的TTL=min(队列中消息的TTL, 消息设置的TTL), 消息过期后则变为死信(Dead Message)</li>
+</ul>
+<p>当一个队列有多个消费者时, 队列中的消息会被平均分摊(Round-Robin, 即轮询) 给多个消费者进行处理, 而不是每个消费者都收到所有的消息并处理.</p>
+<p>通过路由键(Route Key)将Exchange和Queue进行绑定.</p>
+<p>Queue的应用:</p>
+<ul>
+<li>死信队列, 需要配合死信交换器(DLX), 当消息过期后会被路由到死信队列</li>
+<li>延迟队列, 通过死信队列+消息的TTL来实现</li>
+<li>优先级队列</li>
+<li>RPC队列</li>
+</ul>
+<h3 id="备用交换器ae-alternate-exchange">备用交换器(AE, Alternate Exchange)</h3>
+<p>为了防止消息丢失, 一般建议配置AE, 当交换器无法路由消息到指定的队列时, 会将消息路由到AE, 由AE保存到与它绑定的队列中, 之后在修复后, 通过工具将这些丢失的消息重新入队.</p>
+<h3 id="基本模板">基本模板</h3>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// AE声明</span></span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.AE, BuiltinExchangeType.FANOUT,</span><br><span class="line">    <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">true</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.AE_QUEUE,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.AE_QUEUE, RabbitMQConfig.AE, <span class="string">&quot;&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Exchange和Queue声明</span></span><br><span class="line">Map&lt;String, Object&gt; args = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;&gt;();</span><br><span class="line">args.put(<span class="string">&quot;alternate-exchange&quot;</span>, RabbitMQConfig.AE);</span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.EX, BuiltinExchangeType.DIRECT,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, args);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.EX_QUEUE,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.EX_QUEUE, RabbitMQConfig.EX, </span><br><span class="line">    RabbitMQConfig.EX_QUEUE_ROUTE_KEY);</span><br></pre></td></tr></table></figure>
+<h3 id="message">Message</h3>
+<p>生产者创建的消息分为两部分:</p>
+<ul>
+<li>消息标签, 包含路由相关的信息</li>
+<li>消息体, 消息的内容, 可以被Queue保存</li>
+</ul>
+<p>消息的常用属性:</p>
+<ul>
+<li>durable, 通过设置deliverMode为2, 可实现消息的持久化; 对于可靠性/重要性不是那么高的消息不采用持久化处理, 以提高系统的吞吐量</li>
+<li>消息的TTL, 通过设置expiration参数</li>
+</ul>
+<h3 id="connect-channel">Connect &amp;&amp; Channel</h3>
+<p>客户端需要和RabbitMQ建立TCP Connection, 建立后会创建AMQP信道(Channel), 并被指派一个唯一的ID. Channel是建立在Connection上的虚拟连接, 用于处理AMQP指令.</p>
+<p>建立/销毁TCP连接是非常大的开销, 高峰时, 性能瓶颈也就随之出现. 所以RabbitMQ采用类似NIO的做法, 对TCP连接进行复用.</p>
+<p>建议客户端采用连接池, 将Channel均摊到池中的Connection上; 每个线程持有一个Channel.</p>
+<p>为了当发生阻塞时可以在阻止生产者的同时, 又不影响消费者的运行, 建议生产者和消费者的逻辑使用不同的Connection.</p>
+<h2 id="实现publisher">实现Publisher</h2>
+<p>为了避免发送方的消息丢失, RabbitMQ提供了以下几种机制:</p>
+<ul>
+<li>发送消息时设置mandatory, 当交换器无法找到复合条件的队列时, 通过Basic.Return将消息返回给生产者; 如果交换器存在AE, 则mandatory失效.</li>
+<li>事务机制, txSelect/txCommit/txRollback, 每次只能处理一条消息, 在消息发送后会<strong>阻塞</strong>发送端, 等待RabbitMQ的回应, 回应提交成功, 则表明消息已经到达RabbitMQ; 如果发生任何异常, 发送端可以捕获异常并进行回滚; 它<strong>严重降低了RabbitMQ的消息吞吐量</strong>.</li>
+<li>发送方确认机制, confirmSelect该模式下, 发布的消息都会被指派唯一ID, 消息到达匹配队列后, RabbitMQ会发送Basic.Ack并携带消息的唯一ID, 使发送方知道消息已经正确到达; 如果内部发生错误, 则会发送Basic.Nack告知发送方.</li>
+</ul>
+<p>推荐使用<strong>异步的发送方确认机制</strong>的方式来批量发送消息.</p>
+<h2 id="实现consumer">实现Consumer</h2>
+<p>消费端有两种消费模式:</p>
+<ul>
+<li>Push模式, RabbitMQ主动向订阅的消费者推送消息, 适用于吞吐量大的情况; 不同的订阅消费者采用唯一标签(consumerTag)来区分.</li>
+<li>Pull模式, 消费者从RabbitMQ拉取消息, 适用于吞吐量少的情况</li>
+</ul>
+<p>为了保证消息从队列可靠的到达消费者, RabbitMQ提供了消息确认机制(Message Acknowledge). 通过设置auto ack为false, 让消费者有足够的时间处理消息, 处理完毕后再显式的发送Basic.Ack给RabbitMQ, 然后RabbitMQ才从内存/磁盘中移除消息(实际上是先打上删除标记, 之后再删除). 如果设置为true, 则RabbitMQ发送消息后就会将其从内存/磁盘中移除.</p>
+<p>RabbitMQ队列中的消息分为两个部分:</p>
+<ul>
+<li>Ready, 等待投递给消费者的消息</li>
+<li>Unacked, 已经投递给消费者, 但还没有收到确认信号的消息</li>
+</ul>
+<p>如果一直没有收到消费者的确认信号, 并且消费者断开了连接, RabbitMQ则会安排该消息重新进入队列, 等待投递给下一个消费者, 确保消息被正确的消费.</p>
+<p>RabbitMQ判断此消息是否重新投递给消费者的唯一依据是消费该消息的消费者连接是否断开, 因为RabbitMQ允许消费者消费一条消息的时间可以很久.</p>
+<p>通过Basic.Qos来对消费者端的吞吐量进行控制,</p>
+<ul>
+<li>global为false模式时, 针对每个消费者进行限制</li>
+<li>global为true模式时, 针对一个Channle中所有的消费者做限制</li>
+</ul>
+<p>如果同时设置了两种模式, 则同时生效, 即对信道中的每一个消费者做限制, 也对信道中的总数做限制. 一般需要根据节点的性能进行配置.</p>
+<h2 id="reference">Reference</h2>
+<ul>
+<li><a href="https://book.douban.com/subject/27591386/">RabbitMQ实战指南</a></li>
+<li><a href="https://www.rabbitmq.com/getstarted.html">RabbitMQ Tutorials</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>MQ</category>
+      </categories>
+      <tags>
+        <tag>MQ</tag>
+        <tag>event</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MySQL备份和恢复</title>
+    <url>/2021/06/mysql%E5%A4%87%E4%BB%BD%E5%92%8C%E6%81%A2%E5%A4%8D/</url>
+    <content><![CDATA[<p>本文主要针对MySQL的InnoDB数据库，本文的目标:</p>
+<ul>
+<li>对数据进行备份</li>
+<li>将数据恢复到某一个时间点</li>
+</ul>
+<span id="more"></span>
+<h2 id="原理">原理</h2>
+<p>规划备份和恢复策略时, 可以根据一些需求来考虑:</p>
+<ul>
+<li>恢复点目标(RPO), 指恢复到哪个时间点, 可以容许丢失多少数据</li>
+<li>恢复时间目标(RTO), 指恢复可以容许的恢复时间长度</li>
+<li>备份到目的地的时间, 比如本地, NFS等</li>
+</ul>
+<p>备份的内容：</p>
+<ul>
+<li>MySQL配置</li>
+<li>schema和数据</li>
+<li>二进制日志</li>
+</ul>
+<p>Innodb是一个ACID系统， 任何时刻， 每个提交的事务 要么在<strong>Innodb数据文件</strong>中， 要么在<strong>二进制日志文件</strong>中。 所以为了保证一致性， 即属于同一个时间点， 备份Innodb时需要对数据和二进制日志都进行备份。</p>
+<p>关闭MySQL备份是最简单安全的, 也是获取一致性的最好的方法, 并且损坏的风险最小. 但对于在线系统来说, 停机备份的代价太大.</p>
+<p>如果使用了全局读锁FLUSH TABLE WITH READ LOCK, 并且备份的事务执行需要很长的时间, 则全局读锁需要等待备份的事务完成提交后才释放, 在这期间的所有操作很可能会被阻塞和积压, 即当发生一些修改操作需要等待表的写锁时, 之后的所有读写操作都会被阻塞. 而<strong>避免全局读锁的最好方法就是只使用InnoDB, 如果使用少量的MyISAM表, 则只需要锁住它们即可</strong>， 因为InnoDB支持事务， 能报保证在一个事务中的的数据的一致性。</p>
+<p>建议混合使用物理和逻辑两种方式进行备份: 先使用物理复制, 然后启动一个测试的MySQL实例并运行mysqlcheck来检查; 然后周期性的使用mysqldump来执行逻辑备份.</p>
+<h2 id="备份">备份</h2>
+<h3 id="逻辑备份">逻辑备份</h3>
+<p>逻辑备份只用于数据备份, 通过<strong>MySQL服务器</strong>将存储引擎中的数据导出, 与存储引擎无关, 并且可以对备份的数据进行裁剪.</p>
+<p>缺点： 需要通过MySQL加载, 转为存储格式, 并且需要重建索引, 过程很慢, 尤其在加载一个巨大的导出文件的代价很大</p>
+<p>需要尽量控制导出的数据文件大小，在保证一致性的前提下， 按照业务逻辑导出到多个文件中，以控制导出到粒度。</p>
+<p>导出方式:</p>
+<ul>
+<li>导出sql格式的schema和数据</li>
+<li>导出sql格式的schema和csv格式的数据, 必须保证secure_file_priv变量不为NULL, 以及相应的路径必须存在. 需要在MySQL启动前在my.conf中配置</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">-- 将schema导出</span><br><span class="line">$ mysqldump --single-transaction -d --databases &lt;database_name&gt; &gt; schema.sql</span><br><span class="line">-- 将相关连的表的数据导到sql文件中</span><br><span class="line">$ mysqldump --single-transaction -t --databases &lt;database_name&gt; &gt; data.sql</span><br><span class="line">-- 每张表都会导出一个sql格式的表结构文件, csv格式的数据导文件</span><br><span class="line">$ mysqldump --single-transaction --tab=&lt;backup_dirname&gt; &lt;database_name&gt; [table1, ...]</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h3 id="物理备份">物理备份</h3>
+<p>优点:</p>
+<ul>
+<li>物理备份的方式更加简单高效</li>
+<li>恢复往往要比逻辑备份要快, 省去了加载和重建过程</li>
+</ul>
+<p>缺点:</p>
+<ul>
+<li>往往备份的大小要比逻辑备份大得多</li>
+</ul>
+<p>物理备份方式:</p>
+<ul>
+<li>基于文件拷贝的备份, 适用于关机下备份， 配置文件备份， 日志备份等</li>
+<li>通过快照进行备份</li>
+</ul>
+<h4 id="快照备份">快照备份</h4>
+<p>物理数据存放在<code>/var/lib/mysql</code>目录下， 每个数据库存储在相同名字的目录下， 同时也包含服务器配置和二进制日志文件。</p>
+<p>快照备份是非常好的在线备份方法, 并且可以减少持有锁的时间。 又分为：</p>
+<ul>
+<li>最小化锁快照备份, 只锁MyISAM表，InnoDB不需要锁</li>
+<li>无锁快照备份, 如果MyISAM不会发生修改, 就可以不锁表</li>
+</ul>
+<p>快照备份后， 通过挂在快照， 拷贝数据文件到备份的地方。</p>
+<p>但使用快照备份需要额外的磁盘空间， 用于快照需要的写时复制空间。 并且要求将MySQL的数据相关文件（/var/lib/mysql/）部署在同一个专有卷上。 而且会导致原始卷和快照比正常读写性能要差， 尤其在过多使用写时复制空间时。</p>
+<p>对数据进行物理快照备份后, 需要构建一个MySQL实例并加载物理备份, 然后使用mysqlcheck可以对所有的表执行<code>CHECK TABLES</code>操作, 检查物理备份的正确性.</p>
+<h4 id="mysql配置备份">MySQL配置备份</h4>
+<ul>
+<li>/etc/mysql/my.cnf, 默认配置文件</li>
+<li>/etc/mysql/conf.d, 自定义配置目录, 会覆盖默认配置中的设置.</li>
+</ul>
+<h4 id="二进制日志备份">二进制日志备份</h4>
+<p>二进制日志默认存储在<code>/var/lib/mysql/</code>目录下, 格式为<code>binlog.*</code>, 可通过命令<code>mysqlbinlog -d &lt;database_name&gt; &lt;binlog&gt;</code>来查看指定数据库的二进制日志</p>
+<p>常用命令：</p>
+<ul>
+<li>查看二进制日志， <code>show binary logs</code>;</li>
+<li>创建新的二进制日志文件, <code>flush logs</code>;</li>
+<li>清理指定二进制日志文件之前的日志文件, <code>purge binary logs to 'binlog.000005'</code>;</li>
+</ul>
+<p>在备份数据之前， 建议flush logs生成新的日志， 可保证备份期间的操作被清楚的记录在最新的日志文件里。</p>
+<h3 id="最佳实践">最佳实践</h3>
+<p>一般情况下备份策略采用长周期的逻辑全备份（保底恢复，但加载慢） + 短周期的快照物理备份（快速恢复） + 二进制日志文件定时备份（恢复到某个时间点）。 如果数据量不大， 则只需要逻辑全备份 + 二进制日志文件备份就可以。</p>
+<p>逻辑全备份流程：</p>
+<ol type="1">
+<li>在进行全备份之前， 创建新二进制日志， 保证在备份期间的操作会被记录到新二进制日志中</li>
+<li>进行全备份</li>
+<li>清理老的二进制日志， 只保留最新二进制日志</li>
+<li>在下一次全备份之前， 定时备份二进制日志</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ mysql -e <span class="string">&quot;flush logs;&quot;</span></span><br><span class="line">$ mysql -e <span class="string">&quot;show binary logs;&quot;</span></span><br><span class="line">$ <span class="built_in">mkdir</span> &lt;backup_dir_path&gt;</span><br><span class="line">$ mysqldump --single-transaction -d &lt;database_name&gt;</span><br><span class="line">$ mysqldump --single-transaction --tab=&lt;backup_dir_path&gt; &lt;database_name&gt;</span><br><span class="line">$ mysql -e <span class="string">&quot;purge binary logs to ‘&lt;最新的二进制日志&gt;&#x27;&quot;</span></span><br></pre></td></tr></table></figure>
+<p>二进制日志文件备份流程：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ mysql -e <span class="string">&quot;flush logs;&quot;</span></span><br><span class="line">$ <span class="built_in">cp</span> binlog.* &lt;backup_dir_path&gt;</span><br><span class="line">$ mysql -e <span class="string">&quot;purge binary logs to ‘&lt;最新的二进制日志&gt;&#x27;&quot;</span></span><br></pre></td></tr></table></figure>
+<h2 id="恢复">恢复</h2>
+<p>在恢复过程中， 要保证MySQL除了恢复进程外不接受其他访问， 直到恢复并检测完毕， 重新提供服务为止。</p>
+<h3 id="基于时间点的逻辑备份的恢复">基于时间点的逻辑备份的恢复</h3>
+<p>基于时间点的恢复要求建立日常备份, 并保证所需要的二进制日志有效. 这样才能基于某一次全备份, 然后从那个时间点开始重放二进制日志, 将数据来恢复到指定时间.</p>
+<p>基于逻辑备份恢复和二进制重放都是一个很慢的过程, 在开始恢复之前， 建议通过<code>set sql_log_bin=0;</code>关闭二进制日志。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 禁用二进制日志</span></span><br><span class="line">$ mysql -e <span class="string">&quot;set sql_log_bin=0;&quot;</span></span><br><span class="line"><span class="comment"># 创建schema</span></span><br><span class="line">$ mysql &lt; schema.sql</span><br><span class="line"><span class="comment"># 导入数据, mysqlimporter是对load data infile命令的封装</span></span><br><span class="line">$ mysqlimportor &lt;database_name&gt; &lt;csv数据文件路径&gt;</span><br><span class="line"><span class="comment"># 重放从那个时间点之后的二进制日志</span></span><br><span class="line">$ mysqlbinlog --database=&lt;database_name&gt; &lt;binlog二进制文件路径&gt; | mysql</span><br><span class="line"><span class="comment"># 打开二进制日志</span></span><br><span class="line">$ mysql -e <span class="string">&quot;set sql_log_bin=1;&quot;</span></span><br></pre></td></tr></table></figure>
+<h2 id="reference">Reference</h2>
+<ul>
+<li>高性能MySQL — 第15章备份与恢复</li>
+</ul>
+]]></content>
+      <categories>
+        <category>DB</category>
+      </categories>
+      <tags>
+        <tag>DB</tag>
+        <tag>mysql</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MySQL Schema与数据类型优化</title>
+    <url>/2018/06/mysql-schema%E4%B8%8E%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E4%BC%98%E5%8C%96/</url>
+    <content><![CDATA[<ul>
+<li>学习如何选择合适的数据类型</li>
+<li>特殊数据的类型选择</li>
+<li>Schema的设计</li>
+</ul>
+<span id="more"></span>
+<h2 id="mysql基础数据类型">MySQL基础数据类型</h2>
+<ul>
+<li>数字
+<ul>
+<li>整数
+<ul>
+<li>tinyint/smallint/mediumint/int/bigint</li>
+<li>unsigned可选</li>
+</ul></li>
+<li>实数
+<ul>
+<li>Float/Double, 浮点计算</li>
+<li>DECIMAL, 存储精确的小数, 一般可使用bigint来代替decimal, 通过乘以相应的倍数即可</li>
+</ul></li>
+</ul></li>
+<li>字符串
+<ul>
+<li>char, 定长, 适合更新频繁的列或者长度固定的列</li>
+<li>varchar, 变长, 需要额外的1或2个字节来存储长度, 小于等于255则1个字节, 大于则2个字节; 不适合更新频繁的列, 会导致碎片化</li>
+<li>text, 很长的字符串</li>
+</ul></li>
+<li>二进制字符串, 比较时以字节为单位进行比较, 效率要比普通字符串要高
+<ul>
+<li>binary, 定长</li>
+<li>varbinary, 变长</li>
+<li>blob, 很长的二进制字符串</li>
+</ul></li>
+<li>时间
+<ul>
+<li>datetime, 从1001到9999年, 精度为秒, 把日期和时间封装到格式为<strong>YYYYMMDDHHMMSS的整数</strong>中, 显示<strong>与时区无关, 使用8字节存储</strong></li>
+<li>timestamp, 同unit时间戳, 从新纪元时间(1970-01-01T00:00:00)以来的秒数, 使用<strong>4字节存储</strong>, 只能表示1970到2038年, 显示依赖于时区, 会根据时区不同, 显示对应的时间; 对应的列默认为NOT NULL.</li>
+</ul></li>
+</ul>
+<h2 id="特殊数据类型的处理">特殊数据类型的处理</h2>
+<h3 id="uuid数据">uuid数据</h3>
+<p>uuid数据的处理</p>
+<ol type="1">
+<li>移除uuid中的<strong>-</strong></li>
+<li>使用unhex函数将uuid字符串转换为16字节的数字, 存储到binary(16)中</li>
+<li>使用hex函数将16字节的数字转换为uuid字符串</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">mysql&gt; <span class="keyword">select</span> uuid();</span><br><span class="line">+--------------------------------------+</span><br><span class="line">| uuid()                               |</span><br><span class="line">+--------------------------------------+</span><br><span class="line">| e8dc60bb-6df3-11e8-8915-0800273063ab |</span><br><span class="line">+--------------------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br><span class="line"></span><br><span class="line">mysql&gt; <span class="keyword">select</span> unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>);</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">| unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>) |</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">| ��`�m��</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br><span class="line"></span><br><span class="line">mysql&gt; <span class="keyword">select</span> hex(unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>));</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">| hex(unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>)) |</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">| E8DC60BB6DF311E889150800273063AB               |</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br></pre></td></tr></table></figure>
+<h3 id="ip数据">ip数据</h3>
+<p>ip数据需要转换为数字存储</p>
+<ol type="1">
+<li>使用<strong>无符号整数</strong>存储ip列</li>
+<li>使用inet_aton将ip字符串转换为整数</li>
+<li>使用inet_ntoa将数字转换为ip字符串</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">mysql&gt; <span class="keyword">select</span> inet_aton(<span class="string">&#x27;192.168.0.1&#x27;</span>);</span><br><span class="line">+--------------------------+</span><br><span class="line">| inet_aton(<span class="string">&#x27;192.168.0.1&#x27;</span>) |</span><br><span class="line">+--------------------------+</span><br><span class="line">|               3232235521 |</span><br><span class="line">+--------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br><span class="line"></span><br><span class="line">mysql&gt; <span class="keyword">select</span> inet_ntoa(3232235521);</span><br><span class="line">+-----------------------+</span><br><span class="line">| inet_ntoa(3232235521) |</span><br><span class="line">+-----------------------+</span><br><span class="line">| 192.168.0.1           |</span><br><span class="line">+-----------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br></pre></td></tr></table></figure>
+<h3 id="id列的数据类型">id列的数据类型</h3>
+<p>id列的数据类型尽量选择<strong>递增型整数</strong></p>
+<p>因为随机值会分布在很大的空间中, 导致insert和select变慢. 而且随机值的插入会随机写到索引的不同位置, 导致insert语句变慢; 由于数据分布在很大的空间中, 也就导致了select指定的数据会变慢; 还会导致缓存失效.</p>
+<p><strong>由于InnoDB的索引是一个B+Tree, 所以按顺序的插入能够保证数据很快插入, 并保证数据集中在一定的范围之内. 递增插入是比较好的选择.</strong></p>
+<p>不建议使用字符串类型作为id列, 查询性能很差.</p>
+<p>一般情况下尽量使用默认值方案来替换NULL, 因为NULL会增加查询的复杂度.</p>
+<h2 id="范式与反范式">范式与反范式</h2>
+<p>范式的主要目的:</p>
+<ul>
+<li>减少数据冗余</li>
+<li>消除插入/删除/更新的异常</li>
+</ul>
+<p>关键概念:</p>
+<ul>
+<li>码/键(候选码), 表中的一个或多个属性组K, 除开K中的属性外的其他所有属性都完全函数依赖于K, 则K为候选码; 一个表可能存在多个码</li>
+<li>主属性, 包含在各个候选码中的属性, 主属性不可为空</li>
+</ul>
+<p>通常使用的范式:</p>
+<ul>
+<li>1NF(Normal Form)第一范式, 属性的原子性保证不可再分割, 每个属性都只能存储一个值</li>
+<li>2NF第二范式, 基于1NF, 定义候选码, 非主属性必须完全依赖于候选码, 即通过候选码可以确定实体的唯一性</li>
+<li>3NF第三范式, 基于2NF, 消除传递依赖, 即任何非主属性不能由其他属性派生, 要求属性没有冗余</li>
+<li>BCNF, 基于3NF的改进范式, 消除主属性对码的部分与传递依赖</li>
+</ul>
+<p>一般情况下, 关系型数据库的表设计只要达到3NF/BCNF就够了.</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">// 不符合1NF, 电话列可继续拆分</span><br><span class="line">学生|课程|老师|电话(手机, 座机)|教材|教室|上课时间 </span><br><span class="line"></span><br><span class="line">// 符合1NF, 候选码为(学生, 课程), 但不符合2NF, 教材只部分依赖于主键列中的课程</span><br><span class="line">学生|课程|老师|手机|座机|教材|教室|上课时间 </span><br><span class="line"></span><br><span class="line">// 符合2NF, 但不符合3NF, (学生, 课程) =&gt; 老师 =&gt; 手机|座机, 存在传递依赖</span><br><span class="line">学生|课程|老师|手机|座机|教室|上课时间</span><br><span class="line"></span><br><span class="line">课程|教材</span><br><span class="line"></span><br><span class="line">// 符合3NF</span><br><span class="line">学生|课程|老师|教室|上课时间</span><br><span class="line"></span><br><span class="line">课程|教材</span><br><span class="line"></span><br><span class="line">老师|手机|座机</span><br></pre></td></tr></table></figure>
+<p><img src="3nf-diagram.png" /></p>
+<p>针对<strong>写密集</strong>的场景尤其需要对schema进行范式化, 而针对读密集的场景可以使用反范式.</p>
+<p>范式化的表能够更好更快的进行更新操作, 但是查询往往需要多表join; 然而单独的表能够更有效的利用索引.</p>
+<h2 id="缓存表-汇总表">缓存表 &amp;&amp; 汇总表</h2>
+<p>通过缓存表和汇总表来缓存源数据经过逻辑计算后的冗余数据, 可以提升相应业务逻辑场景的查询性能.</p>
+<ul>
+<li>非实时性数据, 定时计算更新的不严格计数</li>
+<li>实时性数据, 通过小范围查询填满间隙的严格计数</li>
+</ul>
+<p>在使用缓存表和汇总表时, 对数据的维护有两种方式:</p>
+<ul>
+<li>实时维护, 成本较高, 数据容易碎片化</li>
+<li>定期重建, 可以保持表不会有很多碎片, 而且能保证顺序组织索引, 更加高效</li>
+</ul>
+<p>重建表可以通过影子表的技巧</p>
+<ol type="1">
+<li>创建相同结构的新表, create table test_table_new like test_table</li>
+<li>填充数据, 数据有可能时老数据, 也可能时重新整理后的数据</li>
+<li>通过重命名来交换新表和旧表的名字, rename table test_table to test_table_old, test_table_new to test_table</li>
+<li>如果出问题了, 可以很容易回滚旧表</li>
+</ol>
+<h2 id="计数表">计数表</h2>
+<p>为了提升技术表的并发处理能力, 在更新时随机到相应的slot行插入, 查询时汇总结果.</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 多slot的计数表</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> if <span class="keyword">not</span> <span class="keyword">exists</span> counter_tb (</span><br><span class="line">slot tinyint unsigned <span class="keyword">not</span> <span class="keyword">null</span> <span class="keyword">primary</span> key, </span><br><span class="line">cnt <span class="type">int</span> unsigned <span class="keyword">not</span> <span class="keyword">null</span></span><br><span class="line">) engine<span class="operator">=</span>InnoDB <span class="keyword">default</span> charset<span class="operator">=</span>utf8mb4;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 更新时随机slot更新</span></span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> counter_tb (slot, cnt)</span><br><span class="line"><span class="keyword">values</span> (rand() <span class="operator">*</span> <span class="number">10</span>, <span class="number">1</span>)</span><br><span class="line"><span class="keyword">on</span> duplicate key <span class="keyword">update</span> cnt <span class="operator">=</span> cnt <span class="operator">+</span> <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 查询时汇总</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> counter_tb;</span><br><span class="line"></span><br><span class="line"><span class="keyword">select</span> <span class="built_in">sum</span>(cnt)</span><br><span class="line"><span class="keyword">from</span> counter_tb;</span><br></pre></td></tr></table></figure>
+<h2 id="schema的修改">schema的修改</h2>
+<p>MySQL中大部分执行alter table来修改表结构的操作都会导致重建表, 即用新的结构创建新表, 将旧表数据导入新表, 最后删除旧表. 这对大表来说需要花费很大的时间和代价.</p>
+<p>大部分的alter table操作都会导致MySQL服务中断. 对于在生产环境中修改表结构, 一般可采用以下方法:</p>
+<ul>
+<li>在备用数据库上修改结构后, 和主库进行切换</li>
+<li>影子拷贝, 操作同创建影子表的操作; 也可借助一些第三方工具来进行影子拷贝</li>
+</ul>
+<p>.frm文件存储着表的结构, 它存放在mysql的data目录下对应的schema目录里, 默认的data目录为/var/lib/mysql. 以下情况可通过修改<strong>.frm文件</strong>的结构来更新表结构, 但对.frm文件的修改存在风险, 需要做好备份:</p>
+<ul>
+<li>列的默认值</li>
+<li>NULL/NOT Null</li>
+</ul>
+<h2 id="reference">Reference</h2>
+<ul>
+<li><a href="https://book.douban.com/subject/23008813/">高性能MySQL</a>, 第4章 Schema与数据类型优化</li>
+<li><a href="https://www.zhihu.com/question/24696366">解释一下关系数据库的第一第二第三范式</a></li>
+<li><a href="https://www.cnblogs.com/ybwang/archive/2010/06/04/1751279.html">数据库设计三大范式与BCNF，学习笔记</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>DB</category>
+      </categories>
+      <tags>
+        <tag>DB</tag>
+        <tag>mysql</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HTTPS的安全性</title>
+    <url>/2023/11/https%E7%9A%84%E5%AE%89%E5%85%A8%E6%80%A7/</url>
+    <content><![CDATA[<p>Https相较于Htp主要增加了通信的安全性。主要指：</p>
+<ul>
+<li>所有信息都是<strong>加密</strong>传播，第三方无法窃听。</li>
+<li>具有<strong>校验机制</strong>，一旦被篡改，通信双方会立刻发现。</li>
+<li>配备<strong>身份证书</strong>，防止身份被冒充。</li>
+</ul>
+<span id="more"></span>
+<h2 id="加密">加密</h2>
+<p>Https中的加密主要分为2块：</p>
+<ul>
+<li>握手阶段的加密， 使用非对称加密技术（例如RSA等）对pre-master key的加密</li>
+<li>通信阶段的加密，使用会话密钥对通信内容进行加密，会话密钥采用对称加密技术，例如DES等</li>
+</ul>
+<h3 id="握手过程">握手过程</h3>
+<img src='data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXMtYXNjaWkiIHN0YW5kYWxvbmU9Im5vIj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgaGVpZ2h0PSI1MzZweCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSIgc3R5bGU9IndpZHRoOjEzOTRweDtoZWlnaHQ6NTM2cHg7YmFja2dyb3VuZDojRkZGRkZGOyIgdmVyc2lvbj0iMS4xIiB2aWV3Qm94PSIwIDAgMTM5NCA1MzYiIHdpZHRoPSIxMzk0cHgiIHpvb21BbmRQYW49Im1hZ25pZnkiPjxkZWZzLz48Zz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtZGFzaGFycmF5OjUuMCw1LjA7IiB4MT0iMzMiIHgyPSIzMyIgeTE9IjM2LjI5NjkiIHkyPSI1MDAuODkwNiIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41O3N0cm9rZS1kYXNoYXJyYXk6NS4wLDUuMDsiIHgxPSI2NjMiIHgyPSI2NjMiIHkxPSIzNi4yOTY5IiB5Mj0iNTAwLjg5MDYiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtZGFzaGFycmF5OjUuMCw1LjA7IiB4MT0iMTM2NS41IiB4Mj0iMTM2NS41IiB5MT0iMzYuMjk2OSIgeTI9IjUwMC44OTA2Ii8+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI1NyIgeD0iNSIgeT0iNSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQzIiB4PSIxMiIgeT0iMjQuOTk1MSI+Q2xpZW50PC90ZXh0PjxyZWN0IGZpbGw9IiNFMkUyRjAiIGhlaWdodD0iMzAuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTciIHg9IjUiIHk9IjQ5OS44OTA2Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNDMiIHg9IjEyIiB5PSI1MTkuODg1NyI+Q2xpZW50PC90ZXh0PjxyZWN0IGZpbGw9IiNFMkUyRjAiIGhlaWdodD0iMzAuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNjEiIHg9IjYzMyIgeT0iNSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQ3IiB4PSI2NDAiIHk9IjI0Ljk5NTEiPlNlcnZlcjwvdGV4dD48cmVjdCBmaWxsPSIjRTJFMkYwIiBoZWlnaHQ9IjMwLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjYxIiB4PSI2MzMiIHk9IjQ5OS44OTA2Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNDciIHg9IjY0MCIgeT0iNTE5Ljg4NTciPlNlcnZlcjwvdGV4dD48cmVjdCBmaWxsPSIjRTJFMkYwIiBoZWlnaHQ9IjMwLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjM0IiB4PSIxMzQ4LjUiIHk9IjUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMCIgeD0iMTM1NS41IiB5PSIyNC45OTUxIj5DQTwvdGV4dD48cmVjdCBmaWxsPSIjRTJFMkYwIiBoZWlnaHQ9IjMwLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjM0IiB4PSIxMzQ4LjUiIHk9IjQ5OS44OTA2Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjAiIHg9IjEzNTUuNSIgeT0iNTE5Ljg4NTciPkNBPC90ZXh0PjxyZWN0IGZpbGw9IiNFRUVFRUUiIGhlaWdodD0iMyIgc3R5bGU9InN0cm9rZTojRUVFRUVFO3N0cm9rZS13aWR0aDoxLjA7IiB3aWR0aD0iMTM4Ny41IiB4PSIwIiB5PSI2Ni44NjMzIi8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjA7IiB4MT0iMCIgeDI9IjEzODcuNSIgeTE9IjY2Ljg2MzMiIHkyPSI2Ni44NjMzIi8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjA7IiB4MT0iMCIgeDI9IjEzODcuNSIgeTE9IjY5Ljg2MzMiIHkyPSI2OS44NjMzIi8+PHJlY3QgZmlsbD0iI0VFRUVFRSIgaGVpZ2h0PSIyMy4xMzI4IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjIuMDsiIHdpZHRoPSI3NSIgeD0iNjU2LjI1IiB5PSI1Ni4yOTY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjU2IiB4PSI2NjIuMjUiIHk9IjcyLjM2MzgiPiYjMjU1Njk7JiMyNTE2MzsmIzM4NDU0OyYjMjc1NzM7PC90ZXh0PjxyZWN0IGZpbGw9IiNFRUVFRUUiIGhlaWdodD0iMyIgc3R5bGU9InN0cm9rZTojRUVFRUVFO3N0cm9rZS13aWR0aDoxLjA7IiB3aWR0aD0iMTM4Ny41IiB4PSIwIiB5PSIxMDkuOTk2MSIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS4wOyIgeDE9IjAiIHgyPSIxMzg3LjUiIHkxPSIxMDkuOTk2MSIgeTI9IjEwOS45OTYxIi8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjA7IiB4MT0iMCIgeDI9IjEzODcuNSIgeTE9IjExMi45OTYxIiB5Mj0iMTEyLjk5NjEiLz48cmVjdCBmaWxsPSIjRUVFRUVFIiBoZWlnaHQ9IjIzLjEzMjgiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6Mi4wOyIgd2lkdGg9IjEyMSIgeD0iNjMzLjI1IiB5PSI5OS40Mjk3Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEwMiIgeD0iNjM5LjI1IiB5PSIxMTUuNDk2NiI+JiMyNTU2OTsmIzI1MTYzOyYjMzg0NTQ7JiMyNzU3MzstLS0mIzI2MTI2OyYjMjU5OTE7PC90ZXh0Pjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNjUxLjUsMTQ5LjY5NTMsNjYxLjUsMTUzLjY5NTMsNjUxLjUsMTU3LjY5NTMsNjU1LjUsMTUzLjY5NTMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSIzMy41IiB4Mj0iNjU3LjUiIHkxPSIxNTMuNjk1MyIgeTI9IjE1My42OTUzIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzM4IiB4PSI0MC41IiB5PSIxNDguNjI5NCI+JiMyMTQ1NzsmIzIwOTg2OyYjMjExNTI7JiMyMzQ5NDsmIzM2ODkwOyYjMjA0NDk7JiMzMDM0MDsmIzM1ODMxOyYjMjc3MTQ7LCAmIzIxMjUzOyYjMjUzMjQ7U1NML1RMUyB2ZXJzaW9uLCAmIzIzNDU4OyYjMjUxNDM7JiMzMTQ3MTsmIzI5OTgzOyYjMjUxMDQ7JiMzMDM0MDs8L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQyIiB4PSIzNzguNSIgeT0iMTQ4LjYyOTQiPiYjMzg1NDM7JiMyNjQyNjsmIzI1OTY4OzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNzMiIHg9IjQyMC41IiB5PSIxNDguNjI5NCI+JiM2NTI5MjsgJiMyNTkwMzsmIzI1MzQ1OyYjMzAzNDA7JiMyMTE1MjsmIzIzNDk0OyYjMjYwNDE7JiMyNzg2MTsmIzIxNjQ0OyYjMjEzODc7JiMzMjU1MzsmIzI2MDQxOyYjMjc4NjE7PC90ZXh0Pjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDQuNSwxNzguODI4MSwzNC41LDE4Mi44MjgxLDQ0LjUsMTg2LjgyODEsNDAuNSwxODIuODI4MSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxLjA7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxLjA7c3Ryb2tlLWRhc2hhcnJheToyLjAsMi4wOyIgeDE9IjM4LjUiIHgyPSI2NjIuNSIgeTE9IjE4Mi44MjgxIiB5Mj0iMTgyLjgyODEiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyNjQiIHg9IjUwLjUiIHk9IjE3Ny43NjIyIj4mIzMwODMwOyYjMzU3NDg7JiMyMDM1MTsmIzI5OTkyOyYjMzAzNDA7JiMyMTE1MjsmIzIzNDk0OyYjMzY4OTA7JiMyMDQ0OTsmIzIxMzI3OyYjMzU3NTg7JiMyOTI1NjsmIzI2NDEyOyYjNjUyOTI7ICYjMjYzODE7JiMyMTE1MzsmIzIyMTIwOyYjMjk5ODM7JiMyNTEwNDsmIzMwMzQwOzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNDIiIHg9IjMxNC41IiB5PSIxNzcuNzYyMiI+JiMzODU0MzsmIzI2NDI2OyYjMjU5Njg7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIxNiIgeD0iMzU2LjUiIHk9IjE3Ny43NjIyIj4mIzY1MjkyOyAmIzMwODMwOyYjMzU3NDg7JiMyMDM1MTsmIzI5OTkyOyYjMzAzNDA7JiMyMTE1MjsmIzIzNDk0OyYjMjYwNDE7JiMyNzg2MTsmIzY1MjkyOyAmIzI2MzgxOyYjMjExNTM7JiMyMjEyMDsmIzM1Nzc3OyYjMjAwNzA7PC90ZXh0Pjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTM1My41LDIwNy45NjA5LDEzNjMuNSwyMTEuOTYwOSwxMzUzLjUsMjE1Ljk2MDksMTM1Ny41LDIxMS45NjA5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjEuMDsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjEuMDtzdHJva2UtZGFzaGFycmF5OjIuMCwyLjA7IiB4MT0iMzMuNSIgeDI9IjEzNTkuNSIgeTE9IjIxMS45NjA5IiB5Mj0iMjExLjk2MDkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI5MSIgeD0iNDAuNSIgeT0iMjA2Ljg5NSI+JiMzOTU2NDsmIzM1Nzc3OyYjMjYzODE7JiMyMTE1MzsmIzIyMTIwOyYjMzU3Nzc7JiMyMDA3MDs8L3RleHQ+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxLjA7c3Ryb2tlLWRhc2hhcnJheToyLjAsMi4wOyIgeDE9IjMzLjUiIHgyPSI3NS41IiB5MT0iMjQxLjA5MzgiIHkyPSIyNDEuMDkzOCIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSI3NS41IiB4Mj0iNzUuNSIgeTE9IjI0MS4wOTM4IiB5Mj0iMjU0LjA5MzgiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjEuMDtzdHJva2UtZGFzaGFycmF5OjIuMCwyLjA7IiB4MT0iMzQuNSIgeDI9Ijc1LjUiIHkxPSIyNTQuMDkzOCIgeTI9IjI1NC4wOTM4Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI0NC41LDI1MC4wOTM4LDM0LjUsMjU0LjA5MzgsNDQuNSwyNTguMDkzOCw0MC41LDI1NC4wOTM4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjEuMDsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNTYiIHg9IjQwLjUiIHk9IjIzNi4wMjc4Ij4mIzIwMTc0OyYjMzU3Nzc7JiMyMDA3MDsmIzIwMDEzOyYjMjE0NjI7JiMyMDk4NjsmIzI2MzgxOyYjMjExNTM7JiMyMjEyMDsmIzMwMzQwOyYjMjA4NDQ7JiMzODA1Mzs8L3RleHQ+PHJlY3QgZmlsbD0iI0VFRUVFRSIgaGVpZ2h0PSIzIiBzdHlsZT0ic3Ryb2tlOiNFRUVFRUU7c3Ryb2tlLXdpZHRoOjEuMDsiIHdpZHRoPSIxMzg3LjUiIHg9IjAiIHk9IjI4Mi42NjAyIi8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjA7IiB4MT0iMCIgeDI9IjEzODcuNSIgeTE9IjI4Mi42NjAyIiB5Mj0iMjgyLjY2MDIiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjEuMDsiIHgxPSIwIiB4Mj0iMTM4Ny41IiB5MT0iMjg1LjY2MDIiIHkyPSIyODUuNjYwMiIvPjxyZWN0IGZpbGw9IiNFRUVFRUUiIGhlaWdodD0iMjMuMTMyOCIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoyLjA7IiB3aWR0aD0iMTIxIiB4PSI2MzMuMjUiIHk9IjI3Mi4wOTM4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEwMiIgeD0iNjM5LjI1IiB5PSIyODguMTYwNiI+JiMyNTU2OTsmIzI1MTYzOyYjMzg0NTQ7JiMyNzU3MzstLS0mIzIzNDk0OyYjMjU5OTE7PC90ZXh0Pjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNjUxLjUsMzIyLjM1OTQsNjYxLjUsMzI2LjM1OTQsNjUxLjUsMzMwLjM1OTQsNjU1LjUsMzI2LjM1OTQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSIzMy41IiB4Mj0iNjU3LjUiIHkxPSIzMjYuMzU5NCIgeTI9IjMyNi4zNTk0Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTE3IiB4PSI0MC41IiB5PSIzMjEuMjkzNSI+JiMyOTk5MjsmIzI2MzgxOyYjMjExNTM7JiMyMjEyMDsmIzIwODQ0OyYjMzgwNTM7JiMyMTE1MjsmIzIzNDk0OyYjMzAzNDA7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxODciIHg9IjE1Ny41IiB5PSIzMjEuMjkzNSI+JiMzODU0MzsmIzI2NDI2OyYjMjU5Njg7JiM2NTI4ODtwcmUtbWFzdGVyIGtleSYjNjUyODk7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjMwMiIgeD0iMzQ0LjUiIHk9IjMyMS4yOTM1Ij4mIzY1MjkyOyAmIzMyNTM0OyYjMzA3MjE7JiMyNTkxMzsmIzIxNDY0OyYjMzY4OTA7JiMzMDY5MzssICYjMjM0NTg7JiMyNTE0MzsmIzMxNDcxOyYjMzU3Nzc7JiMyMDA3MDsmIzY1MjkyOyAmIzIzNDU4OyYjMjUxNDM7JiMzMTQ3MTsmIzI1NTY5OyYjMjUxNjM7JiMzMjQ2NzsmIzI2NDYzOyYjMzY4OTA7JiMzMDY5Mzs8L3RleHQ+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxLjA7c3Ryb2tlLWRhc2hhcnJheToyLjAsMi4wOyIgeDE9IjMzLjUiIHgyPSI3NS41IiB5MT0iMzU1LjQ5MjIiIHkyPSIzNTUuNDkyMiIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSI3NS41IiB4Mj0iNzUuNSIgeTE9IjM1NS40OTIyIiB5Mj0iMzY4LjQ5MjIiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjEuMDtzdHJva2UtZGFzaGFycmF5OjIuMCwyLjA7IiB4MT0iMzQuNSIgeDI9Ijc1LjUiIHkxPSIzNjguNDkyMiIgeTI9IjM2OC40OTIyIi8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI0NC41LDM2NC40OTIyLDM0LjUsMzY4LjQ5MjIsNDQuNSwzNzIuNDkyMiw0MC41LDM2OC40OTIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjEuMDsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyNDciIHg9IjQwLjUiIHk9IjM1MC40MjYzIj4mIzI5OTkyOyYjMTk5Nzc7JiMyMDAxMDsmIzM4NTQzOyYjMjY0MjY7JiMyNTk2ODsmIzIyNTIyOyYjMjAxMTA7JiMzMDgzMDsmIzM1NzQ4OyYjMzAzNDA7JiMyMTE1MjsmIzIzNDk0OyYjMjYwNDE7JiMyNzg2MTsmIzI5OTgzOyYjMjUxMDQ7JiMxOTk2ODsmIzIwMDEwOzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNTYiIHg9IjI4Ny41IiB5PSIzNTAuNDI2MyI+JiMyMzU0NTsmIzMxMjE2OyYjMjM0OTQ7JiMzODA1Mzs8L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNzgiIHg9IjM0My41IiB5PSIzNTAuNDI2MyI+JiMyMDMxNjsmIzIwMDI2OyYjMjAyNTA7JiMzNTgwNTsmIzIzNDk0OyYjMzgwNTM7PC90ZXh0PjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSI2NjMuNSIgeDI9IjcwNS41IiB5MT0iMzk3LjYyNSIgeTI9IjM5Ny42MjUiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjEuMDtzdHJva2UtZGFzaGFycmF5OjIuMCwyLjA7IiB4MT0iNzA1LjUiIHgyPSI3MDUuNSIgeTE9IjM5Ny42MjUiIHkyPSI0MTAuNjI1Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxLjA7c3Ryb2tlLWRhc2hhcnJheToyLjAsMi4wOyIgeDE9IjY2NC41IiB4Mj0iNzA1LjUiIHkxPSI0MTAuNjI1IiB5Mj0iNDEwLjYyNSIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNjc0LjUsNDA2LjYyNSw2NjQuNSw0MTAuNjI1LDY3NC41LDQxNC42MjUsNjcwLjUsNDEwLjYyNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxLjA7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNjg4IiB4PSI2NzAuNSIgeT0iMzkyLjU1OTEiPiYjMjk5OTI7JiMyNjM4MTsmIzIxMTUzOyYjMjIxMjA7JiMzMTE2OTsmIzM4MDUzOyYjMzUyOTk7JiMyMzQ5NDsmIzMzNzE5OyYjMjQ0NzE7JiMzODU0MzsmIzI2NDI2OyYjMjU5Njg7JiM2NTI4ODtwcmUtbWFzdGVyIGtleSYjNjUyODk7JiM2NTI5MjsgJiMyOTk5MjsmIzE5OTc3OyYjMjAwMTA7JiMzODU0MzsmIzI2NDI2OyYjMjU5Njg7JiMyMjUyMjsmIzIwMTEwOyYjMzA4MzA7JiMzNTc0ODsmIzMwMzQwOyYjMjExNTI7JiMyMzQ5NDsmIzI2MDQxOyYjMjc4NjE7JiMyMzU0ODsmIzIwOTg2OyYjMTk5Njg7JiMyMDAxMDsmIzIzNTQ1OyYjMzEyMTY7JiMyMzQ5NDsmIzM4MDUzOyYjMjAzMTY7JiMyMDAyNjsmIzIwMjUwOyYjMzU4MDU7JiMyMzQ5NDsmIzM4MDUzOzwvdGV4dD48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjQ0LjUsNDM1Ljc1NzgsMzQuNSw0MzkuNzU3OCw0NC41LDQ0My43NTc4LDQwLjUsNDM5Ljc1NzgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSIzOC41IiB4Mj0iNjYyLjUiIHkxPSI0MzkuNzU3OCIgeTI9IjQzOS43NTc4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjEyIiB4PSI1MC41IiB5PSI0MzQuNjkxOSI+JiMzMjUzNDsmIzMwNzIxOyYjMjU5MTM7JiMyMTQ2NDsmIzM2ODkwOyYjMzA2OTM7JiM2NTI5MjsgJiMyNjM4MTsmIzIxMTUzOyYjMjIxMjA7JiMyNTU2OTsmIzI1MTYzOyYjMzI0Njc7JiMyNjQ2MzsmIzM2ODkwOyYjMzA2OTM7PC90ZXh0PjxyZWN0IGZpbGw9IiNFRUVFRUUiIGhlaWdodD0iMyIgc3R5bGU9InN0cm9rZTojRUVFRUVFO3N0cm9rZS13aWR0aDoxLjA7IiB3aWR0aD0iMTM4Ny41IiB4PSIwIiB5PSI0NjguMzI0MiIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS4wOyIgeDE9IjAiIHgyPSIxMzg3LjUiIHkxPSI0NjguMzI0MiIgeTI9IjQ2OC4zMjQyIi8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjA7IiB4MT0iMCIgeDI9IjEzODcuNSIgeTE9IjQ3MS4zMjQyIiB5Mj0iNDcxLjMyNDIiLz48cmVjdCBmaWxsPSIjRUVFRUVFIiBoZWlnaHQ9IjIzLjEzMjgiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6Mi4wOyIgd2lkdGg9IjIwNyIgeD0iNTkwLjI1IiB5PSI0NTcuNzU3OCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxODgiIHg9IjU5Ni4yNSIgeT0iNDczLjgyNDciPiYjMjAzNTE7JiMyOTk5MjsmIzIwMjUwOyYjMzU4MDU7JiMyMzQ5NDsmIzM4MDUzOyYjMjM1NDU7aHR0cCYjMzY4Mjc7JiMzNDg5MjsmIzIxMTUyOyYjMjM0OTQ7PC90ZXh0PjwhLS1TUkM9W2JMOVRSejlHNkJ4ZEx2cGhuaVB4NGFvTXRrd2tfVzVZY2FaS3NLMVp1anFtcGk3ZU1hTTZZMm9pSmNIRVI2VUNLaGZFX2ltdnhwY3p1WV91YmFDT0hKM25na2RwVlpwRi1wcDdCOVFqcWVFSU1Ub3BZRlF1UEUyZE0yNVFwYnAxVFFGeXAyWWRrOXgxalByU2hiMFd1N2ZHUm9JVE4tM185OE4yRWdJZ0FkR1NRMS1jRE9zZXdac1l2bWJwdHgzM1kxc1RpVTFMaWotYkt1enROdWZXM0R6VnQyN0NGZTM2SURUdHh6eFZyR2JvTHFmRnpuM3NGcTlqcEJ5NmxETTdzY2lTSzlJYXdxOGxXZkNoSFBkNURlNU0wN09MQXQ4cGoyVm11dUdyUlVPcVVGbjVfa1Jxa0dXakp4WmQyX3lKbFBkb3JpTG9IZ2ZYbnd4bVZMd2xHTXlxTnpteFBhU1VVdC1uZE5sWkRhY1BzSTIyQWZyeU5iWVh4VUg5U2NhWmpnTVU5X0pRYUgwRGxwNnRaUlJUWWE2UVdyN0k3Nm1tVkt3VURIczVCS1ZiZDFJUGxNT01yeW9vZUp1ZkxZbkNfUDduVjFSTjVuVjZSTnZNWFRRNGtIc3FZVlM3QXc1OFpNZFI0ZkFBLUZMUkVFdEJfamtoSzBpRHdwSXlORkFvVmFHWkh4Z3V2ZnlxZE9SeHNBeWVCOVptdUxLUUxORVdBRkljSHlFOG5icUhkNGZpNFYzUW1Obk9uUGVPZGNFSlNDUml6eGpfTlpvX3p0eXFpWTM2UUFKNkxPTFJ6UUtjXzZMZXZnTGl5MnlETVp3bnJPdDh6ejJvSjM3ejgzblJZaUJXX20wMF0tLT48L2c+PC9zdmc+'>
+<ul>
+<li>整个握手阶段都不加密（也没法加密），都是明文的。 整个通话的安全，只取决于第三个随机数（Premaster secret）能不能被破解</li>
+<li>CA证书</li>
+<li>会话密钥，<strong>对称加密</strong>生成, 用三个随机数通过密钥导出器最终导出一个对称密钥</li>
+<li>服务器的公钥和私钥， <strong>非对称加密</strong>生成， 整个会话过程只使用<strong>一次</strong>， 用于加密和解密"会话密钥"</li>
+</ul>
+<h3 id="会话恢复">会话恢复</h3>
+<ul>
+<li>session id, 只保留在一台服务器上</li>
+<li>session ticket, 加密的，只有服务器才能解密，其中包括本次会话的主要信息，比如会话密钥和加密方法。 当服务器收到session ticket以后，解密后就不必重新生成会话密钥了。</li>
+</ul>
+<h2 id="报文完整性的校验机制">报文完整性的校验机制</h2>
+<p>使用散列算法来计算哈希值，用于完整性的校验。 主要使用以下散列算法</p>
+<ul>
+<li>MD5，生成128bit的散列</li>
+<li>SHA-1，生成160bit的散列</li>
+</ul>
+<h2 id="报文机密性">报文机密性</h2>
+<p>报文的机密性用于进行<strong>端点校验</strong>，不是必要的， 取决于应用的场景，常见于金融领域</p>
+<h3 id="报文鉴别码mac">报文鉴别码MAC</h3>
+<p>有些通信需要保证通信双方的机密性，防止中间人冒充通信双方。</p>
+<p>鉴别密钥只有通信双方知道，通过将鉴别密钥和报文内容一起进行散列计算，然后发送给对方。</p>
+<h3 id="数字签名">数字签名</h3>
+<p>使用数字签名作为鉴别密钥，而非对称加密可用于实现数字签名。</p>
+<p>由于私钥只有生成密钥对的人保留，通过使用私钥对报文的散列码进行加密处理生成数字签名， 然后将报文以及数字签名一起发送给对方; 接收方使用公钥对报文散列码进行解密，解密成功则保证了报文的完整性，也验证了发送方是指定的对象。</p>
+<p>数字签名需要依赖具有认证中心支撑的公钥基础设施PKI。</p>
+<h4 id="公钥认证">公钥认证</h4>
+<p>公钥认证，即证实一个公钥属于某个特定的实体。 而将公钥和特定实体绑定通常由<strong>认证中心CA</strong>完成，它的职责就是使识别和发行<strong>证书</strong>合法化。 它的主要职责：</p>
+<ul>
+<li>证实一个实体的真实身份</li>
+<li>负责生成一个将身份和公钥绑定的证书，即CA Certificate</li>
+</ul>
+<img src='data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXMtYXNjaWkiIHN0YW5kYWxvbmU9Im5vIj8+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgaGVpZ2h0PSIzNzZweCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSIgc3R5bGU9IndpZHRoOjUzMHB4O2hlaWdodDozNzZweDtiYWNrZ3JvdW5kOiNGRkZGRkY7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCA1MzAgMzc2IiB3aWR0aD0iNTMwcHgiIHpvb21BbmRQYW49Im1hZ25pZnkiPjxkZWZzLz48Zz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtZGFzaGFycmF5OjUuMCw1LjA7IiB4MT0iMzUiIHgyPSIzNSIgeTE9IjM2LjI5NjkiIHkyPSIzNDEuMzU5NCIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41O3N0cm9rZS1kYXNoYXJyYXk6NS4wLDUuMDsiIHgxPSIyNzguNSIgeDI9IjI3OC41IiB5MT0iMzYuMjk2OSIgeTI9IjM0MS4zNTk0Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWRhc2hhcnJheTo1LjAsNS4wOyIgeDE9IjUwNyIgeDI9IjUwNyIgeTE9IjM2LjI5NjkiIHkyPSIzNDEuMzU5NCIvPjxyZWN0IGZpbGw9IiNFMkUyRjAiIGhlaWdodD0iMzAuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNjAiIHg9IjUiIHk9IjUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI0NiIgeD0iMTIiIHk9IjI0Ljk5NTEiPk93bmVyPC90ZXh0PjxyZWN0IGZpbGw9IiNFMkUyRjAiIGhlaWdodD0iMzAuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNjAiIHg9IjUiIHk9IjM0MC4zNTk0Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNDYiIHg9IjEyIiB5PSIzNjAuMzU0NSI+T3duZXI8L3RleHQ+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0NSIgeD0iMjU2LjUiIHk9IjUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIzMSIgeD0iMjYzLjUiIHk9IjI0Ljk5NTEiPlVzZXI8L3RleHQ+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0NSIgeD0iMjU2LjUiIHk9IjM0MC4zNTk0Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzEiIHg9IjI2My41IiB5PSIzNjAuMzU0NSI+VXNlcjwvdGV4dD48cmVjdCBmaWxsPSIjRTJFMkYwIiBoZWlnaHQ9IjMwLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjM0IiB4PSI0OTAiIHk9IjUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMCIgeD0iNDk3IiB5PSIyNC45OTUxIj5DQTwvdGV4dD48cmVjdCBmaWxsPSIjRTJFMkYwIiBoZWlnaHQ9IjMwLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjM0IiB4PSI0OTAiIHk9IjM0MC4zNTk0Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjAiIHg9IjQ5NyIgeT0iMzYwLjM1NDUiPkNBPC90ZXh0PjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSIzNSIgeDI9Ijc3IiB5MT0iNjcuNDI5NyIgeTI9IjY3LjQyOTciLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjEuMDtzdHJva2UtZGFzaGFycmF5OjIuMCwyLjA7IiB4MT0iNzciIHgyPSI3NyIgeTE9IjY3LjQyOTciIHkyPSI4MC40Mjk3Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxLjA7c3Ryb2tlLWRhc2hhcnJheToyLjAsMi4wOyIgeDE9IjM2IiB4Mj0iNzciIHkxPSI4MC40Mjk3IiB5Mj0iODAuNDI5NyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDYsNzYuNDI5NywzNiw4MC40Mjk3LDQ2LDg0LjQyOTcsNDIsODAuNDI5NyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxLjA7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjMwIiB4PSI0MiIgeT0iNjIuMzYzOCI+Z2VuZXJhdGUgcHVibGljIGtleSBhbmQgcHJpdmF0ZSBrZXk8L3RleHQ+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI0OTUsMTA1LjU2MjUsNTA1LDEwOS41NjI1LDQ5NSwxMTMuNTYyNSw0OTksMTA5LjU2MjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSIzNSIgeDI9IjUwMSIgeTE9IjEwOS41NjI1IiB5Mj0iMTA5LjU2MjUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyNDciIHg9IjQyIiB5PSIxMDQuNDk2NiI+Z2VuZXJhdGUgQ0EgY2VydGlmaWNhdGUgd2l0aCBwdWJsaWMga2V5PC90ZXh0Pjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDYsMTM0LjY5NTMsMzYsMTM4LjY5NTMsNDYsMTQyLjY5NTMsNDIsMTM4LjY5NTMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSI0MCIgeDI9IjI3OCIgeTE9IjEzOC42OTUzIiB5Mj0iMTM4LjY5NTMiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNjUiIHg9IjUyIiB5PSIxMzMuNjI5NCI+Z2V0IG93bmVyJ3MgQ0EgY2VydGlmaWNhdGU8L3RleHQ+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI0OTUsMTYzLjgyODEsNTA1LDE2Ny44MjgxLDQ5NSwxNzEuODI4MSw0OTksMTY3LjgyODEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSIyNzkiIHgyPSI1MDEiIHkxPSIxNjcuODI4MSIgeTI9IjE2Ny44MjgxIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTI3IiB4PSIyODYiIHk9IjE2Mi43NjIyIj52ZXJpZnkgQ0EgY2VydGlmaWNhdGU8L3RleHQ+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxLjA7c3Ryb2tlLWRhc2hhcnJheToyLjAsMi4wOyIgeDE9IjI3OSIgeDI9IjMyMSIgeTE9IjE5Ni45NjA5IiB5Mj0iMTk2Ljk2MDkiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjEuMDtzdHJva2UtZGFzaGFycmF5OjIuMCwyLjA7IiB4MT0iMzIxIiB4Mj0iMzIxIiB5MT0iMTk2Ljk2MDkiIHkyPSIyMDkuOTYwOSIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSIyODAiIHgyPSIzMjEiIHkxPSIyMDkuOTYwOSIgeTI9IjIwOS45NjA5Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIyOTAsMjA1Ljk2MDksMjgwLDIwOS45NjA5LDI5MCwyMTMuOTYwOSwyODYsMjA5Ljk2MDkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIxNCIgeD0iMjg2IiB5PSIxOTEuODk1Ij5nZXQgcHVibGljIGtleSBmcm9tIENBIGNlcnRpZmljYXRlPC90ZXh0PjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSIyNzkiIHgyPSIzMjEiIHkxPSIyMzkuMDkzOCIgeTI9IjIzOS4wOTM4Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxLjA7c3Ryb2tlLWRhc2hhcnJheToyLjAsMi4wOyIgeDE9IjMyMSIgeDI9IjMyMSIgeTE9IjIzOS4wOTM4IiB5Mj0iMjUyLjA5MzgiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjEuMDtzdHJva2UtZGFzaGFycmF5OjIuMCwyLjA7IiB4MT0iMjgwIiB4Mj0iMzIxIiB5MT0iMjUyLjA5MzgiIHkyPSIyNTIuMDkzOCIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMjkwLDI0OC4wOTM4LDI4MCwyNTIuMDkzOCwyOTAsMjU2LjA5MzgsMjg2LDI1Mi4wOTM4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjEuMDsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxOTQiIHg9IjI4NiIgeT0iMjM0LjAyNzgiPnVzZSBwdWJsaWMga2V5IHRvIGVuY3J5cHQgZGF0YTwvdGV4dD48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjQ2LDI3Ny4yMjY2LDM2LDI4MS4yMjY2LDQ2LDI4NS4yMjY2LDQyLDI4MS4yMjY2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjEuMDsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjEuMDtzdHJva2UtZGFzaGFycmF5OjIuMCwyLjA7IiB4MT0iNDAiIHgyPSIyNzgiIHkxPSIyODEuMjI2NiIgeTI9IjI4MS4yMjY2Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTE3IiB4PSI1MiIgeT0iMjc2LjE2MDYiPnNlbmQgZW5jcnlwdCBkYXRhPC90ZXh0PjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSIzNSIgeDI9Ijc3IiB5MT0iMzEwLjM1OTQiIHkyPSIzMTAuMzU5NCIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSI3NyIgeDI9Ijc3IiB5MT0iMzEwLjM1OTQiIHkyPSIzMjMuMzU5NCIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wO3N0cm9rZS1kYXNoYXJyYXk6Mi4wLDIuMDsiIHgxPSIzNiIgeDI9Ijc3IiB5MT0iMzIzLjM1OTQiIHkyPSIzMjMuMzU5NCIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDYsMzE5LjM1OTQsMzYsMzIzLjM1OTQsNDYsMzI3LjM1OTQsNDIsMzIzLjM1OTQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MS4wOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE3OCIgeD0iNDIiIHk9IjMwNS4yOTM1Ij5kZWNyeXB0IGRhdGEgYnkgcHJpdmF0ZSBrZXk8L3RleHQ+PCEtLVNSQz1bVFAxMTNpOFc0NE50ZEVCbE5GSzJCYW9RN2UwTDF3MXFnYUliMUFPcnQ1djg2cWtEQmtWRGR2X19uLWwwcmJZbDdLRS03ME5lMjJieVhMTFNnSmhHaFhMMmVjYWthNlRTQUx6ZzlsWXZWclkzRW9MZUR5MDdrbklTdnF0U2pQTXdRczRlTXV4TWJGNWItTE92MkJOUkN3T0l4WElfUlpQRFNMcWVzMzd6dGdsTGVxZXRYa2R2THBsN0duRVVHQ3c0djFjM1BodGRZZkd4N2JRVlptb3FLX0lmX2lHUl0tLT48L2c+PC9zdmc+'>
+<p>涉及几个关键元素： - CA证书 - 公钥 - 私钥，私钥只保存在拥有者那</p>
+<h2 id="ssl证书格式">SSL证书格式</h2>
+<p>公钥证书的格式标准为<strong>X509</strong>，可使用openssl工具进行处理</p>
+<p>编码格式： - DER编码, 二进制格式 - PEM编码, ASCII文本格式，经过base64处理</p>
+<p>各种文件类型： - .DER .CER，文件是<strong>二进制格式</strong>，只保存证书，不保存私钥，多用于Java和Windows服务器端 - .PEM，一般是<strong>文本格式</strong>，可保存证书，可保存私钥; 常用语apache/nginx - .CRT，可能使用PEM编码，也可能使用DER编码，不保存私钥。 - .PFX .P12，二进制格式，同时包含证书和私钥，一般有密码保护; 一般用于Windows IIS以及Mac。 - .JKS，二进制格式，同时包含证书和私钥，一般有密码保护; java专用格式，使用keytool进行处理，一般用于tomcat服务器</p>
+<h3 id="证书链">证书链</h3>
+<p>证书链(certificate chain)可以有任意长度，但证书链越长，加载速度越慢，信任度越差。 合规SSL证书一般有3层：根证书、中间证书、服务器证书。</p>
+<p>在验证证书的有效性的时候，会逐级去寻找签发者的证书，直至根证书为结束， 然后通过公钥一级一级验证数字签名的正确性。</p>
+<h3 id="openssl-常用命令">openssl 常用命令</h3>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 获取证书</span></span><br><span class="line">openssl s_client -showcerts -connect &lt;server host&gt;:443</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看证书</span></span><br><span class="line">openssl x509 -noout -text -<span class="keyword">in</span> &lt;certificate file&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 校验证书</span></span><br><span class="line">openssl verify -CAfile &lt;certificate chain file&gt; &lt;certificate file&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 将pem转换为der, 或者从der转换为pem</span></span><br><span class="line">openssl x509 -inform &lt;pem/der&gt; -<span class="keyword">in</span> &lt;input certificate file&gt; -outform &lt;der/pem&gt; -out &lt;out certificate file&gt;</span><br></pre></td></tr></table></figure>
+<h3 id="java证书管理">Java证书管理</h3>
+<p>在Java中通过keytool来对证书以及密钥进行管理，证书的格式为jks</p>
+<ul>
+<li>keystore, 一般存储<strong>自己的私钥和公钥</strong>，需要<strong>密码保护</strong>，不可被分享, 向客户端提供所需的证书和公钥信息</li>
+<li>truststore， 本质上也是keystore, 只是用来存储<strong>信任对象的公钥</strong>， 可被分享，用于验证服务端是否可信</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 查看证书</span></span><br><span class="line">keytool -list -keystore &lt;keystore file&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 添加证书</span></span><br><span class="line">keytool -import -<span class="built_in">alias</span> &lt;<span class="built_in">alias</span> name&gt; -file &lt;certificate file&gt; -keystore &lt;keystore file&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 删除证书</span></span><br><span class="line">keytool -delete -keystore &lt;keystore file&gt; -<span class="built_in">alias</span> &lt;<span class="built_in">alias</span> name&gt;</span><br></pre></td></tr></table></figure>
+<h2 id="参考">参考</h2>
+<ul>
+<li><a href="https://www.ruanyifeng.com/blog/2014/02/ssl_tls.html">SSL/TLS协议运行机制的概述</a></li>
+<li><a href="https://blog.freessl.cn/ssl-cert-format-introduce/">SSL 证书格式普及，PEM、CER、JKS、PKCS12</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>it</category>
+      </categories>
+      <tags>
+        <tag>https</tag>
+        <tag>ssl</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Security的框架设计</title>
+    <url>/2021/08/spring-security%E7%9A%84%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1/</url>
+    <content><![CDATA[<p>Spring Security的架构是完全基于标准的Servlet过滤器进行实现的, 所以只要是基于Java Servlet框架就可以集成它.</p>
+<p>整个Spring Security的入口为<code>FilterChainProxy</code>.</p>
+<span id="more"></span>
+<p><img src="spring-security-entry.png" /></p>
+<p>在Spring中定义名为<code>springSecurityFilterChain</code>的FilterChainProxy的bean实例, 然后通过DelegatingFilterProxy获取它, 并将它插入到Servlet的过滤器链中.</p>
+<h2 id="过滤器链的设计">过滤器链的设计</h2>
+<p>FilterChainProxy的内部维护了多个过滤器链(SecurityFilterChain), 会按照<code>Order</code>注解定义的顺序, 每个SecurityFilterChain通过<code>RequestMatcher</code>对请求url进行匹配, 并使用第一个匹配的SecurityFilterChain对请求进行处理. 所以每个SecurityFilterChain的匹配规则和顺序.</p>
+<ul>
+<li>AutowiredWebSecurityConfigurersIgnoreParents#getWebSecurityConfigurers, 获取所有实现了<code>WebSecurityConfigurer接口</code>的SecurityFilterChain的配置</li>
+<li>WebSecurityConfiguration#setFilterChainProxySecurityConfigurer, 对所有的SecurityFilterChain的配置根据Order注解进行排序, 并加载到WebSecurity中用于生成SecurityFilterChain.</li>
+<li>WebSecurityConfiguration#springSecurityFilterChain, 定义了名为<strong>springSecurityFilterChain</strong>的FilterChainProxy的bean实例</li>
+</ul>
+<p><img src="multi-filter-chains.png" /></p>
+<h2 id="怎样配置过滤器链">怎样配置过滤器链</h2>
+<p>Spring Security通过实现WebSecurityConfigurer接口来进行相关的配置, 并且它提供了一个默认的抽象实现WebSecurityConfigurerAdapter, 它主要提供了3个方面的配置:</p>
+<ul>
+<li>WebSecurityConfigurerAdapter#configure(WebSecurity), 对FilterChainProxy进行配置</li>
+<li>WebSecurityConfigurerAdapter#configure(HttpSecurity), 对SecurityFilterChain进行配置</li>
+<li>WebSecurityConfigurerAdapter#configure(AuthenticationManagerBuilder), 对认证相关进行配置</li>
+</ul>
+<h2 id="核心的过滤器介绍">核心的过滤器介绍</h2>
+<p>每个SecurityFilterChain中都包含多个过滤器(Filter), 下面是一般默认加载的Filter.</p>
+<p><img src="default-security-filters.png" /></p>
+<h3 id="securitycontextpersistencefilter">SecurityContextPersistenceFilter</h3>
+<p>检查当前请求是否有相关的session存在, 如果存在, 则获取保存的SecurityContext; 不存在, 则创建新的SecurityContext.</p>
+<p><img src="security-context-filter.png" /></p>
+<p>在请求处理的过程中, 可以通过SecurityContextHolder来获取SecurityContext, SecurityContext中包含了Authentication信息.</p>
+<p><img src="security-context-holder.png" /></p>
+<p>SecurityContextHolder默认将SecurityContext保存在ThreadLocal中</p>
+<h3 id="logoutfilter">LogoutFilter</h3>
+<p>处理用户的登出请求, 通过LogoutHandler实例对相关的数据进行清理, 成功清理完成后调用LogoutSuccessHandler</p>
+<h3 id="authenticationfilter">AuthenticationFilter</h3>
+<p>Authentication描述登录的认证输入信息, 通过校验认证输入信息, 得到认证成功后的Authentication信息. 认证成功后的Authentication会被保存在SecurityContext中.</p>
+<p>详情会在认证章节进行讨论.</p>
+<h3 id="sessionmanagementfilter">SessionManagementFilter</h3>
+<p>对刚刚认证通过的用户进行session校验, 主要针对同时登录数之类的检查.</p>
+<p>详情会在Session章节进行讨论.</p>
+<h3 id="exceptiontranslationfilter">ExceptionTranslationFilter</h3>
+<p>Spring Security中的全局异常处理, 用于对ExceptionTranslationFilter之后的所有Filter产生的 AccessDeniedException和AuthenticationException进行捕获处理.</p>
+<p><img src="exception-translation-filter.png" /></p>
+<h3 id="filtersecurityinterceptor">FilterSecurityInterceptor</h3>
+<p>根据在<strong>SecurityFilterChain</strong>中预先配置的鉴权信息, 对当前请求进行校验.</p>
+<p><img src="filter-security-interceptor.png" /></p>
+<h2 id="reference">Reference</h2>
+<ul>
+<li><a href="https://spring.io/guides/topicals/spring-security-architecture">Spring Security Architecture</a></li>
+<li><a href="https://docs.spring.io/spring-security/site/docs/current/reference/html5/">Spring Security Reference</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>spring</category>
+      </categories>
+      <tags>
+        <tag>spring</tag>
+        <tag>web</tag>
+        <tag>spring security</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Security的认证设计</title>
+    <url>/2021/02/spring-security%E7%9A%84%E8%AE%A4%E8%AF%81%E8%AE%BE%E8%AE%A1/</url>
+    <content><![CDATA[<p>通过对应的<code>AuthenticationProvider</code>对特定的<code>Authentication</code>进行认证处理。</p>
+<span id="more"></span>
+<p><img src="authorization-flow.png" /></p>
+<ul>
+<li>SecurityContextHolder, 认证成功后, 可以在后续的处理中通过它来获取认证后的用户信息</li>
+</ul>
+<h2 id="authentication-design">Authentication Design</h2>
+<p><img src="authentication-design.png" /> <img src="provider-manager.png" /></p>
+<h2 id="常见的认证方式">常见的认证方式</h2>
+<h3 id="daoauthenticationprovider">DaoAuthenticationProvider</h3>
+<p>用于对<strong>username/password</strong>这种形式的认证信息进行校验, 认证信息通过<code>UsernamePasswordAuthenticationToken</code>进行包装. 其中password可以从本地服务中获取.</p>
+<p><img src="dao-authentication-provider.png" /></p>
+<p><img src="dao-authentication-provider-design.png" /></p>
+<p>通过<code>UserDetailsService</code>来查询username来获取对应的UserDetails用户信息, 包括用于校验的密码信息.</p>
+<p>由于密码往往通过某种加密方式加密后保存, 所以需要通过PasswordEncoder对输入的password进行加密后, 再同UserDetails中的密码信息进行比较.</p>
+<h4 id="对formlogin的支持">对FormLogin的支持</h4>
+<p><img src="form-login.png" /></p>
+<p><img src="form-login-design.png" /></p>
+<ul>
+<li>LoginUrlAuthenticationEntryPoint, 在认证失败时, 重导向到登录页面</li>
+<li>UsernamePasswordAuthenticationFilter处理登录页面的认证请求</li>
+</ul>
+<h4 id="对basic的支持">对Basic的支持</h4>
+<p><img src="basic-login-flow.png" /></p>
+<p><img src="basic-login-design.png" /></p>
+<ul>
+<li>BasicAuthenticationEntryPoint, 在认证失败时返回WWW-Authenticate头信息</li>
+<li>BasicAuthenticationFilter, 处理Basic认证请求</li>
+</ul>
+<h3 id="pre-authentication-framework对第三方认证的集成">Pre-Authentication Framework对第三方认证的集成</h3>
+<p><img src="Pre-Authentication-design.png" /></p>
+<ul>
+<li>AbstractPreAuthenticatedProcessingFilter, Pre-Authentication Framework的入口</li>
+<li>PreAuthenticatedAuthenticationToken, 包含第三方的用户校验信息或者认证成功后的用户信息</li>
+<li>PreAuthenticatedAuthenticationProvider, Pre-Authentication Framework默认的校验器</li>
+<li>AuthenticationUserDetailsService, 同第三方进行校验, 在校验成功后获取系统中的用户信息</li>
+</ul>
+<h2 id="session管理">Session管理</h2>
+<p>Http Session相关的功能都在以下组件中进行处理:</p>
+<ul>
+<li>SessionManagementFilter</li>
+<li>SessionAuthenticationStrategy, 对认证成功的用户进行session校验</li>
+<li>SessionRegistry, 存储session和认证后的用户信息的键值对</li>
+</ul>
+<p>主要处理以下问题:</p>
+<ul>
+<li>防御会话固定攻击(session-fixation protection attack)
+<ul>
+<li>SessionFixationProtectionStrategy</li>
+</ul></li>
+<li>检查Session是否超时
+<ul>
+<li>InvalidSessionStrategy, 对无效session进行处理</li>
+</ul></li>
+<li>限制用户的同时登录数
+<ul>
+<li>ConcurrentSessionFilter</li>
+<li>ConcurrentSessionControlAuthenticationStrategy</li>
+</ul></li>
+</ul>
+<h2 id="登出处理">登出处理</h2>
+<p>登出时会对用户相关的登录信息进行清理:</p>
+<ul>
+<li>session无效化</li>
+<li>清理SecurityContextHolder</li>
+<li>重导向到登录页面</li>
+<li>清理Cookies</li>
+</ul>
+<p>通过LogoutHandler进行清理, 不可以抛出异常.</p>
+<p>LogoutSuccessHandler在logout成功后, 进行重定向(默认为/login?logout)或者返回指定的http status code(默认为200).</p>
+<h2 id="reference">Reference</h2>
+<ul>
+<li><a href="https://docs.spring.io/spring-security/site/docs/5.4.2/reference/html5/#servlet-authentication">Servlet Authentication</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>spring</category>
+      </categories>
+      <tags>
+        <tag>spring</tag>
+        <tag>web</tag>
+        <tag>spring security</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Security 鉴权设计</title>
+    <url>/2021/12/spring-security-%E9%89%B4%E6%9D%83%E8%AE%BE%E8%AE%A1/</url>
+    <content><![CDATA[<p>Spring Security提供了以下几种方式进行鉴权:</p>
+<ul>
+<li>pre-invocation handling, 在使用被保护资源之前进行鉴权</li>
+<li>after invocation handling， 对调用后返回的被保护资源， 通过鉴权进行过滤</li>
+<li>FilterSecurityInterceptor, 在请求处理链中根据请求进行鉴权</li>
+<li>基于SpEL(Spring Expression Language)， 通过注解对被保护资源进行鉴权</li>
+</ul>
+<span id="more"></span>
+<h2 id="architecture-core">Architecture Core</h2>
+<h3 id="pre-invocation-handling">Pre-Invocation Handling</h3>
+<p><img src="pre-invocation-design.png" /></p>
+<ul>
+<li>GrantedAuthority, 描述用户的权限</li>
+<li>AccessDecisionManager， 决定用户是否有对受保护资源的访问权限</li>
+</ul>
+<p>在访问受保护资源之前， 对用户进行鉴权</p>
+<p><img src="pre-invocation-design2.png" /></p>
+<h3 id="after-invocation-handling">After Invocation Handling</h3>
+<p>对方法放回的值根据用户权限进行再过滤，只返回用户可以访问的资源</p>
+<p><img src="after-invocation-design.png" /></p>
+<ul>
+<li>PostInvocationAdviceProvider, 当使用@PostAuthorize和<span class="citation" data-cites="PostFilter注解时调用">@PostFilter注解时调用</span></li>
+</ul>
+<h2 id="filtersecurityinterceptor">FilterSecurityInterceptor</h2>
+<p>在调用链中对请求进行鉴权</p>
+<p><img src="FilterSecurityInterceptor-flow.png" /></p>
+<h2 id="基于spelspring-expression-language">基于SpEL(Spring Expression Language)</h2>
+<p>Spring Security 3.0引入， 通过注解对被保护资源进行鉴权</p>
+<ul>
+<li>内置校验表达式，返回boolean进行校验，常用的有：
+<ul>
+<li>hasRole</li>
+<li>hasPermission</li>
+<li>authentication, 访问Authentication对象</li>
+<li>principal，访问当前对象</li>
+</ul></li>
+<li><code>@&lt;bean_name&gt;.&lt;function&gt;</code>, 引用bean中返回boolean的方法</li>
+<li><code>#&lt;path_variable&gt;</code>, 引用方法参数列表中的变量</li>
+</ul>
+<p>通过<code>EnableGlobalMethodSecurity注解</code>开启@Pre和<span class="citation" data-cites="Post注解功能">@Post注解功能</span>:</p>
+<ul>
+<li><span class="citation" data-cites="PreAuthorize">@PreAuthorize</span>, 对方法是否可以访问进行校验</li>
+<li><span class="citation" data-cites="PostAuthorize注解">@PostAuthorize注解</span>， 可通过returnObject来引用返回值, 校验用户是否可以访问返回对象</li>
+<li><span class="citation" data-cites="PreFilter">@PreFilter</span>, 对方法参数列表中的Iterable的对象进行过滤，</li>
+<li><span class="citation" data-cites="PostFilter注解">@PostFilter注解</span>，对方法返回的Iterable对象进行过滤，可通过filterObject来引用方法返回值</li>
+</ul>
+<p>优先通过PreFilter进行过滤，避免后续大量无效数据的获取</p>
+<h2 id="reference">Reference</h2>
+<ul>
+<li><a href="https://docs.spring.io/spring-security/site/docs/current/reference/html5/#servlet-authorization">Spring Security Authorization</a></li>
+<li><a href="https://amos.s2u2m.com/2021/08/spring-security/authorization/">JSR-250</a></li>
+<li><a href="https://amos.s2u2m.com/2021/08/spring-security/authorization/">ACL</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>spring</category>
+      </categories>
+      <tags>
+        <tag>spring</tag>
+        <tag>web</tag>
+        <tag>spring security</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring MVC请求处理流程</title>
+    <url>/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/</url>
+    <content><![CDATA[<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">环境: </span><br><span class="line">- org.springframework:spring-webmvc:5.3.10</span><br><span class="line">- org.springframework.boot:spring-boot:2.5.5</span><br></pre></td></tr></table></figure>
+<p>web程序启动时的初始化顺序: ServletContext -&gt; listener -&gt; filter -&gt; servlet spring bean的初始化是在listener中声明的, 可以在后面使用.</p>
+<span id="more"></span>
+<p><img src="request-workflow.jpg" /></p>
+<h2 id="filter">Filter</h2>
+<ul>
+<li>Servlet规范规定的，只能用于Web程序中, 由Servlet容器提供支持</li>
+<li>作用于Servlet执行前后</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Order(1)</span></span><br><span class="line"><span class="meta">@WebFilter(filterName = &quot;customized&quot;, urlPatterns = &quot;/*&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">CustomizedFilter</span> <span class="keyword">implements</span> <span class="title class_">Filter</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">init</span><span class="params">(FilterConfig filterConfig)</span> <span class="keyword">throws</span> ServletException &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter Init&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">doFilter</span><span class="params">(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)</span> <span class="keyword">throws</span> IOException, ServletException &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter doFilter before&quot;</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 执行Servlet</span></span><br><span class="line">        filterChain.doFilter(servletRequest, servletResponse);</span><br><span class="line"></span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter doFilter after&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">destroy</span><span class="params">()</span> &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter destroy&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>必须要注解<strong>ServletComponentScan</strong>才能让自定义的Filter其效果.</p>
+<p>在filterChain.doFilter调用的前后来执行操作, 作用于Servlet之前的前后.</p>
+<h2 id="dispatcherservlet">DispatcherServlet</h2>
+<p>为Spring框架定制的Servlet, 用来对请求进行处理</p>
+<ul>
+<li>获取请求处理链HandlerExecutionChain以及相应的HandlerAdapter</li>
+<li>通过HandlerAdapter对请求进行处理</li>
+<li>使用Interceptor对request/response进行拦截</li>
+<li>对异常进行处理</li>
+</ul>
+<p>Spring MVC中的各种相关配置可参考<code>WebMvcAutoConfigurationAdapter</code>. 通过定义一个或者多个<code>WebMvcConfigurer</code>来扩展Spring MVC中的配置</p>
+<h2 id="获取handler">获取Handler</h2>
+<p><img src="request-mapping.png" /></p>
+<p>通过<code>@RequestMapping</code>注解定义方法Handler的匹配要求， 生成对应的<code>RequestMappingInfo</code>和多个<code>RequestCondition</code>， 用于请求匹配, 匹配成功后调用对应的方法Handler。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@RequestMapping(value = &quot;/&#123;ping&#125;&quot;, method = RequestMethod.GET)</span></span><br><span class="line"><span class="keyword">public</span> String <span class="title function_">getPingPong</span><span class="params">( String ping)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> ping;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@GetMapping(value = &quot;/&#123;ping&#125;&quot;, params = &quot;ex=1&quot;)</span></span><br><span class="line"><span class="keyword">public</span> String <span class="title function_">getPingPongEx</span><span class="params">( String ping)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> ping + <span class="string">&quot; Ex&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>DispatcherServlet::getHandler</code>用于获取请求处理链HandlerExecutionChain， 通过比较RequestMappingInfo和RequestCondition，查找最匹配的方法Handler。 定义的RequestCondition越多，则方法Handler的针对性越强；反之，则方法Handler越通用。</p>
+<h2 id="通过handleradapter处理请求">通过HandlerAdapter处理请求</h2>
+<p><code>HandlerAdapter.handle</code>主要做以下几件事：</p>
+<ul>
+<li><code>HandlerMethodArgumentResolver</code>对输入参数进行解析</li>
+<li>调用handler对请求进行处理</li>
+<li><code>HandlerMethodReturnValueHandler</code>对返回进行处理</li>
+<li>ExceptionHandler异常统一处理</li>
+</ul>
+<h3 id="基于string输入的参数解析">基于String输入的参数解析</h3>
+<p><img src="string-param-resolver.png" /></p>
+<p>通过定义Converters中的bean，就可以在启动时 通过<code>WebMvcAutoConfigurationAdapter#addFormatters</code>添加进来， 用于<code>AbstractNamedValueMethodArgumentResolver</code>的输入类型转换。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Money.java</span></span><br><span class="line"><span class="meta">@Getter</span></span><br><span class="line"><span class="meta">@Setter</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Money</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="type">String</span> <span class="variable">currency</span> <span class="operator">=</span> <span class="string">&quot;CNY&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> String value;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">toString</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> currency + <span class="string">&quot; &quot;</span> + value;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// MoneyFormatter.java</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">MoneyFormatter</span> <span class="keyword">implements</span> <span class="title class_">Formatter</span>&lt;Money&gt; &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> Money <span class="title function_">parse</span><span class="params">(String text, Locale locale)</span> <span class="keyword">throws</span> ParseException &#123;</span><br><span class="line">        String[] input = text.split(<span class="string">&quot; &quot;</span>);</span><br><span class="line">        <span class="type">Money</span> <span class="variable">money</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Money</span>();</span><br><span class="line">        <span class="keyword">if</span> (input.length == <span class="number">1</span>) &#123;</span><br><span class="line">            money.setValue(input[<span class="number">0</span>]);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            money.setCurrency(input[<span class="number">0</span>]);</span><br><span class="line">            money.setValue(input[<span class="number">1</span>]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> money;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">print</span><span class="params">(Money object, Locale locale)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> object.getCurrency()</span><br><span class="line">                + <span class="string">&quot; &quot;</span> + object.getValue();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// IndexController.java</span></span><br><span class="line"><span class="meta">@GetMapping(value = &quot;/price&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Money <span class="title function_">price</span><span class="params">( Money money)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> money;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="针对body的输入和输出处理">针对Body的输入和输出处理</h3>
+<p><img src="body-param-resolver.png" /></p>
+<p>通过<code>HttpMessageConverter</code>对body进行序列化和反序列化, 其中最常用的就是json的处理模块<code>MappingJackson2HttpMessageConverter</code>.</p>
+<p>通过定义<code>HttpMessageConverters</code>的bean，将自定义的<code>HttpMessageConverter</code>添加进来， 通过<code>WebMvcAutoConfigurationAdapter#configureMessageConverters</code>进行注册</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// StringConverter.java</span></span><br><span class="line"><span class="keyword">public</span> StringConverter <span class="keyword">implements</span> <span class="title class_">HttpMessageConverter</span>&lt;String&gt; &#123;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// ConverterConfig.java</span></span><br><span class="line"><span class="meta">@Bean</span></span><br><span class="line"><span class="keyword">public</span> HttpMessageConverters <span class="title function_">converters</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">HttpMessageConverters</span>(<span class="keyword">new</span> <span class="title class_">StringConverter</span>());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="jacksonjson序列化的支持">JacksonJson序列化的支持</h3>
+<p>Spring MVC中提供了<code>MappingJackson2HttpMessageConverter</code>对json对象进行序列化处理。 通过JsonComponnet相关的bean来注册JSON序列化组件</p>
+<ul>
+<li>JsonSerializer</li>
+<li>JsonDeserializer</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@JsonComponent</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">MoneyJson</span> <span class="keyword">extends</span> <span class="title class_">StdSerializer</span>&lt;Money&gt; &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">protected</span> <span class="title function_">MoneyJson</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="built_in">super</span>(Money.class);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">serialize</span><span class="params">(Money money, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)</span> <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">        jsonGenerator.writeString(money.toString());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="interceptor">Interceptor</h2>
+<p>Interceptor用于对Controller层进行拦截， 处理一些和controller没有依赖的业务，比如鉴权，日志等</p>
+<ul>
+<li>作用于Controller前后执行</li>
+<li>不能修改request</li>
+<li>spring中优先使用Interceptor, 而不是filter</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">CustomizedInterceptor</span> <span class="keyword">extends</span> <span class="title class_">HandlerInterceptorAdapter</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">preHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler)</span></span><br><span class="line">            <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedInterceptor prehandle&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">postHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler,</span></span><br><span class="line"><span class="params">			<span class="meta">@Nullable</span> ModelAndView modelAndView)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">		log.info(<span class="string">&quot;CustomizedInterceptor postHandle&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">afterCompletion</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler,</span></span><br><span class="line"><span class="params">			<span class="meta">@Nullable</span> Exception ex)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">		log.info(<span class="string">&quot;CustomizedInterceptor afterCompletion&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 添加interceptor</span></span><br><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">AppServiceConfig</span> <span class="keyword">extends</span> <span class="title class_">WebMvcConfigurationSupport</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> CustomizedInterceptor customizedInterceptor;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">addInterceptors</span><span class="params">(InterceptorRegistry registry)</span> &#123;</span><br><span class="line">        registry.addInterceptor(customizedInterceptor).addPathPatterns(<span class="string">&quot;/**&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="exception处理">Exception处理</h2>
+<p>对Request Mapping Handler方法抛出的异常进行处理。</p>
+<ul>
+<li>ExceptionHandler
+<ul>
+<li>Controller层异常处理</li>
+<li>ControllerAdvice全局异常处理</li>
+</ul></li>
+</ul>
+<h2 id="reference">Reference</h2>
+<ul>
+<li><a href="https://jcp.org/en/jsr/detail?id=340">JSR 340: Java Servlet 3.1 Specification</a></li>
+<li><a href="https://waylau.gitbooks.io/servlet-3-1-specification/content/">中文翻译</a></li>
+<li><a href="https://docs.spring.io/spring-framework/reference/">Spring MVC</a></li>
+<li><a href="https://time.geekbang.org/course/detail/100023501-85504">玩转Spring全家桶 — 46 | Spring MVC中的常用视图（上）</a></li>
+<li><a href="https://blog.csdn.net/zhaolijing2012/article/details/41596803">SpringMVC系列（一）核心：处理请求流程</a></li>
+<li><a href="http://www.cnblogs.com/cnndevelop/p/7255622.html">Spring Boot :Request请求处理流程</a></li>
+<li><a href="http://www.51gjie.com/javaweb/909.html">Spring MVC工作流程以及请求处理流程</a></li>
+<li><a href="https://blog.csdn.net/u012881904/article/details/51292211">码农小汪-Spring MVC -DispatcherServlet 详解</a></li>
+<li><a href="https://www.ibm.com/developerworks/cn/java/j-lo-servlet/index.html">Servlet 工作原理解析</a></li>
+<li><a href="https://www.cnblogs.com/ycpanda/p/3637312.html">Spring filter和拦截器(Interceptor)的区别和执行顺序</a></li>
+<li><a href="http://fanlychie.github.io/post/spring-boot-servlet-filter-listener-usage.html">Spring Boot 使用 Servlet、Filter、Listener</a></li>
+<li><a href="https://my.oschina.net/lichhao/blog/172562">SpringMVC源码剖析（五)-消息转换器HttpMessageConverter</a></li>
+<li><a href="https://leokongwq.github.io/2015/04/17/springMVCOutlines.html">Spring MVC HandlerMapping HandlerAdapter</a></li>
+<li><a href="https://blog.csdn.net/hongxingxiaonan/article/details/50282001">SpringMVC中WebDataBinder的应用及原理</a></li>
+<li><a href="https://blog.csdn.net/u010913106/article/details/50855691">说说Spring中的WebDataBinder</a></li>
+<li><a href="https://www.jianshu.com/p/ffe56d9553fd">Spring Boot：定制HTTP消息转换器</a></li>
+<li><a href="https://cloud.tencent.com/developer/article/1561782">Spring Boot 统一异常处理最佳实践 – 拓展篇</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>spring</category>
+      </categories>
+      <tags>
+        <tag>spring</tag>
+        <tag>web</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>成都失业保险金领取</title>
+    <url>/2024/04/%E6%88%90%E9%83%BD%E5%A4%B1%E4%B8%9A%E4%BF%9D%E9%99%A9%E9%87%91%E9%A2%86%E5%8F%96/</url>
+    <content><![CDATA[<ul>
+<li>怎么领取失业保险金呢</li>
+<li>社保和医保如何缴纳</li>
+</ul>
+<span id="more"></span>
+<h2 id="确定是否满足条件">确定是否满足条件</h2>
+<p>领取失业金需要满足以下所有条件：</p>
+<ul>
+<li>失业前用人单位和本人已缴纳失业保险费满一年，即在原单位必须缴纳社保满一年</li>
+<li>非因本人意愿中断就业, 具体请参考<a href="https://www.gov.cn/zhengce/2022-08/31/content_5711321.htm">实施《中华人民共和国社会保险法》若干规定 --- 第四章 关于失业保险, 第十三条</a></li>
+<li>是否已经进行了失业登记</li>
+</ul>
+<h2 id="失业登记">失业登记</h2>
+<p>告知国家自己失业了，并登记个人信息以及职业信息， 然后政府那就会有相关数据记录，后续可能会有社区相关的人员会帮助失业人士再就业。</p>
+<p>目前可以通过以下几种方式去进行登记：</p>
+<ul>
+<li>线下社保服务中心，不太推荐</li>
+<li><a href="https://si.12333.gov.cn/">国家社会保险公共服务平台</a></li>
+<li>电子社保卡，最推荐，方便快捷</li>
+</ul>
+<h2 id="申请失业金">申请失业金</h2>
+<p>在满足所有条件之后，就可以去申请失业金了。</p>
+<p>具体可以领取多少取决于累计缴费时间， 请注意如果之前在多个地方缴纳的，有可能只会看申请地累计缴费时间， 而不是全国总计的累计缴费时间。</p>
+<ul>
+<li>满1年不满5年，最多12个月</li>
+<li>满5年不满10年，最多18个月</li>
+<li>10年以上，最多24个月</li>
+</ul>
+<p>具体发放标准看地方政策，一般是按照失业人员原单位所在地同期最低工资标准的80%执行的。</p>
+<p>申请成功后，从次月开始按月发放，一般月底前发放到账。 当再就业时，国家会停止发放，具体可参考<a href="https://www.gov.cn/zhengce/2022-08/31/content_5711311.htm">失业保险金申领发放办法</a>; 之后如果再次失业，并且符合条件的，失业可再次申请。 若再就业不满一年失业的，可以继续申领其前次失业应领取而尚未领取的失业金。</p>
+<h2 id="社保以及医保">社保以及医保</h2>
+<p>失业期间，国家会为失业人员代缴纳基本医疗保险，但不算在个人缴纳记录中</p>
+<p>针对社保，个人可以灵活就业方式进行缴纳。</p>
+<h2 id="最后建言">最后建言</h2>
+<p>请耐心的找一个合法的相对良心的企业，保护好自己，才能去做更好的自己。</p>
+<h2 id="reference">Reference</h2>
+<ul>
+<li><a href="http://www.mohrss.gov.cn/xxgk2020/fdzdgknr/zcjd/zcjdwz/202204/t20220418_444154.html">领取失业保险金需要什么条件？</a></li>
+<li><a href="https://www.gov.cn/zhengce/2022-08/31/content_5711321.htm">实施《中华人民共和国社会保险法》若干规定</a></li>
+<li><a href="https://cdhrss.chengdu.gov.cn/cdrsj/c135754/2020-04/24/content_6f1e783f4c924f798e804292cae1c516.shtml">失业人员如何申领失业保险金？</a></li>
+<li><a href="https://www.gov.cn/zhengce/2022-08/31/content_5711311.htm">失业保险金申领发放办法</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>life</category>
+      </categories>
+      <tags>
+        <tag>life</tag>
+        <tag>unemployment</tag>
+        <tag>insurance</tag>
+      </tags>
+  </entry>
+</search>
