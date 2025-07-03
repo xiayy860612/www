@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha256-dABdfBfUoC8vJUBOwGVdm8L9qlMWaHTIfXt+7GnZCIo=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.36/fancybox/fancybox.css" integrity="sha256-zM8WXtG4eUn7dKKNMTuoWZub++VnSfaOpA/8PJfvTBo=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"amos.s2u2m.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.23.1","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":7,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="NextJS 快速入门">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NextJS Guide">
+<meta property="og:url" content="https://amos.s2u2m.com/2025/05/nextjs-guide/index.html">
+<meta property="og:site_name" content="爱码士Amos">
+<meta property="og:description" content="NextJS 快速入门">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://amos.s2u2m.com/2025/05/nextjs-guide/route-files.png">
+<meta property="article:published_time" content="2025-05-08T12:47:19.000Z">
+<meta property="article:modified_time" content="2025-07-03T23:26:09.681Z">
+<meta property="article:author" content="Amos Xia">
+<meta property="article:tag" content="quick-guide">
+<meta property="article:tag" content="NextJS">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://amos.s2u2m.com/2025/05/nextjs-guide/route-files.png">
+
+
+<link rel="canonical" href="https://amos.s2u2m.com/2025/05/nextjs-guide/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://amos.s2u2m.com/2025/05/nextjs-guide/","path":"2025/05/nextjs-guide/","title":"NextJS Guide"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>NextJS Guide | 爱码士Amos</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.36/fancybox/fancybox.umd.js" integrity="sha256-hiUEBwFEpLF6DlB8sGXlKo4kPZ46Ui4qGpd0vrVkOm4=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js" defer></script>
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js" defer></script>
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">爱码士Amos</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">行到水穷处，坐看云起时</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#app-router"><span class="nav-number">1.</span> <span class="nav-text">App Router</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#route-files"><span class="nav-number">1.1.</span> <span class="nav-text">Route files</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#navigation"><span class="nav-number">1.2.</span> <span class="nav-text">Navigation</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#component"><span class="nav-number">2.</span> <span class="nav-text">Component</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#pure-server-component"><span class="nav-number">2.1.</span> <span class="nav-text">Pure Server Component</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#client-component"><span class="nav-number">2.2.</span> <span class="nav-text">Client Component</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#mixture-for-server-component-with-client-component"><span class="nav-number">2.3.</span> <span class="nav-text">Mixture for
+Server Component with Client Component</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#server-render-features"><span class="nav-number">3.</span> <span class="nav-text">Server Render Features</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#server-function"><span class="nav-number">3.1.</span> <span class="nav-text">Server Function</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#invoke-a-server-function"><span class="nav-number">3.1.1.</span> <span class="nav-text">invoke a Server Function</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#error-handler-in-server"><span class="nav-number">3.2.</span> <span class="nav-text">Error Handler In Server</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#reference"><span class="nav-number">4.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Amos Xia"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">Amos Xia</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-CN" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://amos.s2u2m.com/2025/05/nextjs-guide/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="Amos Xia">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="爱码士Amos">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="NextJS Guide | 爱码士Amos">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          NextJS Guide
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-05-08 20:47:19" itemprop="dateCreated datePublished" datetime="2025-05-08T20:47:19+08:00">2025-05-08</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-07-04 07:26:09" itemprop="dateModified" datetime="2025-07-04T07:26:09+08:00">2025-07-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/quick-guide/" itemprop="url" rel="index"><span itemprop="name">quick-guide</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>NextJS 快速入门</p>
+<span id="more"></span>
+<h2 id="app-router">App Router</h2>
+<p>nextjs use <code>app router</code> for routing, it follows
+<strong>directory hierarchy</strong> and requires below files in
+directory to enable routing:</p>
+<ul>
+<li><code>page.tsx</code>, page component</li>
+<li><code>route.tsx</code>, API endpoint</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># directory hierarchy example for routing</span></span><br><span class="line">app                         --&gt; /</span><br><span class="line">  |-- items                 --&gt; /items</span><br><span class="line">        |-- [&lt;item-id&gt;]     --&gt; /items/&lt;item-id&gt;</span><br></pre></td></tr></table></figure>
+<p>get path variables from dynamic routing
+<code>[&lt;item-id&gt;]</code> by <code>params</code> parameters and
+<code>params</code> could by customized by
+<code>function generateStaticParams(&#123; params &#125;)</code>, details please
+refer to <a
+target="_blank" rel="noopener" href="https://nextjs.org/docs/app/api-reference/functions/generate-static-params">generateStaticParams</a>.</p>
+<h3 id="route-files">Route files</h3>
+<figure>
+<img src="route-files.png" alt="route files" />
+<figcaption aria-hidden="true">route files</figcaption>
+</figure>
+<h3 id="navigation">Navigation</h3>
+<ul>
+<li>use <code>&lt;Link&gt;</code> component</li>
+<li>use <code>useRouter</code> hook</li>
+</ul>
+<h2 id="component">Component</h2>
+<p>Component is <code>Server Component</code> by default.</p>
+<h3 id="pure-server-component">Pure Server Component</h3>
+<ul>
+<li>use <code>async/await</code>
+<ul>
+<li><strong>async</strong> Page</li>
+<li><strong>await</strong> data from API/db</li>
+</ul></li>
+</ul>
+<figure class="highlight tsx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> <span class="keyword">async</span> <span class="keyword">function</span> <span class="title function_">Page</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="comment">// get from API</span></span><br><span class="line"><span class="comment">//   const data = await fetch(&#x27;https://api.vercel.app/blog&#x27;)</span></span><br><span class="line"><span class="comment">//   const allPosts = await data.json()</span></span><br><span class="line">  </span><br><span class="line">  <span class="comment">// get from DB</span></span><br><span class="line">  <span class="keyword">const</span> allPosts = <span class="keyword">await</span> db.<span class="title function_">select</span>().<span class="title function_">from</span>(posts)</span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="language-xml"><span class="tag">&lt;<span class="name">ul</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      &#123;allPosts.map((post) =&gt; (</span></span><br><span class="line"><span class="language-xml">        <span class="tag">&lt;<span class="name">li</span> <span class="attr">key</span>=<span class="string">&#123;post.id&#125;</span>&gt;</span>&#123;post.title&#125;<span class="tag">&lt;/<span class="name">li</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      ))&#125;</span></span><br><span class="line"><span class="language-xml">    <span class="tag">&lt;/<span class="name">ul</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="client-component">Client Component</h3>
+<ul>
+<li>require <code>'use client'</code> at top of component file</li>
+<li>not async Page</li>
+<li>get data from client state, such like <code>useState</code>,
+<code>RTK</code> and so on.</li>
+</ul>
+<figure class="highlight tsx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">&#x27;use client&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> <span class="keyword">function</span> <span class="title function_">Page</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> &#123; data, error, isLoading &#125; = <span class="title function_">useQueryByRTK</span>()</span><br><span class="line"> </span><br><span class="line">  <span class="keyword">if</span> (isLoading) <span class="keyword">return</span> <span class="language-xml"><span class="tag">&lt;<span class="name">div</span>&gt;</span>Loading...<span class="tag">&lt;/<span class="name">div</span>&gt;</span></span></span><br><span class="line">  <span class="keyword">if</span> (error) <span class="keyword">return</span> <span class="language-xml"><span class="tag">&lt;<span class="name">div</span>&gt;</span>Error: &#123;error.message&#125;<span class="tag">&lt;/<span class="name">div</span>&gt;</span></span></span><br><span class="line"> </span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="language-xml"><span class="tag">&lt;<span class="name">ul</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      &#123;data.map((post: &#123; id: string; title: string &#125;) =&gt; (</span></span><br><span class="line"><span class="language-xml">        <span class="tag">&lt;<span class="name">li</span> <span class="attr">key</span>=<span class="string">&#123;post.id&#125;</span>&gt;</span>&#123;post.title&#125;<span class="tag">&lt;/<span class="name">li</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      ))&#125;</span></span><br><span class="line"><span class="language-xml">    <span class="tag">&lt;/<span class="name">ul</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="mixture-for-server-component-with-client-component">Mixture for
+Server Component with Client Component</h3>
+<ul>
+<li>use React's <code>use</code> hook to <strong>stream data</strong>
+with <code>Promise</code> from the server to client in Client
+Component.</li>
+<li>use streaming to break up the page's HTML into smaller chunks and
+send those chunks from the server to the client.</li>
+<li>wrap Client component with loading component
+<ul>
+<li>use <code>loading.tsx</code> file in route directory</li>
+<li>wrap with <code>Suspense</code> by manual</li>
+</ul></li>
+</ul>
+<figure class="highlight tsx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Server Component part</span></span><br><span class="line"><span class="keyword">import</span> <span class="title class_">Posts</span> <span class="keyword">from</span> <span class="string">&#x27;@/app/ui/posts</span></span><br><span class="line"><span class="string">import &#123; Suspense &#125; from &#x27;</span>react<span class="string">&#x27;</span></span><br><span class="line"><span class="string"> </span></span><br><span class="line"><span class="string">export default function Page() &#123;</span></span><br><span class="line"><span class="string">  // Don&#x27;</span>t <span class="keyword">await</span> the data fetching <span class="keyword">function</span></span><br><span class="line">  <span class="keyword">const</span> posts = <span class="title function_">getPosts</span>()</span><br><span class="line"> </span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="language-xml"><span class="tag">&lt;<span class="name">Suspense</span> <span class="attr">fallback</span>=<span class="string">&#123;</span>&lt;<span class="attr">div</span>&gt;</span>Loading...<span class="tag">&lt;/<span class="name">div</span>&gt;</span>&#125;&gt;</span></span><br><span class="line"><span class="language-xml">      <span class="tag">&lt;<span class="name">Posts</span> <span class="attr">posts</span>=<span class="string">&#123;posts&#125;</span> /&gt;</span></span></span><br><span class="line"><span class="language-xml">    <span class="tag">&lt;/<span class="name">Suspense</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight tsx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Client Component part</span></span><br><span class="line"><span class="string">&#x27;use client&#x27;</span></span><br><span class="line"><span class="keyword">import</span> &#123; use &#125; <span class="keyword">from</span> <span class="string">&#x27;react&#x27;</span></span><br><span class="line"> </span><br><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> <span class="keyword">function</span> <span class="title function_">Posts</span>(<span class="params">&#123;</span></span><br><span class="line"><span class="params">  posts,</span></span><br><span class="line"><span class="params">&#125;: &#123;</span></span><br><span class="line"><span class="params">  posts: <span class="built_in">Promise</span>&lt;&#123; id: <span class="built_in">string</span>; title: <span class="built_in">string</span> &#125;[]&gt;</span></span><br><span class="line"><span class="params">&#125;</span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> allPosts = <span class="title function_">use</span>(posts)</span><br><span class="line"> </span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="language-xml"><span class="tag">&lt;<span class="name">ul</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      &#123;allPosts.map((post) =&gt; (</span></span><br><span class="line"><span class="language-xml">        <span class="tag">&lt;<span class="name">li</span> <span class="attr">key</span>=<span class="string">&#123;post.id&#125;</span>&gt;</span>&#123;post.title&#125;<span class="tag">&lt;/<span class="name">li</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      ))&#125;</span></span><br><span class="line"><span class="language-xml">    <span class="tag">&lt;/<span class="name">ul</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="server-render-features">Server Render Features</h2>
+<h3 id="server-function">Server Function</h3>
+<ul>
+<li>place <code>use server</code> directive at the top of an
+asynchronous function</li>
+</ul>
+<figure class="highlight ts"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">export</span> <span class="keyword">async</span> <span class="keyword">function</span> <span class="title function_">createPost</span>(<span class="params"><span class="attr">formData</span>: <span class="title class_">FormData</span></span>) &#123;</span><br><span class="line">  <span class="string">&#x27;use server&#x27;</span></span><br><span class="line">  <span class="keyword">const</span> title = formData.<span class="title function_">get</span>(<span class="string">&#x27;title&#x27;</span>)</span><br><span class="line">  <span class="keyword">const</span> content = formData.<span class="title function_">get</span>(<span class="string">&#x27;content&#x27;</span>)</span><br><span class="line"> </span><br><span class="line">  <span class="comment">// Update data</span></span><br><span class="line">  <span class="comment">// Revalidate cache</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="invoke-a-server-function">invoke a Server Function</h4>
+<ul>
+<li><strong>Forms</strong> in Server and Client Components</li>
+<li><strong>Event Handlers</strong> in Client Components</li>
+</ul>
+<figure class="highlight tsx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; createPost &#125; <span class="keyword">from</span> <span class="string">&#x27;@/app/actions&#x27;</span></span><br><span class="line"> </span><br><span class="line"><span class="keyword">export</span> <span class="keyword">function</span> <span class="title function_">Form</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="language-xml"><span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">&#123;createPost&#125;</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;text&quot;</span> <span class="attr">name</span>=<span class="string">&quot;title&quot;</span> /&gt;</span></span></span><br><span class="line"><span class="language-xml">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;text&quot;</span> <span class="attr">name</span>=<span class="string">&quot;content&quot;</span> /&gt;</span></span></span><br><span class="line"><span class="language-xml">      <span class="tag">&lt;<span class="name">button</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span>&gt;</span>Create<span class="tag">&lt;/<span class="name">button</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">    <span class="tag">&lt;/<span class="name">form</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight tsx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">&#x27;use client&#x27;</span></span><br><span class="line"> </span><br><span class="line"><span class="keyword">import</span> &#123; useActionState &#125; <span class="keyword">from</span> <span class="string">&#x27;react&#x27;</span></span><br><span class="line"><span class="keyword">import</span> &#123; createPost &#125; <span class="keyword">from</span> <span class="string">&#x27;@/app/actions&#x27;</span></span><br><span class="line"><span class="keyword">import</span> &#123; <span class="title class_">LoadingSpinner</span> &#125; <span class="keyword">from</span> <span class="string">&#x27;@/app/ui/loading-spinner&#x27;</span></span><br><span class="line"> </span><br><span class="line"><span class="keyword">export</span> <span class="keyword">function</span> <span class="title function_">Button</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> [response, action, pending] = <span class="title function_">useActionState</span>(createPost, <span class="literal">false</span>)</span><br><span class="line"> </span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="language-xml"><span class="tag">&lt;<span class="name">button</span> <span class="attr">onClick</span>=<span class="string">&#123;async</span> () =&gt;</span> action()&#125;&gt;</span></span><br><span class="line"><span class="language-xml">      &#123;pending ? <span class="tag">&lt;<span class="name">LoadingSpinner</span> /&gt;</span> : &#x27;Create Post&#x27;&#125;</span></span><br><span class="line"><span class="language-xml">    <span class="tag">&lt;/<span class="name">button</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>use <code>useActionState</code> to get more status of server function
+invokation.</p>
+<h3 id="error-handler-in-server">Error Handler In Server</h3>
+<ul>
+<li>define a <strong>fixed Error Response</strong> and return it when
+<strong>expected</strong> error is raised.</li>
+<li><strong>Error Boundary</strong> in <code>error.tsx</code> file in
+route directory to handle <strong>uncaught</strong> exceptions, it only
+exists for client component.</li>
+</ul>
+<h2 id="reference">Reference</h2>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://nextjs.org/docs">NextJS Document</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Amos Xia
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://amos.s2u2m.com/2025/05/nextjs-guide/" title="NextJS Guide">https://amos.s2u2m.com/2025/05/nextjs-guide/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-CN" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/quick-guide/" rel="tag"># quick-guide</a>
+              <a href="/tags/NextJS/" rel="tag"># NextJS</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/06/typescript-%E5%BF%AB%E9%80%9F%E5%85%A5%E9%97%A8/" rel="prev" title="TypeScript 快速入门">
+                  <i class="fa fa-angle-left"></i> TypeScript 快速入门
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Amos Xia</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

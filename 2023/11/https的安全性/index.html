@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha256-dABdfBfUoC8vJUBOwGVdm8L9qlMWaHTIfXt+7GnZCIo=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.36/fancybox/fancybox.css" integrity="sha256-zM8WXtG4eUn7dKKNMTuoWZub++VnSfaOpA/8PJfvTBo=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"amos.s2u2m.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.23.1","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":7,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="Https相较于Htp主要增加了通信的安全性。主要指：  所有信息都是加密传播，第三方无法窃听。 具有校验机制，一旦被篡改，通信双方会立刻发现。 配备身份证书，防止身份被冒充。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HTTPS的安全性">
+<meta property="og:url" content="https://amos.s2u2m.com/2023/11/https%E7%9A%84%E5%AE%89%E5%85%A8%E6%80%A7/index.html">
+<meta property="og:site_name" content="爱码士Amos">
+<meta property="og:description" content="Https相较于Htp主要增加了通信的安全性。主要指：  所有信息都是加密传播，第三方无法窃听。 具有校验机制，一旦被篡改，通信双方会立刻发现。 配备身份证书，防止身份被冒充。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-11-21T09:47:19.000Z">
+<meta property="article:modified_time" content="2024-11-19T00:29:20.581Z">
+<meta property="article:author" content="Amos Xia">
+<meta property="article:tag" content="https">
+<meta property="article:tag" content="ssl">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://amos.s2u2m.com/2023/11/https%E7%9A%84%E5%AE%89%E5%85%A8%E6%80%A7/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://amos.s2u2m.com/2023/11/https%E7%9A%84%E5%AE%89%E5%85%A8%E6%80%A7/","path":"2023/11/https的安全性/","title":"HTTPS的安全性"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>HTTPS的安全性 | 爱码士Amos</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fancyapps-ui/5.0.36/fancybox/fancybox.umd.js" integrity="sha256-hiUEBwFEpLF6DlB8sGXlKo4kPZ46Ui4qGpd0vrVkOm4=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.4.1/search.js" integrity="sha256-1kfA5uHPf65M5cphT2dvymhkuyHPQp5A53EGZOnOLmc=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+  <script src="/js/third-party/fancybox.js" defer></script>
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">false</script><script class="next-config" data-name="mathjax" type="application/json">{"enable":true,"tags":"ams","js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js","integrity":"sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI="}}</script>
+<script src="/js/third-party/math/mathjax.js" defer></script>
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">爱码士Amos</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">行到水穷处，坐看云起时</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A0%E5%AF%86"><span class="nav-number">1.</span> <span class="nav-text">加密</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8F%A1%E6%89%8B%E8%BF%87%E7%A8%8B"><span class="nav-number">1.1.</span> <span class="nav-text">握手过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BC%9A%E8%AF%9D%E6%81%A2%E5%A4%8D"><span class="nav-number">1.2.</span> <span class="nav-text">会话恢复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%A5%E6%96%87%E5%AE%8C%E6%95%B4%E6%80%A7%E7%9A%84%E6%A0%A1%E9%AA%8C%E6%9C%BA%E5%88%B6"><span class="nav-number">2.</span> <span class="nav-text">报文完整性的校验机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%A5%E6%96%87%E6%9C%BA%E5%AF%86%E6%80%A7"><span class="nav-number">3.</span> <span class="nav-text">报文机密性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8A%A5%E6%96%87%E9%89%B4%E5%88%AB%E7%A0%81MAC"><span class="nav-number">3.1.</span> <span class="nav-text">报文鉴别码MAC</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E5%AD%97%E7%AD%BE%E5%90%8D"><span class="nav-number">3.2.</span> <span class="nav-text">数字签名</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%85%AC%E9%92%A5%E8%AE%A4%E8%AF%81"><span class="nav-number">3.2.1.</span> <span class="nav-text">公钥认证</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SSL%E8%AF%81%E4%B9%A6%E6%A0%BC%E5%BC%8F"><span class="nav-number">4.</span> <span class="nav-text">SSL证书格式</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%81%E4%B9%A6%E9%93%BE"><span class="nav-number">4.1.</span> <span class="nav-text">证书链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#openssl-%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4"><span class="nav-number">4.2.</span> <span class="nav-text">openssl 常用命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java%E8%AF%81%E4%B9%A6%E7%AE%A1%E7%90%86"><span class="nav-number">4.3.</span> <span class="nav-text">Java证书管理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Amos Xia"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">Amos Xia</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-CN" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://amos.s2u2m.com/2023/11/https%E7%9A%84%E5%AE%89%E5%85%A8%E6%80%A7/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="Amos Xia">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="爱码士Amos">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="HTTPS的安全性 | 爱码士Amos">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          HTTPS的安全性
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-11-21 17:47:19" itemprop="dateCreated datePublished" datetime="2023-11-21T17:47:19+08:00">2023-11-21</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2024-11-19 08:29:20" itemprop="dateModified" datetime="2024-11-19T08:29:20+08:00">2024-11-19</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/it/" itemprop="url" rel="index"><span itemprop="name">it</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>Https相较于Htp主要增加了通信的安全性。主要指：</p>
+<ul>
+<li>所有信息都是<strong>加密</strong>传播，第三方无法窃听。</li>
+<li>具有<strong>校验机制</strong>，一旦被篡改，通信双方会立刻发现。</li>
+<li>配备<strong>身份证书</strong>，防止身份被冒充。</li>
+</ul>
+<span id="more"></span>
+
+<h2 id="加密"><a href="#加密" class="headerlink" title="加密"></a>加密</h2><p>Https中的加密主要分为2块：</p>
+<ul>
+<li>握手阶段的加密， 使用非对称加密技术（例如RSA等）对pre-master key的加密</li>
+<li>通信阶段的加密，使用会话密钥对通信内容进行加密，会话密钥采用对称加密技术，例如DES等</li>
+</ul>
+<h3 id="握手过程"><a href="#握手过程" class="headerlink" title="握手过程"></a>握手过程</h3><img src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IlNFUVVFTkNFIiBoZWlnaHQ9IjUzNnB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6MTM4M3B4O2hlaWdodDo1MzZweDtiYWNrZ3JvdW5kOiNGRkZGRkY7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAxMzgzIDUzNiIgd2lkdGg9IjEzODNweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjxnPjx0aXRsZT5DbGllbnQ8L3RpdGxlPjxyZWN0IGZpbGw9IiMwMDAwMDAiIGZpbGwtb3BhY2l0eT0iMC4wMDAwMCIgaGVpZ2h0PSI0NjQuNTkzOCIgd2lkdGg9IjgiIHg9IjI4LjI2NTEiIHk9IjM2LjI5NjkiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtZGFzaGFycmF5OjUsNTsiIHgxPSIzMiIgeDI9IjMyIiB5MT0iMzYuMjk2OSIgeTI9IjUwMC44OTA2Ii8+PC9nPjxnPjx0aXRsZT5TZXJ2ZXI8L3RpdGxlPjxyZWN0IGZpbGw9IiMwMDAwMDAiIGZpbGwtb3BhY2l0eT0iMC4wMDAwMCIgaGVpZ2h0PSI0NjQuNTkzOCIgd2lkdGg9IjgiIHg9IjY0OC42ODUxIiB5PSIzNi4yOTY5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWRhc2hhcnJheTo1LDU7IiB4MT0iNjUxLjczIiB4Mj0iNjUxLjczIiB5MT0iMzYuMjk2OSIgeTI9IjUwMC44OTA2Ii8+PC9nPjxnPjx0aXRsZT5DQTwvdGl0bGU+PHJlY3QgZmlsbD0iIzAwMDAwMCIgZmlsbC1vcGFjaXR5PSIwLjAwMDAwIiBoZWlnaHQ9IjQ2NC41OTM4IiB3aWR0aD0iOCIgeD0iMTM1MS4yOTgxIiB5PSIzNi4yOTY5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWRhc2hhcnJheTo1LDU7IiB4MT0iMTM1NC42MjE5IiB4Mj0iMTM1NC42MjE5IiB5MT0iMzYuMjk2OSIgeTI9IjUwMC44OTA2Ii8+PC9nPjxnIGNsYXNzPSJwYXJ0aWNpcGFudCBwYXJ0aWNpcGFudC1oZWFkIiBkYXRhLXBhcnRpY2lwYW50PSJDIj48cmVjdCBmaWxsPSIjRTJFMkYwIiBoZWlnaHQ9IjMwLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjU0LjUzMDMiIHg9IjUiIHk9IjUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI0MC41MzAzIiB4PSIxMiIgeT0iMjQuOTk1MSI+Q2xpZW50PC90ZXh0PjwvZz48ZyBjbGFzcz0icGFydGljaXBhbnQgcGFydGljaXBhbnQtdGFpbCIgZGF0YS1wYXJ0aWNpcGFudD0iQyI+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI1NC41MzAzIiB4PSI1IiB5PSI0OTkuODkwNiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQwLjUzMDMiIHg9IjEyIiB5PSI1MTkuODg1NyI+Q2xpZW50PC90ZXh0PjwvZz48ZyBjbGFzcz0icGFydGljaXBhbnQgcGFydGljaXBhbnQtaGVhZCIgZGF0YS1wYXJ0aWNpcGFudD0iUyI+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI1OS45MTAyIiB4PSI2MjIuNzMiIHk9IjUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI0NS45MTAyIiB4PSI2MjkuNzMiIHk9IjI0Ljk5NTEiPlNlcnZlcjwvdGV4dD48L2c+PGcgY2xhc3M9InBhcnRpY2lwYW50IHBhcnRpY2lwYW50LXRhaWwiIGRhdGEtcGFydGljaXBhbnQ9IlMiPjxyZWN0IGZpbGw9IiNFMkUyRjAiIGhlaWdodD0iMzAuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTkuOTEwMiIgeD0iNjIyLjczIiB5PSI0OTkuODkwNiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQ1LjkxMDIiIHg9IjYyOS43MyIgeT0iNTE5Ljg4NTciPlNlcnZlcjwvdGV4dD48L2c+PGcgY2xhc3M9InBhcnRpY2lwYW50IHBhcnRpY2lwYW50LWhlYWQiIGRhdGEtcGFydGljaXBhbnQ9IkNBIj48cmVjdCBmaWxsPSIjRTJFMkYwIiBoZWlnaHQ9IjMwLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjMzLjM1MjUiIHg9IjEzMzguNjIxOSIgeT0iNSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE5LjM1MjUiIHg9IjEzNDUuNjIxOSIgeT0iMjQuOTk1MSI+Q0E8L3RleHQ+PC9nPjxnIGNsYXNzPSJwYXJ0aWNpcGFudCBwYXJ0aWNpcGFudC10YWlsIiBkYXRhLXBhcnRpY2lwYW50PSJDQSI+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIzMy4zNTI1IiB4PSIxMzM4LjYyMTkiIHk9IjQ5OS44OTA2Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTkuMzUyNSIgeD0iMTM0NS42MjE5IiB5PSI1MTkuODg1NyI+Q0E8L3RleHQ+PC9nPjxyZWN0IGZpbGw9IiNFRUVFRUUiIGhlaWdodD0iMyIgc3R5bGU9InN0cm9rZTojRUVFRUVFO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEzNzYuOTc0NCIgeD0iMCIgeT0iNjYuODYzMyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHgxPSIwIiB4Mj0iMTM3Ni45NzQ0IiB5MT0iNjYuODYzMyIgeTI9IjY2Ljg2MzMiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMCIgeDI9IjEzNzYuOTc0NCIgeTE9IjY5Ljg2MzMiIHkyPSI2OS44NjMzIi8+PHJlY3QgZmlsbD0iI0VFRUVFRSIgaGVpZ2h0PSIyMy4xMzI4IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjI7IiB3aWR0aD0iNzAuNTI1OSIgeD0iNjUzLjIyNDIiIHk9IjU2LjI5NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNTIuMDAwMSIgeD0iNjU5LjIyNDIiIHk9IjcyLjM2MzgiPiYjMjU1Njk7JiMyNTE2MzsmIzM4NDU0OyYjMjc1NzM7PC90ZXh0PjxyZWN0IGZpbGw9IiNFRUVFRUUiIGhlaWdodD0iMyIgc3R5bGU9InN0cm9rZTojRUVFRUVFO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEzNzYuOTc0NCIgeD0iMCIgeT0iMTA5Ljk5NjEiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMCIgeDI9IjEzNzYuOTc0NCIgeTE9IjEwOS45OTYxIiB5Mj0iMTA5Ljk5NjEiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMCIgeDI9IjEzNzYuOTc0NCIgeTE9IjExMi45OTYxIiB5Mj0iMTEyLjk5NjEiLz48cmVjdCBmaWxsPSIjRUVFRUVFIiBoZWlnaHQ9IjIzLjEzMjgiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MjsiIHdpZHRoPSIxMTIuNzEyNSIgeD0iNjMyLjEzMSIgeT0iOTkuNDI5NyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI5NC4xODY2IiB4PSI2MzguMTMxIiB5PSIxMTUuNDk2NiI+JiMyNTU2OTsmIzI1MTYzOyYjMzg0NTQ7JiMyNzU3MzstLS0mIzI2MTI2OyYjMjU5OTE7PC90ZXh0PjxnIGNsYXNzPSJtZXNzYWdlIiBkYXRhLXBhcnRpY2lwYW50LTE9IkMiIGRhdGEtcGFydGljaXBhbnQtMj0iUyI+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI2NDAuNjg1MSwxNDkuNjk1Myw2NTAuNjg1MSwxNTMuNjk1Myw2NDAuNjg1MSwxNTcuNjk1Myw2NDQuNjg1MSwxNTMuNjk1MyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSIzMi4yNjUxIiB4Mj0iNjQ2LjY4NTEiIHkxPSIxNTMuNjk1MyIgeTI9IjE1My42OTUzIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzQwLjgzNzYiIHg9IjM5LjI2NTEiIHk9IjE0OC42Mjk0Ij4mIzIxNDU3OyYjMjA5ODY7JiMyMTE1MjsmIzIzNDk0OyYjMzY4OTA7JiMyMDQ0OTsmIzMwMzQwOyYjMzU4MzE7JiMyNzcxNDssICYjMjEyNTM7JiMyNTMyNDtTU0wvVExTIHZlcnNpb24sICYjMjM0NTg7JiMyNTE0MzsmIzMxNDcxOyYjMjk5ODM7JiMyNTEwNDsmIzMwMzQwOzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzkiIHg9IjM4MC4xMDI3IiB5PSIxNDguNjI5NCI+JiMzODU0MzsmIzI2NDI2OyYjMjU5Njg7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE3My4xMzI1IiB4PSI0MTkuMTAyOCIgeT0iMTQ4LjYyOTQiPiYjNjUyOTI7ICYjMjU5MDM7JiMyNTM0NTsmIzMwMzQwOyYjMjExNTI7JiMyMzQ5NDsmIzI2MDQxOyYjMjc4NjE7JiMyMTY0NDsmIzIxMzg3OyYjMzI1NTM7JiMyNjA0MTsmIzI3ODYxOzwvdGV4dD48L2c+PGcgY2xhc3M9Im1lc3NhZ2UiIGRhdGEtcGFydGljaXBhbnQtMT0iUyIgZGF0YS1wYXJ0aWNpcGFudC0yPSJDIj48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjQzLjI2NTEsMTc4LjgyODEsMzMuMjY1MSwxODIuODI4MSw0My4yNjUxLDE4Ni44MjgxLDM5LjI2NTEsMTgyLjgyODEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMzcuMjY1MSIgeDI9IjY1MS42ODUxIiB5MT0iMTgyLjgyODEiIHkyPSIxODIuODI4MSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI2NC4xMzI2IiB4PSI0OS4yNjUxIiB5PSIxNzcuNzYyMiI+JiMzMDgzMDsmIzM1NzQ4OyYjMjAzNTE7JiMyOTk5MjsmIzMwMzQwOyYjMjExNTI7JiMyMzQ5NDsmIzM2ODkwOyYjMjA0NDk7JiMyMTMyNzsmIzM1NzU4OyYjMjkyNTY7JiMyNjQxMjsmIzY1MjkyOyAmIzI2MzgxOyYjMjExNTM7JiMyMjEyMDsmIzI5OTgzOyYjMjUxMDQ7JiMzMDM0MDs8L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjM5IiB4PSIzMTMuMzk3OCIgeT0iMTc3Ljc2MjIiPiYjMzg1NDM7JiMyNjQyNjsmIzI1OTY4OzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMTYuMjY0OSIgeD0iMzUyLjM5NzgiIHk9IjE3Ny43NjIyIj4mIzY1MjkyOyAmIzMwODMwOyYjMzU3NDg7JiMyMDM1MTsmIzI5OTkyOyYjMzAzNDA7JiMyMTE1MjsmIzIzNDk0OyYjMjYwNDE7JiMyNzg2MTsmIzY1MjkyOyAmIzI2MzgxOyYjMjExNTM7JiMyMjEyMDsmIzM1Nzc3OyYjMjAwNzA7PC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJDIiBkYXRhLXBhcnRpY2lwYW50LTI9IkNBIj48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjEzNDMuMjk4MSwyMDcuOTYwOSwxMzUzLjI5ODEsMjExLjk2MDksMTM0My4yOTgxLDIxNS45NjA5LDEzNDcuMjk4MSwyMTEuOTYwOSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSIzMi4yNjUxIiB4Mj0iMTM0OS4yOTgxIiB5MT0iMjExLjk2MDkiIHkyPSIyMTEuOTYwOSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjkxLjAwMDEiIHg9IjM5LjI2NTEiIHk9IjIwNi44OTUiPiYjMzk1NjQ7JiMzNTc3NzsmIzI2MzgxOyYjMjExNTM7JiMyMjEyMDsmIzM1Nzc3OyYjMjAwNzA7PC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJDIiBkYXRhLXBhcnRpY2lwYW50LTI9IkMiPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSIzMi4yNjUxIiB4Mj0iNzQuMjY1MSIgeTE9IjI0MS4wOTM4IiB5Mj0iMjQxLjA5MzgiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iNzQuMjY1MSIgeDI9Ijc0LjI2NTEiIHkxPSIyNDEuMDkzOCIgeTI9IjI1NC4wOTM4Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjMzLjI2NTEiIHgyPSI3NC4yNjUxIiB5MT0iMjU0LjA5MzgiIHkyPSIyNTQuMDkzOCIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDMuMjY1MSwyNTAuMDkzOCwzMy4yNjUxLDI1NC4wOTM4LDQzLjI2NTEsMjU4LjA5MzgsMzkuMjY1MSwyNTQuMDkzOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE1Ni4wMDAyIiB4PSIzOS4yNjUxIiB5PSIyMzYuMDI3OCI+JiMyMDE3NDsmIzM1Nzc3OyYjMjAwNzA7JiMyMDAxMzsmIzIxNDYyOyYjMjA5ODY7JiMyNjM4MTsmIzIxMTUzOyYjMjIxMjA7JiMzMDM0MDsmIzIwODQ0OyYjMzgwNTM7PC90ZXh0PjwvZz48cmVjdCBmaWxsPSIjRUVFRUVFIiBoZWlnaHQ9IjMiIHN0eWxlPSJzdHJva2U6I0VFRUVFRTtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMzc2Ljk3NDQiIHg9IjAiIHk9IjI4Mi42NjAyIi8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgeDE9IjAiIHgyPSIxMzc2Ljk3NDQiIHkxPSIyODIuNjYwMiIgeTI9IjI4Mi42NjAyIi8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgeDE9IjAiIHgyPSIxMzc2Ljk3NDQiIHkxPSIyODUuNjYwMiIgeTI9IjI4NS42NjAyIi8+PHJlY3QgZmlsbD0iI0VFRUVFRSIgaGVpZ2h0PSIyMy4xMzI4IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjI7IiB3aWR0aD0iMTEyLjcxMjUiIHg9IjYzMi4xMzEiIHk9IjI3Mi4wOTM4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijk0LjE4NjYiIHg9IjYzOC4xMzEiIHk9IjI4OC4xNjA2Ij4mIzI1NTY5OyYjMjUxNjM7JiMzODQ1NDsmIzI3NTczOy0tLSYjMjM0OTQ7JiMyNTk5MTs8L3RleHQ+PGcgY2xhc3M9Im1lc3NhZ2UiIGRhdGEtcGFydGljaXBhbnQtMT0iQyIgZGF0YS1wYXJ0aWNpcGFudC0yPSJTIj48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjY0MC42ODUxLDMyMi4zNTk0LDY1MC42ODUxLDMyNi4zNTk0LDY0MC42ODUxLDMzMC4zNTk0LDY0NC42ODUxLDMyNi4zNTk0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjMyLjI2NTEiIHgyPSI2NDYuNjg1MSIgeTE9IjMyNi4zNTk0IiB5Mj0iMzI2LjM1OTQiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMTcuMDAwMSIgeD0iMzkuMjY1MSIgeT0iMzIxLjI5MzUiPiYjMjk5OTI7JiMyNjM4MTsmIzIxMTUzOyYjMjIxMjA7JiMyMDg0NDsmIzM4MDUzOyYjMjExNTI7JiMyMzQ5NDsmIzMwMzQwOzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTc2Ljg5MDIiIHg9IjE1Ni4yNjUzIiB5PSIzMjEuMjkzNSI+JiMzODU0MzsmIzI2NDI2OyYjMjU5Njg7JiM2NTI4ODtwcmUtbWFzdGVyIGtleSYjNjUyODk7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjMwMi41Mjk2IiB4PSIzMzMuMTU1NSIgeT0iMzIxLjI5MzUiPiYjNjUyOTI7ICYjMzI1MzQ7JiMzMDcyMTsmIzI1OTEzOyYjMjE0NjQ7JiMzNjg5MDsmIzMwNjkzOywgJiMyMzQ1ODsmIzI1MTQzOyYjMzE0NzE7JiMzNTc3NzsmIzIwMDcwOyYjNjUyOTI7ICYjMjM0NTg7JiMyNTE0MzsmIzMxNDcxOyYjMjU1Njk7JiMyNTE2MzsmIzMyNDY3OyYjMjY0NjM7JiMzNjg5MDsmIzMwNjkzOzwvdGV4dD48L2c+PGcgY2xhc3M9Im1lc3NhZ2UiIGRhdGEtcGFydGljaXBhbnQtMT0iQyIgZGF0YS1wYXJ0aWNpcGFudC0yPSJDIj48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMzIuMjY1MSIgeDI9Ijc0LjI2NTEiIHkxPSIzNTUuNDkyMiIgeTI9IjM1NS40OTIyIi8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9Ijc0LjI2NTEiIHgyPSI3NC4yNjUxIiB5MT0iMzU1LjQ5MjIiIHkyPSIzNjguNDkyMiIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSIzMy4yNjUxIiB4Mj0iNzQuMjY1MSIgeTE9IjM2OC40OTIyIiB5Mj0iMzY4LjQ5MjIiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjQzLjI2NTEsMzY0LjQ5MjIsMzMuMjY1MSwzNjguNDkyMiw0My4yNjUxLDM3Mi40OTIyLDM5LjI2NTEsMzY4LjQ5MjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyNDcuMDAwMyIgeD0iMzkuMjY1MSIgeT0iMzUwLjQyNjMiPiYjMjk5OTI7JiMxOTk3NzsmIzIwMDEwOyYjMzg1NDM7JiMyNjQyNjsmIzI1OTY4OyYjMjI1MjI7JiMyMDExMDsmIzMwODMwOyYjMzU3NDg7JiMzMDM0MDsmIzIxMTUyOyYjMjM0OTQ7JiMyNjA0MTsmIzI3ODYxOyYjMjk5ODM7JiMyNTEwNDsmIzE5OTY4OyYjMjAwMTA7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI1Mi4wMDAxIiB4PSIyODYuMjY1NCIgeT0iMzUwLjQyNjMiPiYjMjM1NDU7JiMzMTIxNjsmIzIzNDk0OyYjMzgwNTM7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijc4LjAwMDEiIHg9IjMzOC4yNjU1IiB5PSIzNTAuNDI2MyI+JiMyMDMxNjsmIzIwMDI2OyYjMjAyNTA7JiMzNTgwNTsmIzIzNDk0OyYjMzgwNTM7PC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJTIiBkYXRhLXBhcnRpY2lwYW50LTI9IlMiPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSI2NTIuNjg1MSIgeDI9IjY5NC42ODUxIiB5MT0iMzk3LjYyNSIgeTI9IjM5Ny42MjUiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iNjk0LjY4NTEiIHgyPSI2OTQuNjg1MSIgeTE9IjM5Ny42MjUiIHkyPSI0MTAuNjI1Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjY1My42ODUxIiB4Mj0iNjk0LjY4NTEiIHkxPSI0MTAuNjI1IiB5Mj0iNDEwLjYyNSIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNjYzLjY4NTEsNDA2LjYyNSw2NTMuNjg1MSw0MTAuNjI1LDY2My42ODUxLDQxNC42MjUsNjU5LjY4NTEsNDEwLjYyNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjY4OC42MTMiIHg9IjY1OS42ODUxIiB5PSIzOTIuNTU5MSI+JiMyOTk5MjsmIzI2MzgxOyYjMjExNTM7JiMyMjEyMDsmIzMxMTY5OyYjMzgwNTM7JiMzNTI5OTsmIzIzNDk0OyYjMzM3MTk7JiMyNDQ3MTsmIzM4NTQzOyYjMjY0MjY7JiMyNTk2ODsmIzY1Mjg4O3ByZS1tYXN0ZXIga2V5JiM2NTI4OTsmIzY1MjkyOyAmIzI5OTkyOyYjMTk5Nzc7JiMyMDAxMDsmIzM4NTQzOyYjMjY0MjY7JiMyNTk2ODsmIzIyNTIyOyYjMjAxMTA7JiMzMDgzMDsmIzM1NzQ4OyYjMzAzNDA7JiMyMTE1MjsmIzIzNDk0OyYjMjYwNDE7JiMyNzg2MTsmIzIzNTQ4OyYjMjA5ODY7JiMxOTk2ODsmIzIwMDEwOyYjMjM1NDU7JiMzMTIxNjsmIzIzNDk0OyYjMzgwNTM7JiMyMDMxNjsmIzIwMDI2OyYjMjAyNTA7JiMzNTgwNTsmIzIzNDk0OyYjMzgwNTM7PC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJTIiBkYXRhLXBhcnRpY2lwYW50LTI9IkMiPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDMuMjY1MSw0MzUuNzU3OCwzMy4yNjUxLDQzOS43NTc4LDQzLjI2NTEsNDQzLjc1NzgsMzkuMjY1MSw0MzkuNzU3OCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSIzNy4yNjUxIiB4Mj0iNjUxLjY4NTEiIHkxPSI0MzkuNzU3OCIgeTI9IjQzOS43NTc4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjEyLjEzMjYiIHg9IjQ5LjI2NTEiIHk9IjQzNC42OTE5Ij4mIzMyNTM0OyYjMzA3MjE7JiMyNTkxMzsmIzIxNDY0OyYjMzY4OTA7JiMzMDY5MzsmIzY1MjkyOyAmIzI2MzgxOyYjMjExNTM7JiMyMjEyMDsmIzI1NTY5OyYjMjUxNjM7JiMzMjQ2NzsmIzI2NDYzOyYjMzY4OTA7JiMzMDY5Mzs8L3RleHQ+PC9nPjxyZWN0IGZpbGw9IiNFRUVFRUUiIGhlaWdodD0iMyIgc3R5bGU9InN0cm9rZTojRUVFRUVFO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEzNzYuOTc0NCIgeD0iMCIgeT0iNDY4LjMyNDIiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMCIgeDI9IjEzNzYuOTc0NCIgeTE9IjQ2OC4zMjQyIiB5Mj0iNDY4LjMyNDIiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMCIgeDI9IjEzNzYuOTc0NCIgeTE9IjQ3MS4zMjQyIiB5Mj0iNDcxLjMyNDIiLz48cmVjdCBmaWxsPSIjRUVFRUVFIiBoZWlnaHQ9IjIzLjEzMjgiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MjsiIHdpZHRoPSIxOTIuNTE1MyIgeD0iNTkyLjIyOTUiIHk9IjQ1Ny43NTc4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE3My45ODk0IiB4PSI1OTguMjI5NSIgeT0iNDczLjgyNDciPiYjMjAzNTE7JiMyOTk5MjsmIzIwMjUwOyYjMzU4MDU7JiMyMzQ5NDsmIzM4MDUzOyYjMjM1NDU7aHR0cCYjMzY4Mjc7JiMzNDg5MjsmIzIxMTUyOyYjMjM0OTQ7PC90ZXh0PjwhLS1TUkM9W2JMOVRSejlHNkJ4ZEx2cGhuaVB4NGFvTXRrd2tfVzVZY2FaS3NLMVp1anFtcGk3ZU1hTTZZMm9pSmNIRVI2VUNLaGZFX2ltdnhwY3p1WV91YmFDT0hKM25na2RwVlpwRi1wcDdCOVFqcWVFSU1Ub3BZRlF1UEUyZE0yNVFwYnAxVFFGeXAyWWRrOXgxalByU2hiMFd1N2ZHUm9JVE4tM185OE4yRWdJZ0FkR1NRMS1jRE9zZXdac1l2bWJwdHgzM1kxc1RpVTFMaWotYkt1enROdWZXM0R6VnQyN0NGZTM2SURUdHh6eFZyR2JvTHFmRnpuM3NGcTlqcEJ5NmxETTdzY2lTSzlJYXdxOGxXZkNoSFBkNURlNU0wN09MQXQ4cGoyVm11dUdyUlVPcVVGbjVfa1Jxa0dXakp4WmQyX3lKbFBkb3JpTG9IZ2ZYbnd4bVZMd2xHTXlxTnpteFBhU1VVdC1uZE5sWkRhY1BzSTIyQWZyeU5iWVh4VUg5U2NhWmpnTVU5X0pRYUgwRGxwNnRaUlJUWWE2UVdyN0k3Nm1tVkt3VURIczVCS1ZiZDFJUGxNT01yeW9vZUp1ZkxZbkNfUDduVjFSTjVuVjZSTnZNWFRRNGtIc3FZVlM3QXc1OFpNZFI0ZkFBLUZMUkVFdEJfamtoSzBpRHdwSXlORkFvVmFHWkh4Z3V2ZnlxZE9SeHNBeWVCOVptdUxLUUxORVdBRkljSHlFOG5icUhkNGZpNFYzUW1Obk9uUGVPZGNFSlNDUml6eGpfTlpvX3p0eXFpWTM2UUFKNkxPTFJ6UUtjXzZMZXZnTGl5MnlETVp3bnJPdDh6ejJvSjM3ejgzblJZaUJXX20wMF0tLT48L2c+PC9zdmc+'>
+
+<ul>
+<li>整个握手阶段都不加密（也没法加密），都是明文的。<br>整个通话的安全，只取决于第三个随机数（Premaster secret）能不能被破解</li>
+<li>CA证书</li>
+<li>会话密钥，<strong>对称加密</strong>生成, 用三个随机数通过密钥导出器最终导出一个对称密钥</li>
+<li>服务器的公钥和私钥， <strong>非对称加密</strong>生成， 整个会话过程只使用<strong>一次</strong>， 用于加密和解密”会话密钥”</li>
+</ul>
+<h3 id="会话恢复"><a href="#会话恢复" class="headerlink" title="会话恢复"></a>会话恢复</h3><ul>
+<li>session id, 只保留在一台服务器上</li>
+<li>session ticket, 加密的，只有服务器才能解密，其中包括本次会话的主要信息，比如会话密钥和加密方法。<br>当服务器收到session ticket以后，解密后就不必重新生成会话密钥了。</li>
+</ul>
+<h2 id="报文完整性的校验机制"><a href="#报文完整性的校验机制" class="headerlink" title="报文完整性的校验机制"></a>报文完整性的校验机制</h2><p>使用散列算法来计算哈希值，用于完整性的校验。<br>主要使用以下散列算法</p>
+<ul>
+<li>MD5，生成128bit的散列</li>
+<li>SHA-1，生成160bit的散列</li>
+</ul>
+<h2 id="报文机密性"><a href="#报文机密性" class="headerlink" title="报文机密性"></a>报文机密性</h2><p>报文的机密性用于进行<strong>端点校验</strong>，不是必要的，<br>取决于应用的场景，常见于金融领域</p>
+<h3 id="报文鉴别码MAC"><a href="#报文鉴别码MAC" class="headerlink" title="报文鉴别码MAC"></a>报文鉴别码MAC</h3><p>有些通信需要保证通信双方的机密性，防止中间人冒充通信双方。</p>
+<p>鉴别密钥只有通信双方知道，通过将鉴别密钥和报文内容一起进行散列计算，然后发送给对方。</p>
+<h3 id="数字签名"><a href="#数字签名" class="headerlink" title="数字签名"></a>数字签名</h3><p>使用数字签名作为鉴别密钥，而非对称加密可用于实现数字签名。</p>
+<p>由于私钥只有生成密钥对的人保留，通过使用私钥对报文的散列码进行加密处理生成数字签名，<br>然后将报文以及数字签名一起发送给对方;<br>接收方使用公钥对报文散列码进行解密，解密成功则保证了报文的完整性，也验证了发送方是指定的对象。</p>
+<p>数字签名需要依赖具有认证中心支撑的公钥基础设施PKI。</p>
+<h4 id="公钥认证"><a href="#公钥认证" class="headerlink" title="公钥认证"></a>公钥认证</h4><p>公钥认证，即证实一个公钥属于某个特定的实体。<br>而将公钥和特定实体绑定通常由<strong>认证中心CA</strong>完成，它的职责就是使识别和发行<strong>证书</strong>合法化。<br>它的主要职责：</p>
+<ul>
+<li>证实一个实体的真实身份</li>
+<li>负责生成一个将身份和公钥绑定的证书，即CA Certificate</li>
+</ul>
+<img src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IlNFUVVFTkNFIiBoZWlnaHQ9IjM3NnB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6NTM5cHg7aGVpZ2h0OjM3NnB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDUzOSAzNzYiIHdpZHRoPSI1MzlweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjxnPjx0aXRsZT5Pd25lcjwvdGl0bGU+PHJlY3QgZmlsbD0iIzAwMDAwMCIgZmlsbC1vcGFjaXR5PSIwLjAwMDAwIiBoZWlnaHQ9IjMwNS4wNjI1IiB3aWR0aD0iOCIgeD0iMzAuODU2IiB5PSIzNi4yOTY5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWRhc2hhcnJheTo1LDU7IiB4MT0iMzQiIHgyPSIzNCIgeTE9IjM2LjI5NjkiIHkyPSIzNDEuMzU5NCIvPjwvZz48Zz48dGl0bGU+VXNlcjwvdGl0bGU+PHJlY3QgZmlsbD0iIzAwMDAwMCIgZmlsbC1vcGFjaXR5PSIwLjAwMDAwIiBoZWlnaHQ9IjMwNS4wNjI1IiB3aWR0aD0iOCIgeD0iMjgwLjM4NTciIHk9IjM2LjI5NjkiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtZGFzaGFycmF5OjUsNTsiIHgxPSIyODMuNDMwNyIgeDI9IjI4My40MzA3IiB5MT0iMzYuMjk2OSIgeTI9IjM0MS4zNTk0Ii8+PC9nPjxnPjx0aXRsZT5DQTwvdGl0bGU+PHJlY3QgZmlsbD0iIzAwMDAwMCIgZmlsbC1vcGFjaXR5PSIwLjAwMDAwIiBoZWlnaHQ9IjMwNS4wNjI1IiB3aWR0aD0iOCIgeD0iNTEyLjgzNCIgeT0iMzYuMjk2OSIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41O3N0cm9rZS1kYXNoYXJyYXk6NSw1OyIgeDE9IjUxNi4xNTc3IiB4Mj0iNTE2LjE1NzciIHkxPSIzNi4yOTY5IiB5Mj0iMzQxLjM1OTQiLz48L2c+PGcgY2xhc3M9InBhcnRpY2lwYW50IHBhcnRpY2lwYW50LWhlYWQiIGRhdGEtcGFydGljaXBhbnQ9Ik8iPjxyZWN0IGZpbGw9IiNFMkUyRjAiIGhlaWdodD0iMzAuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTkuNzExOSIgeD0iNSIgeT0iNSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQ1LjcxMTkiIHg9IjEyIiB5PSIyNC45OTUxIj5Pd25lcjwvdGV4dD48L2c+PGcgY2xhc3M9InBhcnRpY2lwYW50IHBhcnRpY2lwYW50LXRhaWwiIGRhdGEtcGFydGljaXBhbnQ9Ik8iPjxyZWN0IGZpbGw9IiNFMkUyRjAiIGhlaWdodD0iMzAuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTkuNzExOSIgeD0iNSIgeT0iMzQwLjM1OTQiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI0NS43MTE5IiB4PSIxMiIgeT0iMzYwLjM1NDUiPk93bmVyPC90ZXh0PjwvZz48ZyBjbGFzcz0icGFydGljaXBhbnQgcGFydGljaXBhbnQtaGVhZCIgZGF0YS1wYXJ0aWNpcGFudD0iVSI+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0NS45MTAyIiB4PSIyNjEuNDMwNyIgeT0iNSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjMxLjkxMDIiIHg9IjI2OC40MzA3IiB5PSIyNC45OTUxIj5Vc2VyPC90ZXh0PjwvZz48ZyBjbGFzcz0icGFydGljaXBhbnQgcGFydGljaXBhbnQtdGFpbCIgZGF0YS1wYXJ0aWNpcGFudD0iVSI+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0NS45MTAyIiB4PSIyNjEuNDMwNyIgeT0iMzQwLjM1OTQiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIzMS45MTAyIiB4PSIyNjguNDMwNyIgeT0iMzYwLjM1NDUiPlVzZXI8L3RleHQ+PC9nPjxnIGNsYXNzPSJwYXJ0aWNpcGFudCBwYXJ0aWNpcGFudC1oZWFkIiBkYXRhLXBhcnRpY2lwYW50PSJDQSI+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIzMy4zNTI1IiB4PSI1MDAuMTU3NyIgeT0iNSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE5LjM1MjUiIHg9IjUwNy4xNTc3IiB5PSIyNC45OTUxIj5DQTwvdGV4dD48L2c+PGcgY2xhc3M9InBhcnRpY2lwYW50IHBhcnRpY2lwYW50LXRhaWwiIGRhdGEtcGFydGljaXBhbnQ9IkNBIj48cmVjdCBmaWxsPSIjRTJFMkYwIiBoZWlnaHQ9IjMwLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjMzLjM1MjUiIHg9IjUwMC4xNTc3IiB5PSIzNDAuMzU5NCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE5LjM1MjUiIHg9IjUwNy4xNTc3IiB5PSIzNjAuMzU0NSI+Q0E8L3RleHQ+PC9nPjxnIGNsYXNzPSJtZXNzYWdlIiBkYXRhLXBhcnRpY2lwYW50LTE9Ik8iIGRhdGEtcGFydGljaXBhbnQtMj0iTyI+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjM0Ljg1NiIgeDI9Ijc2Ljg1NiIgeTE9IjY3LjQyOTciIHkyPSI2Ny40Mjk3Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9Ijc2Ljg1NiIgeDI9Ijc2Ljg1NiIgeTE9IjY3LjQyOTciIHkyPSI4MC40Mjk3Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjM1Ljg1NiIgeDI9Ijc2Ljg1NiIgeTE9IjgwLjQyOTciIHkyPSI4MC40Mjk3Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI0NS44NTYsNzYuNDI5NywzNS44NTYsODAuNDI5Nyw0NS44NTYsODQuNDI5Nyw0MS44NTYsODAuNDI5NyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIzNS41Mjk4IiB4PSI0MS44NTYiIHk9IjYyLjM2MzgiPmdlbmVyYXRlIHB1YmxpYyBrZXkgYW5kIHByaXZhdGUga2V5PC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJPIiBkYXRhLXBhcnRpY2lwYW50LTI9IkNBIj48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjUwNC44MzQsMTA1LjU2MjUsNTE0LjgzNCwxMDkuNTYyNSw1MDQuODM0LDExMy41NjI1LDUwOC44MzQsMTA5LjU2MjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMzQuODU2IiB4Mj0iNTEwLjgzNCIgeTE9IjEwOS41NjI1IiB5Mj0iMTA5LjU2MjUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyNTMuMDM2NiIgeD0iNDEuODU2IiB5PSIxMDQuNDk2NiI+Z2VuZXJhdGUgQ0EgY2VydGlmaWNhdGUgd2l0aCBwdWJsaWMga2V5PC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJVIiBkYXRhLXBhcnRpY2lwYW50LTI9Ik8iPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDUuODU2LDEzNC42OTUzLDM1Ljg1NiwxMzguNjk1Myw0NS44NTYsMTQyLjY5NTMsNDEuODU2LDEzOC42OTUzIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjM5Ljg1NiIgeDI9IjI4My4zODU3IiB5MT0iMTM4LjY5NTMiIHkyPSIxMzguNjk1MyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE2Ny44MjU3IiB4PSI1MS44NTYiIHk9IjEzMy42Mjk0Ij5nZXQgb3duZXIncyBDQSBjZXJ0aWZpY2F0ZTwvdGV4dD48L2c+PGcgY2xhc3M9Im1lc3NhZ2UiIGRhdGEtcGFydGljaXBhbnQtMT0iVSIgZGF0YS1wYXJ0aWNpcGFudC0yPSJDQSI+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI1MDQuODM0LDE2My44MjgxLDUxNC44MzQsMTY3LjgyODEsNTA0LjgzNCwxNzEuODI4MSw1MDguODM0LDE2Ny44MjgxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjI4NC4zODU3IiB4Mj0iNTEwLjgzNCIgeTE9IjE2Ny44MjgxIiB5Mj0iMTY3LjgyODEiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMjguNzQ5NSIgeD0iMjkxLjM4NTciIHk9IjE2Mi43NjIyIj52ZXJpZnkgQ0EgY2VydGlmaWNhdGU8L3RleHQ+PC9nPjxnIGNsYXNzPSJtZXNzYWdlIiBkYXRhLXBhcnRpY2lwYW50LTE9IlUiIGRhdGEtcGFydGljaXBhbnQtMj0iVSI+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjI4NC4zODU3IiB4Mj0iMzI2LjM4NTciIHkxPSIxOTYuOTYwOSIgeTI9IjE5Ni45NjA5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjMyNi4zODU3IiB4Mj0iMzI2LjM4NTciIHkxPSIxOTYuOTYwOSIgeTI9IjIwOS45NjA5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjI4NS4zODU3IiB4Mj0iMzI2LjM4NTciIHkxPSIyMDkuOTYwOSIgeTI9IjIwOS45NjA5Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIyOTUuMzg1NywyMDUuOTYwOSwyODUuMzg1NywyMDkuOTYwOSwyOTUuMzg1NywyMTMuOTYwOSwyOTEuMzg1NywyMDkuOTYwOSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIxOC40NDgyIiB4PSIyOTEuMzg1NyIgeT0iMTkxLjg5NSI+Z2V0IHB1YmxpYyBrZXkgZnJvbSBDQSBjZXJ0aWZpY2F0ZTwvdGV4dD48L2c+PGcgY2xhc3M9Im1lc3NhZ2UiIGRhdGEtcGFydGljaXBhbnQtMT0iVSIgZGF0YS1wYXJ0aWNpcGFudC0yPSJVIj48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMjg0LjM4NTciIHgyPSIzMjYuMzg1NyIgeTE9IjIzOS4wOTM4IiB5Mj0iMjM5LjA5MzgiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMzI2LjM4NTciIHgyPSIzMjYuMzg1NyIgeTE9IjIzOS4wOTM4IiB5Mj0iMjUyLjA5MzgiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMjg1LjM4NTciIHgyPSIzMjYuMzg1NyIgeTE9IjI1Mi4wOTM4IiB5Mj0iMjUyLjA5MzgiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjI5NS4zODU3LDI0OC4wOTM4LDI4NS4zODU3LDI1Mi4wOTM4LDI5NS4zODU3LDI1Ni4wOTM4LDI5MS4zODU3LDI1Mi4wOTM4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTk4LjExMDQiIHg9IjI5MS4zODU3IiB5PSIyMzQuMDI3OCI+dXNlIHB1YmxpYyBrZXkgdG8gZW5jcnlwdCBkYXRhPC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJVIiBkYXRhLXBhcnRpY2lwYW50LTI9Ik8iPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDUuODU2LDI3Ny4yMjY2LDM1Ljg1NiwyODEuMjI2Niw0NS44NTYsMjg1LjIyNjYsNDEuODU2LDI4MS4yMjY2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjM5Ljg1NiIgeDI9IjI4My4zODU3IiB5MT0iMjgxLjIyNjYiIHkyPSIyODEuMjI2NiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjExOC41ODA2IiB4PSI1MS44NTYiIHk9IjI3Ni4xNjA2Ij5zZW5kIGVuY3J5cHQgZGF0YTwvdGV4dD48L2c+PGcgY2xhc3M9Im1lc3NhZ2UiIGRhdGEtcGFydGljaXBhbnQtMT0iTyIgZGF0YS1wYXJ0aWNpcGFudC0yPSJPIj48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMzQuODU2IiB4Mj0iNzYuODU2IiB5MT0iMzEwLjM1OTQiIHkyPSIzMTAuMzU5NCIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSI3Ni44NTYiIHgyPSI3Ni44NTYiIHkxPSIzMTAuMzU5NCIgeTI9IjMyMy4zNTk0Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjM1Ljg1NiIgeDI9Ijc2Ljg1NiIgeTE9IjMyMy4zNTk0IiB5Mj0iMzIzLjM1OTQiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjQ1Ljg1NiwzMTkuMzU5NCwzNS44NTYsMzIzLjM1OTQsNDUuODU2LDMyNy4zNTk0LDQxLjg1NiwzMjMuMzU5NCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE4MC43MjQxIiB4PSI0MS44NTYiIHk9IjMwNS4yOTM1Ij5kZWNyeXB0IGRhdGEgYnkgcHJpdmF0ZSBrZXk8L3RleHQ+PC9nPjwhLS1TUkM9W1RQMTEzaThXNDROdGRFQmxORksyQmFvUTdlMEwxdzFxZ2FJYjFBT3J0NXY4NnFrREJrVkRkdl9fbi1sMHJiWWw3S0UtNzBOZTIyYnlYTExTZ0poR2hYTDJlY2FrYTZUU0FMemc5bFl2VnJZM0VvTGVEeTA3a25JU3ZxdFNqUE13UXM0ZU11eE1iRjViLUxPdjJCTlJDd09JeFhJX1JaUERTTHFlczM3enRnbExlcWV0WGtkdkxwbDdHbkVVR0N3NHYxYzNQaHRkWWZHeDdiUVZabW9xS19JZl9pR1JdLS0+PC9nPjwvc3ZnPg=='>
+
+<p>涉及几个关键元素：</p>
+<ul>
+<li>CA证书</li>
+<li>公钥</li>
+<li>私钥，私钥只保存在拥有者那</li>
+</ul>
+<h2 id="SSL证书格式"><a href="#SSL证书格式" class="headerlink" title="SSL证书格式"></a>SSL证书格式</h2><p>公钥证书的格式标准为<strong>X509</strong>，可使用openssl工具进行处理</p>
+<p>编码格式：</p>
+<ul>
+<li>DER编码, 二进制格式</li>
+<li>PEM编码, ASCII文本格式，经过base64处理</li>
+</ul>
+<p>各种文件类型：</p>
+<ul>
+<li>.DER .CER，文件是<strong>二进制格式</strong>，只保存证书，不保存私钥，多用于Java和Windows服务器端</li>
+<li>.PEM，一般是<strong>文本格式</strong>，可保存证书，可保存私钥; 常用语apache&#x2F;nginx</li>
+<li>.CRT，可能使用PEM编码，也可能使用DER编码，不保存私钥。</li>
+<li>.PFX .P12，二进制格式，同时包含证书和私钥，一般有密码保护; 一般用于Windows IIS以及Mac。</li>
+<li>.JKS，二进制格式，同时包含证书和私钥，一般有密码保护; java专用格式，使用keytool进行处理，一般用于tomcat服务器</li>
+</ul>
+<h3 id="证书链"><a href="#证书链" class="headerlink" title="证书链"></a>证书链</h3><p>证书链(certificate chain)可以有任意长度，但证书链越长，加载速度越慢，信任度越差。<br>合规SSL证书一般有3层：根证书、中间证书、服务器证书。</p>
+<p>在验证证书的有效性的时候，会逐级去寻找签发者的证书，直至根证书为结束，<br>然后通过公钥一级一级验证数字签名的正确性。</p>
+<h3 id="openssl-常用命令"><a href="#openssl-常用命令" class="headerlink" title="openssl 常用命令"></a>openssl 常用命令</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 获取证书</span></span><br><span class="line">openssl s_client -showcerts -connect &lt;server host&gt;:443</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看证书</span></span><br><span class="line">openssl x509 -noout -text -<span class="keyword">in</span> &lt;certificate file&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 校验证书</span></span><br><span class="line">openssl verify -CAfile &lt;certificate chain file&gt; &lt;certificate file&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 将pem转换为der, 或者从der转换为pem</span></span><br><span class="line">openssl x509 -inform &lt;pem/der&gt; -<span class="keyword">in</span> &lt;input certificate file&gt; -outform &lt;der/pem&gt; -out &lt;out certificate file&gt;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Java证书管理"><a href="#Java证书管理" class="headerlink" title="Java证书管理"></a>Java证书管理</h3><p>在Java中通过keytool来对证书以及密钥进行管理，证书的格式为jks</p>
+<ul>
+<li>keystore, 一般存储<strong>自己的私钥和公钥</strong>，需要<strong>密码保护</strong>，不可被分享, 向客户端提供所需的证书和公钥信息</li>
+<li>truststore， 本质上也是keystore, 只是用来存储<strong>信任对象的公钥</strong>， 可被分享，用于验证服务端是否可信</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看证书</span></span><br><span class="line">keytool -list -keystore &lt;keystore file&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 添加证书</span></span><br><span class="line">keytool -import -<span class="built_in">alias</span> &lt;<span class="built_in">alias</span> name&gt; -file &lt;certificate file&gt; -keystore &lt;keystore file&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 删除证书</span></span><br><span class="line">keytool -delete -keystore &lt;keystore file&gt; -<span class="built_in">alias</span> &lt;<span class="built_in">alias</span> name&gt;</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://www.ruanyifeng.com/blog/2014/02/ssl_tls.html">SSL&#x2F;TLS协议运行机制的概述</a> </li>
+<li><a target="_blank" rel="noopener" href="https://blog.freessl.cn/ssl-cert-format-introduce/">SSL 证书格式普及，PEM、CER、JKS、PKCS12</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Amos Xia
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://amos.s2u2m.com/2023/11/https%E7%9A%84%E5%AE%89%E5%85%A8%E6%80%A7/" title="HTTPS的安全性">https://amos.s2u2m.com/2023/11/https的安全性/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/zh-CN" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/https/" rel="tag"># https</a>
+              <a href="/tags/ssl/" rel="tag"># ssl</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/" rel="prev" title="Spring MVC请求处理流程">
+                  <i class="fa fa-angle-left"></i> Spring MVC请求处理流程
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/06/typescript-%E5%BF%AB%E9%80%9F%E5%85%A5%E9%97%A8/" rel="next" title="TypeScript 快速入门">
+                  TypeScript 快速入门 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Amos Xia</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,1067 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>Airflow介绍</title>
+    <url>/2020/08/airflow%E4%BB%8B%E7%BB%8D/</url>
+    <content><![CDATA[<p>了解airflow的基本元素以及并发控制</p>
+<span id="more"></span>
+
+<h2 id="基本元素"><a href="#基本元素" class="headerlink" title="基本元素"></a>基本元素</h2><ul>
+<li>DAG, 有向无环图, 用于描述整个处理流程中的任务之间的关系和依赖,<br>只有定义在globals(全局作用域)的dag才会被airflow扫描到并加载</li>
+<li>Operator, 用于定义任务要去做什么, 尽量保证每个Operator可以独立运行, 没有依赖;<br>如果不能避免依赖, 则通过xcom&#x2F;其他存储方式进行参数传递</li>
+<li>default_args, 可被所有相关dag的Operator共享使用</li>
+<li>DAG Run, DAG被触发后生成的具体执行的DAG实例<ul>
+<li>创建时间</li>
+<li>execution_date, DAG Run的开始执行时间,<br>在同一个DAG中必须保持唯一, 即在同一个DAG在同一时间只能有一个DAG Run.</li>
+</ul>
+</li>
+<li>Task, Operator实例</li>
+<li>Task instance, 每次触发Task都会生成一个task instance, 用于记录这次的task运行.<br>它拥有很多的状态, 状态的完成生命周期:<ol>
+<li>no status</li>
+<li>scheduled, scheduler已计划将要运行对应的task instance</li>
+<li>queued, dispatch将task instance发送对相关的队列上进行排队</li>
+<li>Running, worker拿到队列中的任务进行执行</li>
+<li>success&#x2F;failed, 任务完成后</li>
+</ol>
+</li>
+</ul>
+<p><img src="/2020/08/airflow%E4%BB%8B%E7%BB%8D/airflow-status-flow.png"></p>
+<h2 id="DAG调度"><a href="#DAG调度" class="headerlink" title="DAG调度"></a>DAG调度</h2><p>通过在DAG中定义schedule_interval来指定如何调度,<br>schedule_interval最好指定为预定义的值或者cron表达式</p>
+<p>DAG的调度分为:</p>
+<ul>
+<li>手动触发, 即schedule_interval&#x3D;None</li>
+<li>周期性调度<ul>
+<li>backfill and catchup, 根据start_date到现在为止, 来创建过去的Dag Run并依次执行.<br>针对以时间为周期的数据集非常有用.</li>
+<li>非回填追赶模式, 即DAG的catchup&#x3D;False, 不会为过去创建Dag Run.</li>
+</ul>
+</li>
+</ul>
+<p>关于周期性调度的DAG, 它的创建时间为<code>上一个DAG Run的创建时间+schedule_interval</code>,<br>而第一个DAG Run的创建时间为min(start_date),<br>务必将start_date设置为一个指定的值</p>
+<h2 id="并发控制"><a href="#并发控制" class="headerlink" title="并发控制"></a>并发控制</h2><ul>
+<li>Pools, 用于控制task instance的并行数,<br>它由以下元素组成, 默认任务会被分配到default_pool池中, 它的工作槽有128个位置:<ul>
+<li>工作槽, 用于指定可同时运行的任务数</li>
+<li>等待队列, 当工作槽满时, 任务就进入等待队列, 直到工作槽有空闲位置</li>
+<li>priority_weight, 用于定义队列中的任务优先级以及在工作槽有空闲位置时优先执行哪些任务,<br>默认任务本身的priority_weight为1, 但在评估任务优先级时会计算任务本身及其下游任务的总和.</li>
+</ul>
+</li>
+<li>Celery Queue, 只在使用CeleryExecutor时才有用, 用于给任务贴标签,<br>这样工作节点就可以通过标签来筛选要执行哪些任务. 默认任务会被分配到default_queue.</li>
+</ul>
+<p><img src="/2020/08/airflow%E4%BB%8B%E7%BB%8D/airflwo-with-celery.png"></p>
+<p>DAG的多维度并发控制的参数:</p>
+<ul>
+<li>airflow.cfg的parallelism, airflow集群中同时运行的最大task instance数量</li>
+<li>airflow.cfg的dag_concurrency, 一个dag run中可以同时执行的task instance数量, 超出则排队;<br>可以通过DAG的concurrency进行自定义</li>
+<li>max_active_runs, 针对同一个DAG, 同一时间最多运行几个DAG Run,<br>如果没有设置, 默认读取airflow.cfg的max_active_runs_per_dag</li>
+<li>task_concurrency, 控制Operator对应的task同一时间最多运行几个task instance</li>
+<li>pool, 指定task的Pools, 通过Pools来控制某类task的最大并发数</li>
+</ul>
+<p>调度的并发控制参数:</p>
+<ul>
+<li>airflow.cfg的max_threads, 调度线程数, 可以设置为CPU数-1</li>
+<li>airflow.cfg的scheduler_heartbeat_sec, scheduler扫描task并将task调度起来的频率</li>
+</ul>
+]]></content>
+      <categories>
+        <category>ETL</category>
+      </categories>
+      <tags>
+        <tag>ETL</tag>
+        <tag>airflow</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MySQL备份和恢复</title>
+    <url>/2021/06/mysql%E5%A4%87%E4%BB%BD%E5%92%8C%E6%81%A2%E5%A4%8D/</url>
+    <content><![CDATA[<p>本文主要针对MySQL的InnoDB数据库，本文的目标:</p>
+<ul>
+<li>对数据进行备份</li>
+<li>将数据恢复到某一个时间点</li>
+</ul>
+<span id="more"></span>
+
+<h2 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h2><p>规划备份和恢复策略时, 可以根据一些需求来考虑:</p>
+<ul>
+<li>恢复点目标(RPO), 指恢复到哪个时间点, 可以容许丢失多少数据</li>
+<li>恢复时间目标(RTO), 指恢复可以容许的恢复时间长度</li>
+<li>备份到目的地的时间, 比如本地, NFS等</li>
+</ul>
+<p>备份的内容：</p>
+<ul>
+<li>MySQL配置</li>
+<li>schema和数据</li>
+<li>二进制日志</li>
+</ul>
+<p>Innodb是一个ACID系统， 任何时刻， 每个提交的事务<br>要么在<strong>Innodb数据文件</strong>中， 要么在<strong>二进制日志文件</strong>中。<br>所以为了保证一致性， 即属于同一个时间点， 备份Innodb时需要对数据和二进制日志都进行备份。</p>
+<p>关闭MySQL备份是最简单安全的, 也是获取一致性的最好的方法, 并且损坏的风险最小.<br>但对于在线系统来说, 停机备份的代价太大.</p>
+<p>如果使用了全局读锁FLUSH TABLE WITH READ LOCK, 并且备份的事务执行需要很长的时间,<br>则全局读锁需要等待备份的事务完成提交后才释放, 在这期间的所有操作很可能会被阻塞和积压,<br>即当发生一些修改操作需要等待表的写锁时, 之后的所有读写操作都会被阻塞.<br>而<strong>避免全局读锁的最好方法就是只使用InnoDB, 如果使用少量的MyISAM表, 则只需要锁住它们即可</strong>，<br>因为InnoDB支持事务， 能报保证在一个事务中的的数据的一致性。</p>
+<p>建议混合使用物理和逻辑两种方式进行备份:<br>先使用物理复制, 然后启动一个测试的MySQL实例并运行mysqlcheck来检查;<br>然后周期性的使用mysqldump来执行逻辑备份.</p>
+<h2 id="备份"><a href="#备份" class="headerlink" title="备份"></a>备份</h2><h3 id="逻辑备份"><a href="#逻辑备份" class="headerlink" title="逻辑备份"></a>逻辑备份</h3><p>逻辑备份只用于数据备份, 通过<strong>MySQL服务器</strong>将存储引擎中的数据导出, 与存储引擎无关,<br>并且可以对备份的数据进行裁剪.</p>
+<p>缺点： 需要通过MySQL加载, 转为存储格式, 并且需要重建索引, 过程很慢,<br>尤其在加载一个巨大的导出文件的代价很大</p>
+<p>需要尽量控制导出的数据文件大小，在保证一致性的前提下，<br>按照业务逻辑导出到多个文件中，以控制导出到粒度。</p>
+<p>导出方式:</p>
+<ul>
+<li>导出sql格式的schema和数据</li>
+<li>导出sql格式的schema和csv格式的数据,<br>必须保证secure_file_priv变量不为NULL, 以及相应的路径必须存在.<br>需要在MySQL启动前在my.conf中配置</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">-- 将schema导出</span><br><span class="line">$ mysqldump --single-transaction -d --databases &lt;database_name&gt; &gt; schema.sql</span><br><span class="line">-- 将相关连的表的数据导到sql文件中</span><br><span class="line">$ mysqldump --single-transaction -t --databases &lt;database_name&gt; &gt; data.sql</span><br><span class="line">-- 每张表都会导出一个sql格式的表结构文件, csv格式的数据导文件</span><br><span class="line">$ mysqldump --single-transaction --tab=&lt;backup_dirname&gt; &lt;database_name&gt; [table1, ...]</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="物理备份"><a href="#物理备份" class="headerlink" title="物理备份"></a>物理备份</h3><p>优点:</p>
+<ul>
+<li>物理备份的方式更加简单高效</li>
+<li>恢复往往要比逻辑备份要快, 省去了加载和重建过程</li>
+</ul>
+<p>缺点:</p>
+<ul>
+<li>往往备份的大小要比逻辑备份大得多</li>
+</ul>
+<p>物理备份方式:</p>
+<ul>
+<li>基于文件拷贝的备份, 适用于关机下备份， 配置文件备份， 日志备份等</li>
+<li>通过快照进行备份</li>
+</ul>
+<h4 id="快照备份"><a href="#快照备份" class="headerlink" title="快照备份"></a>快照备份</h4><p>物理数据存放在<code>/var/lib/mysql</code>目录下， 每个数据库存储在相同名字的目录下，<br>同时也包含服务器配置和二进制日志文件。</p>
+<p>快照备份是非常好的在线备份方法, 并且可以减少持有锁的时间。<br>又分为：</p>
+<ul>
+<li>最小化锁快照备份, 只锁MyISAM表，InnoDB不需要锁</li>
+<li>无锁快照备份, 如果MyISAM不会发生修改, 就可以不锁表</li>
+</ul>
+<p>快照备份后， 通过挂在快照， 拷贝数据文件到备份的地方。</p>
+<p>但使用快照备份需要额外的磁盘空间， 用于快照需要的写时复制空间。<br>并且要求将MySQL的数据相关文件（&#x2F;var&#x2F;lib&#x2F;mysql&#x2F;）部署在同一个专有卷上。<br>而且会导致原始卷和快照比正常读写性能要差， 尤其在过多使用写时复制空间时。</p>
+<p>对数据进行物理快照备份后, 需要构建一个MySQL实例并加载物理备份,<br>然后使用mysqlcheck可以对所有的表执行<code>CHECK TABLES</code>操作,<br>检查物理备份的正确性.</p>
+<h4 id="MySQL配置备份"><a href="#MySQL配置备份" class="headerlink" title="MySQL配置备份"></a>MySQL配置备份</h4><ul>
+<li>&#x2F;etc&#x2F;mysql&#x2F;my.cnf, 默认配置文件</li>
+<li>&#x2F;etc&#x2F;mysql&#x2F;conf.d, 自定义配置目录, 会覆盖默认配置中的设置.</li>
+</ul>
+<h4 id="二进制日志备份"><a href="#二进制日志备份" class="headerlink" title="二进制日志备份"></a>二进制日志备份</h4><p>二进制日志默认存储在<code>/var/lib/mysql/</code>目录下, 格式为<code>binlog.*</code>,<br>可通过命令<code>mysqlbinlog -d &lt;database_name&gt; &lt;binlog&gt;</code>来查看指定数据库的二进制日志</p>
+<p>常用命令：</p>
+<ul>
+<li>查看二进制日志， <code>show binary logs</code>;</li>
+<li>创建新的二进制日志文件, <code>flush logs</code>;</li>
+<li>清理指定二进制日志文件之前的日志文件, <code>purge binary logs to &#39;binlog.000005&#39;</code>;</li>
+</ul>
+<p>在备份数据之前， 建议flush logs生成新的日志，<br>可保证备份期间的操作被清楚的记录在最新的日志文件里。</p>
+<h3 id="最佳实践"><a href="#最佳实践" class="headerlink" title="最佳实践"></a>最佳实践</h3><p>一般情况下备份策略采用长周期的逻辑全备份（保底恢复，但加载慢） + 短周期的快照物理备份（快速恢复） + 二进制日志文件定时备份（恢复到某个时间点）。<br>如果数据量不大， 则只需要逻辑全备份 + 二进制日志文件备份就可以。</p>
+<p>逻辑全备份流程：</p>
+<ol>
+<li>在进行全备份之前， 创建新二进制日志， 保证在备份期间的操作会被记录到新二进制日志中</li>
+<li>进行全备份</li>
+<li>清理老的二进制日志， 只保留最新二进制日志</li>
+<li>在下一次全备份之前， 定时备份二进制日志</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ mysql -e <span class="string">&quot;flush logs;&quot;</span></span><br><span class="line">$ mysql -e <span class="string">&quot;show binary logs;&quot;</span></span><br><span class="line">$ <span class="built_in">mkdir</span> &lt;backup_dir_path&gt;</span><br><span class="line">$ mysqldump --single-transaction -d &lt;database_name&gt;</span><br><span class="line">$ mysqldump --single-transaction --tab=&lt;backup_dir_path&gt; &lt;database_name&gt;</span><br><span class="line">$ mysql -e <span class="string">&quot;purge binary logs to ‘&lt;最新的二进制日志&gt;&#x27;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>二进制日志文件备份流程：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ mysql -e <span class="string">&quot;flush logs;&quot;</span></span><br><span class="line">$ <span class="built_in">cp</span> binlog.* &lt;backup_dir_path&gt;</span><br><span class="line">$ mysql -e <span class="string">&quot;purge binary logs to ‘&lt;最新的二进制日志&gt;&#x27;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="恢复"><a href="#恢复" class="headerlink" title="恢复"></a>恢复</h2><p>在恢复过程中， 要保证MySQL除了恢复进程外不接受其他访问， 直到恢复并检测完毕， 重新提供服务为止。</p>
+<h3 id="基于时间点的逻辑备份的恢复"><a href="#基于时间点的逻辑备份的恢复" class="headerlink" title="基于时间点的逻辑备份的恢复"></a>基于时间点的逻辑备份的恢复</h3><p>基于时间点的恢复要求建立日常备份, 并保证所需要的二进制日志有效.<br>这样才能基于某一次全备份, 然后从那个时间点开始重放二进制日志,<br>将数据来恢复到指定时间.</p>
+<p>基于逻辑备份恢复和二进制重放都是一个很慢的过程, 在开始恢复之前， 建议通过<code>set sql_log_bin=0;</code>关闭二进制日志。</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 禁用二进制日志</span></span><br><span class="line">$ mysql -e <span class="string">&quot;set sql_log_bin=0;&quot;</span></span><br><span class="line"><span class="comment"># 创建schema</span></span><br><span class="line">$ mysql &lt; schema.sql</span><br><span class="line"><span class="comment"># 导入数据, mysqlimporter是对load data infile命令的封装</span></span><br><span class="line">$ mysqlimportor &lt;database_name&gt; &lt;csv数据文件路径&gt;</span><br><span class="line"><span class="comment"># 重放从那个时间点之后的二进制日志</span></span><br><span class="line">$ mysqlbinlog --database=&lt;database_name&gt; &lt;binlog二进制文件路径&gt; | mysql</span><br><span class="line"><span class="comment"># 打开二进制日志</span></span><br><span class="line">$ mysql -e <span class="string">&quot;set sql_log_bin=1;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li>高性能MySQL — 第15章备份与恢复</li>
+</ul>
+]]></content>
+      <categories>
+        <category>DB</category>
+      </categories>
+      <tags>
+        <tag>DB</tag>
+        <tag>mysql</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MySQL Schema与数据类型优化</title>
+    <url>/2018/06/mysql-schema%E4%B8%8E%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E4%BC%98%E5%8C%96/</url>
+    <content><![CDATA[<ul>
+<li>学习如何选择合适的数据类型</li>
+<li>特殊数据的类型选择</li>
+<li>Schema的设计</li>
+</ul>
+<span id="more"></span>
+
+<h2 id="MySQL基础数据类型"><a href="#MySQL基础数据类型" class="headerlink" title="MySQL基础数据类型"></a>MySQL基础数据类型</h2><ul>
+<li>数字<ul>
+<li>整数<ul>
+<li>tinyint&#x2F;smallint&#x2F;mediumint&#x2F;int&#x2F;bigint</li>
+<li>unsigned可选</li>
+</ul>
+</li>
+<li>实数<ul>
+<li>Float&#x2F;Double, 浮点计算</li>
+<li>DECIMAL, 存储精确的小数, 一般可使用bigint来代替decimal, 通过乘以相应的倍数即可</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>字符串<ul>
+<li>char, 定长, 适合更新频繁的列或者长度固定的列</li>
+<li>varchar, 变长, 需要额外的1或2个字节来存储长度, 小于等于255则1个字节, 大于则2个字节; 不适合更新频繁的列, 会导致碎片化</li>
+<li>text, 很长的字符串</li>
+</ul>
+</li>
+<li>二进制字符串, 比较时以字节为单位进行比较, 效率要比普通字符串要高<ul>
+<li>binary, 定长</li>
+<li>varbinary, 变长</li>
+<li>blob, 很长的二进制字符串</li>
+</ul>
+</li>
+<li>时间<ul>
+<li>datetime, 从1001到9999年, 精度为秒, 把日期和时间封装到格式为<strong>YYYYMMDDHHMMSS的整数</strong>中, 显示<strong>与时区无关, 使用8字节存储</strong></li>
+<li>timestamp, 同unit时间戳, 从新纪元时间(1970-01-01T00:00:00)以来的秒数, 使用<strong>4字节存储</strong>, 只能表示1970到2038年, 显示依赖于时区, 会根据时区不同, 显示对应的时间; 对应的列默认为NOT NULL.</li>
+</ul>
+</li>
+</ul>
+<h2 id="特殊数据类型的处理"><a href="#特殊数据类型的处理" class="headerlink" title="特殊数据类型的处理"></a>特殊数据类型的处理</h2><h3 id="uuid数据"><a href="#uuid数据" class="headerlink" title="uuid数据"></a>uuid数据</h3><p>uuid数据的处理</p>
+<ol>
+<li>移除uuid中的**-**</li>
+<li>使用unhex函数将uuid字符串转换为16字节的数字, 存储到binary(16)中</li>
+<li>使用hex函数将16字节的数字转换为uuid字符串</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">mysql&gt; <span class="keyword">select</span> uuid();</span><br><span class="line">+--------------------------------------+</span><br><span class="line">| uuid()                               |</span><br><span class="line">+--------------------------------------+</span><br><span class="line">| e8dc60bb-6df3-11e8-8915-0800273063ab |</span><br><span class="line">+--------------------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br><span class="line"></span><br><span class="line">mysql&gt; <span class="keyword">select</span> unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>);</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">| unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>) |</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">| ��`�m��</span><br><span class="line">+-------------------------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br><span class="line"></span><br><span class="line">mysql&gt; <span class="keyword">select</span> hex(unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>));</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">| hex(unhex(<span class="string">&#x27;e8dc60bb6df311e889150800273063ab&#x27;</span>)) |</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">| E8DC60BB6DF311E889150800273063AB               |</span><br><span class="line">+------------------------------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="ip数据"><a href="#ip数据" class="headerlink" title="ip数据"></a>ip数据</h3><p>ip数据需要转换为数字存储</p>
+<ol>
+<li>使用<strong>无符号整数</strong>存储ip列</li>
+<li>使用inet_aton将ip字符串转换为整数</li>
+<li>使用inet_ntoa将数字转换为ip字符串</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">mysql&gt; <span class="keyword">select</span> inet_aton(<span class="string">&#x27;192.168.0.1&#x27;</span>);</span><br><span class="line">+--------------------------+</span><br><span class="line">| inet_aton(<span class="string">&#x27;192.168.0.1&#x27;</span>) |</span><br><span class="line">+--------------------------+</span><br><span class="line">|               3232235521 |</span><br><span class="line">+--------------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br><span class="line"></span><br><span class="line">mysql&gt; <span class="keyword">select</span> inet_ntoa(3232235521);</span><br><span class="line">+-----------------------+</span><br><span class="line">| inet_ntoa(3232235521) |</span><br><span class="line">+-----------------------+</span><br><span class="line">| 192.168.0.1           |</span><br><span class="line">+-----------------------+</span><br><span class="line">1 row <span class="keyword">in</span> <span class="built_in">set</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="id列的数据类型"><a href="#id列的数据类型" class="headerlink" title="id列的数据类型"></a>id列的数据类型</h3><p>id列的数据类型尽量选择<strong>递增型整数</strong></p>
+<p>因为随机值会分布在很大的空间中, 导致insert和select变慢.<br>而且随机值的插入会随机写到索引的不同位置, 导致insert语句变慢;<br>由于数据分布在很大的空间中, 也就导致了select指定的数据会变慢;<br>还会导致缓存失效.</p>
+<p><strong>由于InnoDB的索引是一个B+Tree, 所以按顺序的插入能够保证数据很快插入,<br>并保证数据集中在一定的范围之内. 递增插入是比较好的选择.</strong></p>
+<p>不建议使用字符串类型作为id列, 查询性能很差.</p>
+<p>一般情况下尽量使用默认值方案来替换NULL, 因为NULL会增加查询的复杂度.</p>
+<h2 id="范式与反范式"><a href="#范式与反范式" class="headerlink" title="范式与反范式"></a>范式与反范式</h2><p>范式的主要目的:</p>
+<ul>
+<li>减少数据冗余</li>
+<li>消除插入&#x2F;删除&#x2F;更新的异常</li>
+</ul>
+<p>关键概念:</p>
+<ul>
+<li>码&#x2F;键(候选码), 表中的一个或多个属性组K, 除开K中的属性外的其他所有属性都完全函数依赖于K, 则K为候选码; 一个表可能存在多个码</li>
+<li>主属性, 包含在各个候选码中的属性, 主属性不可为空</li>
+</ul>
+<p>通常使用的范式:</p>
+<ul>
+<li>1NF(Normal Form)第一范式, 属性的原子性保证不可再分割, 每个属性都只能存储一个值</li>
+<li>2NF第二范式, 基于1NF, 定义候选码, 非主属性必须完全依赖于候选码, 即通过候选码可以确定实体的唯一性</li>
+<li>3NF第三范式, 基于2NF, 消除传递依赖, 即任何非主属性不能由其他属性派生, 要求属性没有冗余</li>
+<li>BCNF, 基于3NF的改进范式, 消除主属性对码的部分与传递依赖</li>
+</ul>
+<p>一般情况下, 关系型数据库的表设计只要达到3NF&#x2F;BCNF就够了.</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">// 不符合1NF, 电话列可继续拆分</span><br><span class="line">学生|课程|老师|电话(手机, 座机)|教材|教室|上课时间 </span><br><span class="line"></span><br><span class="line">// 符合1NF, 候选码为(学生, 课程), 但不符合2NF, 教材只部分依赖于主键列中的课程</span><br><span class="line">学生|课程|老师|手机|座机|教材|教室|上课时间 </span><br><span class="line"></span><br><span class="line">// 符合2NF, 但不符合3NF, (学生, 课程) =&gt; 老师 =&gt; 手机|座机, 存在传递依赖</span><br><span class="line">学生|课程|老师|手机|座机|教室|上课时间</span><br><span class="line"></span><br><span class="line">课程|教材</span><br><span class="line"></span><br><span class="line">// 符合3NF</span><br><span class="line">学生|课程|老师|教室|上课时间</span><br><span class="line"></span><br><span class="line">课程|教材</span><br><span class="line"></span><br><span class="line">老师|手机|座机</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2018/06/mysql-schema%E4%B8%8E%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E4%BC%98%E5%8C%96/3nf-diagram.png"></p>
+<p>针对<strong>写密集</strong>的场景尤其需要对schema进行范式化, 而针对读密集的场景可以使用反范式.</p>
+<p>范式化的表能够更好更快的进行更新操作, 但是查询往往需要多表join;<br>然而单独的表能够更有效的利用索引.</p>
+<h2 id="缓存表-汇总表"><a href="#缓存表-汇总表" class="headerlink" title="缓存表 &amp;&amp; 汇总表"></a>缓存表 &amp;&amp; 汇总表</h2><p>通过缓存表和汇总表来缓存源数据经过逻辑计算后的冗余数据, 可以提升相应业务逻辑场景的查询性能.</p>
+<ul>
+<li>非实时性数据, 定时计算更新的不严格计数</li>
+<li>实时性数据, 通过小范围查询填满间隙的严格计数</li>
+</ul>
+<p>在使用缓存表和汇总表时, 对数据的维护有两种方式:</p>
+<ul>
+<li>实时维护, 成本较高, 数据容易碎片化</li>
+<li>定期重建, 可以保持表不会有很多碎片, 而且能保证顺序组织索引, 更加高效</li>
+</ul>
+<p>重建表可以通过影子表的技巧</p>
+<ol>
+<li>创建相同结构的新表, create table test_table_new like test_table</li>
+<li>填充数据, 数据有可能时老数据, 也可能时重新整理后的数据</li>
+<li>通过重命名来交换新表和旧表的名字, rename table test_table to test_table_old, test_table_new to test_table</li>
+<li>如果出问题了, 可以很容易回滚旧表</li>
+</ol>
+<h2 id="计数表"><a href="#计数表" class="headerlink" title="计数表"></a>计数表</h2><p>为了提升技术表的并发处理能力, 在更新时随机到相应的slot行插入, 查询时汇总结果.</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 多slot的计数表</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">create table</span> if <span class="keyword">not</span> <span class="keyword">exists</span> counter_tb (</span><br><span class="line">slot tinyint unsigned <span class="keyword">not null</span> <span class="keyword">primary key</span>, </span><br><span class="line">cnt <span class="type">int</span> unsigned <span class="keyword">not null</span></span><br><span class="line">) engine<span class="operator">=</span>InnoDB <span class="keyword">default</span> charset<span class="operator">=</span>utf8mb4;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 更新时随机slot更新</span></span><br><span class="line"><span class="keyword">insert into</span> counter_tb (slot, cnt)</span><br><span class="line"><span class="keyword">values</span> (rand() <span class="operator">*</span> <span class="number">10</span>, <span class="number">1</span>)</span><br><span class="line"><span class="keyword">on</span> duplicate key <span class="keyword">update</span> cnt <span class="operator">=</span> cnt <span class="operator">+</span> <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 查询时汇总</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span> counter_tb;</span><br><span class="line"></span><br><span class="line"><span class="keyword">select</span> <span class="built_in">sum</span>(cnt)</span><br><span class="line"><span class="keyword">from</span> counter_tb;</span><br></pre></td></tr></table></figure>
+
+<h2 id="schema的修改"><a href="#schema的修改" class="headerlink" title="schema的修改"></a>schema的修改</h2><p>MySQL中大部分执行alter table来修改表结构的操作都会导致重建表, 即用新的结构创建新表, 将旧表数据导入新表, 最后删除旧表.<br>这对大表来说需要花费很大的时间和代价.</p>
+<p>大部分的alter table操作都会导致MySQL服务中断.<br>对于在生产环境中修改表结构, 一般可采用以下方法:</p>
+<ul>
+<li>在备用数据库上修改结构后, 和主库进行切换</li>
+<li>影子拷贝, 操作同创建影子表的操作; 也可借助一些第三方工具来进行影子拷贝</li>
+</ul>
+<p>.frm文件存储着表的结构, 它存放在mysql的data目录下对应的schema目录里, 默认的data目录为&#x2F;var&#x2F;lib&#x2F;mysql.<br>以下情况可通过修改**.frm文件**的结构来更新表结构, 但对.frm文件的修改存在风险, 需要做好备份:</p>
+<ul>
+<li>列的默认值</li>
+<li>NULL&#x2F;NOT Null</li>
+</ul>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a href="https://book.douban.com/subject/23008813/">高性能MySQL</a>, 第4章 Schema与数据类型优化</li>
+<li><a href="https://www.zhihu.com/question/24696366">解释一下关系数据库的第一第二第三范式</a></li>
+<li><a href="https://www.cnblogs.com/ybwang/archive/2010/06/04/1751279.html">数据库设计三大范式与BCNF，学习笔记</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>DB</category>
+      </categories>
+      <tags>
+        <tag>DB</tag>
+        <tag>mysql</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>RabbitMQ 开发实践</title>
+    <url>/2021/12/rabbitmq-%E5%BC%80%E5%8F%91%E5%AE%9E%E8%B7%B5/</url>
+    <content><![CDATA[<p>快速熟悉RabbitMQ的元素, 以及开发相关的最佳实践总结.</p>
+<span id="more"></span>
+
+<p><img src="/2021/12/rabbitmq-%E5%BC%80%E5%8F%91%E5%AE%9E%E8%B7%B5/rmq-modal.png"></p>
+<h2 id="声明Exchange和Queue"><a href="#声明Exchange和Queue" class="headerlink" title="声明Exchange和Queue"></a>声明Exchange和Queue</h2><p>Exchange负责对消息的路由, 而Queue负责对消息的存储.</p>
+<h3 id="Exchange"><a href="#Exchange" class="headerlink" title="Exchange"></a>Exchange</h3><p>Exchange主要有以下几种路由方式:</p>
+<ul>
+<li>fanout, 分发到所有绑定的Queue中</li>
+<li>direct, 只分发到路由键完全匹配的Queue中</li>
+<li>topic, 分发到和路由键匹配的Queue中</li>
+</ul>
+<p>Exchange的常用属性:</p>
+<ul>
+<li>durable, 对于长期使用的交换器设置为true, 保证服务重启后仍然存在.</li>
+<li>auto delete, 对于长期使用的交换器设置为false</li>
+<li>internal, 用于Broker内部的路由, 对于同客户端连接的交换器设置为false, AE可设置为true.</li>
+</ul>
+<h3 id="Queue"><a href="#Queue" class="headerlink" title="Queue"></a>Queue</h3><p>交换器的使用并不真正消耗服务器的性能,<br>但队列会, 所以需要更加关注队列的设计,<br>需要对队列的流量, 内存占用以及网卡占用要有一个清晰的评估,<br>预估其平均值和峰值, 以便合理分配硬件资源.</p>
+<p>Queue的主要属性:</p>
+<ul>
+<li>durable, 设置为true, 则服务重启后队列信息仍然存在; 配合消息的持久化, 可以保证服务重启后消息不丢失.</li>
+<li>exclusive, true则仅对声明它的连接可见, 断开时自动删除; 一般情况下设置为false</li>
+<li>auto delete, 一般设置为false</li>
+<li>队列中消息的TTL, 通过x-message-ttl来设置, 最终消息的TTL&#x3D;min(队列中消息的TTL, 消息设置的TTL), 消息过期后则变为死信(Dead Message)</li>
+</ul>
+<p>当一个队列有多个消费者时, 队列中的消息会被平均分摊(Round-Robin, 即轮询)<br>给多个消费者进行处理, 而不是每个消费者都收到所有的消息并处理.</p>
+<p>通过路由键(Route Key)将Exchange和Queue进行绑定.</p>
+<p>Queue的应用:</p>
+<ul>
+<li>死信队列, 需要配合死信交换器(DLX), 当消息过期后会被路由到死信队列</li>
+<li>延迟队列, 通过死信队列+消息的TTL来实现</li>
+<li>优先级队列</li>
+<li>RPC队列</li>
+</ul>
+<h3 id="备用交换器-AE-Alternate-Exchange"><a href="#备用交换器-AE-Alternate-Exchange" class="headerlink" title="备用交换器(AE, Alternate Exchange)"></a>备用交换器(AE, Alternate Exchange)</h3><p>为了防止消息丢失, 一般建议配置AE,<br>当交换器无法路由消息到指定的队列时, 会将消息路由到AE,<br>由AE保存到与它绑定的队列中,<br>之后在修复后, 通过工具将这些丢失的消息重新入队.</p>
+<h3 id="基本模板"><a href="#基本模板" class="headerlink" title="基本模板"></a>基本模板</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// AE声明</span></span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.AE, BuiltinExchangeType.FANOUT,</span><br><span class="line">    <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">true</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.AE_QUEUE,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.AE_QUEUE, RabbitMQConfig.AE, <span class="string">&quot;&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Exchange和Queue声明</span></span><br><span class="line">Map&lt;String, Object&gt; args = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;&gt;();</span><br><span class="line">args.put(<span class="string">&quot;alternate-exchange&quot;</span>, RabbitMQConfig.AE);</span><br><span class="line">channel.exchangeDeclare(RabbitMQConfig.EX, BuiltinExchangeType.DIRECT,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, args);</span><br><span class="line">channel.queueDeclare(RabbitMQConfig.EX_QUEUE,</span><br><span class="line">    <span class="literal">true</span>, <span class="literal">false</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br><span class="line">channel.queueBind(RabbitMQConfig.EX_QUEUE, RabbitMQConfig.EX, </span><br><span class="line">    RabbitMQConfig.EX_QUEUE_ROUTE_KEY);</span><br></pre></td></tr></table></figure>
+
+<h3 id="Message"><a href="#Message" class="headerlink" title="Message"></a>Message</h3><p>生产者创建的消息分为两部分:</p>
+<ul>
+<li>消息标签, 包含路由相关的信息</li>
+<li>消息体, 消息的内容, 可以被Queue保存</li>
+</ul>
+<p>消息的常用属性:</p>
+<ul>
+<li>durable, 通过设置deliverMode为2, 可实现消息的持久化;<br>对于可靠性&#x2F;重要性不是那么高的消息不采用持久化处理, 以提高系统的吞吐量</li>
+<li>消息的TTL, 通过设置expiration参数</li>
+</ul>
+<h3 id="Connect-Channel"><a href="#Connect-Channel" class="headerlink" title="Connect &amp;&amp; Channel"></a>Connect &amp;&amp; Channel</h3><p>客户端需要和RabbitMQ建立TCP Connection, 建立后会创建AMQP信道(Channel),<br>并被指派一个唯一的ID.<br>Channel是建立在Connection上的虚拟连接, 用于处理AMQP指令.</p>
+<p>建立&#x2F;销毁TCP连接是非常大的开销, 高峰时, 性能瓶颈也就随之出现.<br>所以RabbitMQ采用类似NIO的做法, 对TCP连接进行复用.</p>
+<p>建议客户端采用连接池, 将Channel均摊到池中的Connection上;<br>每个线程持有一个Channel.</p>
+<p>为了当发生阻塞时可以在阻止生产者的同时, 又不影响消费者的运行,<br>建议生产者和消费者的逻辑使用不同的Connection.</p>
+<h2 id="实现Publisher"><a href="#实现Publisher" class="headerlink" title="实现Publisher"></a>实现Publisher</h2><p>为了避免发送方的消息丢失, RabbitMQ提供了以下几种机制:</p>
+<ul>
+<li>发送消息时设置mandatory, 当交换器无法找到复合条件的队列时, 通过Basic.Return将消息返回给生产者; 如果交换器存在AE, 则mandatory失效.</li>
+<li>事务机制, txSelect&#x2F;txCommit&#x2F;txRollback, 每次只能处理一条消息, 在消息发送后会<strong>阻塞</strong>发送端,<br>等待RabbitMQ的回应, 回应提交成功, 则表明消息已经到达RabbitMQ;<br>如果发生任何异常, 发送端可以捕获异常并进行回滚;<br>它<strong>严重降低了RabbitMQ的消息吞吐量</strong>.</li>
+<li>发送方确认机制, confirmSelect该模式下, 发布的消息都会被指派唯一ID,<br>消息到达匹配队列后, RabbitMQ会发送Basic.Ack并携带消息的唯一ID, 使发送方知道消息已经正确到达;<br>如果内部发生错误, 则会发送Basic.Nack告知发送方.</li>
+</ul>
+<p>推荐使用<strong>异步的发送方确认机制</strong>的方式来批量发送消息.</p>
+<h2 id="实现Consumer"><a href="#实现Consumer" class="headerlink" title="实现Consumer"></a>实现Consumer</h2><p>消费端有两种消费模式:</p>
+<ul>
+<li>Push模式, RabbitMQ主动向订阅的消费者推送消息, 适用于吞吐量大的情况;<br>不同的订阅消费者采用唯一标签(consumerTag)来区分.</li>
+<li>Pull模式, 消费者从RabbitMQ拉取消息, 适用于吞吐量少的情况</li>
+</ul>
+<p>为了保证消息从队列可靠的到达消费者, RabbitMQ提供了消息确认机制(Message Acknowledge).<br>通过设置auto ack为false, 让消费者有足够的时间处理消息,<br>处理完毕后再显式的发送Basic.Ack给RabbitMQ,<br>然后RabbitMQ才从内存&#x2F;磁盘中移除消息(实际上是先打上删除标记, 之后再删除).<br>如果设置为true, 则RabbitMQ发送消息后就会将其从内存&#x2F;磁盘中移除.</p>
+<p>RabbitMQ队列中的消息分为两个部分:</p>
+<ul>
+<li>Ready, 等待投递给消费者的消息</li>
+<li>Unacked, 已经投递给消费者, 但还没有收到确认信号的消息</li>
+</ul>
+<p>如果一直没有收到消费者的确认信号, 并且消费者断开了连接,<br>RabbitMQ则会安排该消息重新进入队列, 等待投递给下一个消费者,<br>确保消息被正确的消费.</p>
+<p>RabbitMQ判断此消息是否重新投递给消费者的唯一依据是消费该消息的消费者连接是否断开,<br>因为RabbitMQ允许消费者消费一条消息的时间可以很久.</p>
+<p>通过Basic.Qos来对消费者端的吞吐量进行控制,</p>
+<ul>
+<li>global为false模式时, 针对每个消费者进行限制</li>
+<li>global为true模式时, 针对一个Channle中所有的消费者做限制</li>
+</ul>
+<p>如果同时设置了两种模式, 则同时生效,<br>即对信道中的每一个消费者做限制, 也对信道中的总数做限制.<br>一般需要根据节点的性能进行配置.</p>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a href="https://book.douban.com/subject/27591386/">RabbitMQ实战指南</a></li>
+<li><a href="https://www.rabbitmq.com/getstarted.html">RabbitMQ Tutorials</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>MQ</category>
+      </categories>
+      <tags>
+        <tag>MQ</tag>
+        <tag>event</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>HTTPS的安全性</title>
+    <url>/2023/11/https%E7%9A%84%E5%AE%89%E5%85%A8%E6%80%A7/</url>
+    <content><![CDATA[<p>Https相较于Htp主要增加了通信的安全性。主要指：</p>
+<ul>
+<li>所有信息都是<strong>加密</strong>传播，第三方无法窃听。</li>
+<li>具有<strong>校验机制</strong>，一旦被篡改，通信双方会立刻发现。</li>
+<li>配备<strong>身份证书</strong>，防止身份被冒充。</li>
+</ul>
+<span id="more"></span>
+
+<h2 id="加密"><a href="#加密" class="headerlink" title="加密"></a>加密</h2><p>Https中的加密主要分为2块：</p>
+<ul>
+<li>握手阶段的加密， 使用非对称加密技术（例如RSA等）对pre-master key的加密</li>
+<li>通信阶段的加密，使用会话密钥对通信内容进行加密，会话密钥采用对称加密技术，例如DES等</li>
+</ul>
+<h3 id="握手过程"><a href="#握手过程" class="headerlink" title="握手过程"></a>握手过程</h3><img src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IlNFUVVFTkNFIiBoZWlnaHQ9IjUzNnB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6MTM4M3B4O2hlaWdodDo1MzZweDtiYWNrZ3JvdW5kOiNGRkZGRkY7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAxMzgzIDUzNiIgd2lkdGg9IjEzODNweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjxnPjx0aXRsZT5DbGllbnQ8L3RpdGxlPjxyZWN0IGZpbGw9IiMwMDAwMDAiIGZpbGwtb3BhY2l0eT0iMC4wMDAwMCIgaGVpZ2h0PSI0NjQuNTkzOCIgd2lkdGg9IjgiIHg9IjI4LjI2NTEiIHk9IjM2LjI5NjkiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtZGFzaGFycmF5OjUsNTsiIHgxPSIzMiIgeDI9IjMyIiB5MT0iMzYuMjk2OSIgeTI9IjUwMC44OTA2Ii8+PC9nPjxnPjx0aXRsZT5TZXJ2ZXI8L3RpdGxlPjxyZWN0IGZpbGw9IiMwMDAwMDAiIGZpbGwtb3BhY2l0eT0iMC4wMDAwMCIgaGVpZ2h0PSI0NjQuNTkzOCIgd2lkdGg9IjgiIHg9IjY0OC42ODUxIiB5PSIzNi4yOTY5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWRhc2hhcnJheTo1LDU7IiB4MT0iNjUxLjczIiB4Mj0iNjUxLjczIiB5MT0iMzYuMjk2OSIgeTI9IjUwMC44OTA2Ii8+PC9nPjxnPjx0aXRsZT5DQTwvdGl0bGU+PHJlY3QgZmlsbD0iIzAwMDAwMCIgZmlsbC1vcGFjaXR5PSIwLjAwMDAwIiBoZWlnaHQ9IjQ2NC41OTM4IiB3aWR0aD0iOCIgeD0iMTM1MS4yOTgxIiB5PSIzNi4yOTY5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWRhc2hhcnJheTo1LDU7IiB4MT0iMTM1NC42MjE5IiB4Mj0iMTM1NC42MjE5IiB5MT0iMzYuMjk2OSIgeTI9IjUwMC44OTA2Ii8+PC9nPjxnIGNsYXNzPSJwYXJ0aWNpcGFudCBwYXJ0aWNpcGFudC1oZWFkIiBkYXRhLXBhcnRpY2lwYW50PSJDIj48cmVjdCBmaWxsPSIjRTJFMkYwIiBoZWlnaHQ9IjMwLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjU0LjUzMDMiIHg9IjUiIHk9IjUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI0MC41MzAzIiB4PSIxMiIgeT0iMjQuOTk1MSI+Q2xpZW50PC90ZXh0PjwvZz48ZyBjbGFzcz0icGFydGljaXBhbnQgcGFydGljaXBhbnQtdGFpbCIgZGF0YS1wYXJ0aWNpcGFudD0iQyI+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI1NC41MzAzIiB4PSI1IiB5PSI0OTkuODkwNiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQwLjUzMDMiIHg9IjEyIiB5PSI1MTkuODg1NyI+Q2xpZW50PC90ZXh0PjwvZz48ZyBjbGFzcz0icGFydGljaXBhbnQgcGFydGljaXBhbnQtaGVhZCIgZGF0YS1wYXJ0aWNpcGFudD0iUyI+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI1OS45MTAyIiB4PSI2MjIuNzMiIHk9IjUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI0NS45MTAyIiB4PSI2MjkuNzMiIHk9IjI0Ljk5NTEiPlNlcnZlcjwvdGV4dD48L2c+PGcgY2xhc3M9InBhcnRpY2lwYW50IHBhcnRpY2lwYW50LXRhaWwiIGRhdGEtcGFydGljaXBhbnQ9IlMiPjxyZWN0IGZpbGw9IiNFMkUyRjAiIGhlaWdodD0iMzAuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTkuOTEwMiIgeD0iNjIyLjczIiB5PSI0OTkuODkwNiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQ1LjkxMDIiIHg9IjYyOS43MyIgeT0iNTE5Ljg4NTciPlNlcnZlcjwvdGV4dD48L2c+PGcgY2xhc3M9InBhcnRpY2lwYW50IHBhcnRpY2lwYW50LWhlYWQiIGRhdGEtcGFydGljaXBhbnQ9IkNBIj48cmVjdCBmaWxsPSIjRTJFMkYwIiBoZWlnaHQ9IjMwLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjMzLjM1MjUiIHg9IjEzMzguNjIxOSIgeT0iNSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE5LjM1MjUiIHg9IjEzNDUuNjIxOSIgeT0iMjQuOTk1MSI+Q0E8L3RleHQ+PC9nPjxnIGNsYXNzPSJwYXJ0aWNpcGFudCBwYXJ0aWNpcGFudC10YWlsIiBkYXRhLXBhcnRpY2lwYW50PSJDQSI+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIzMy4zNTI1IiB4PSIxMzM4LjYyMTkiIHk9IjQ5OS44OTA2Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTkuMzUyNSIgeD0iMTM0NS42MjE5IiB5PSI1MTkuODg1NyI+Q0E8L3RleHQ+PC9nPjxyZWN0IGZpbGw9IiNFRUVFRUUiIGhlaWdodD0iMyIgc3R5bGU9InN0cm9rZTojRUVFRUVFO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEzNzYuOTc0NCIgeD0iMCIgeT0iNjYuODYzMyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MTsiIHgxPSIwIiB4Mj0iMTM3Ni45NzQ0IiB5MT0iNjYuODYzMyIgeTI9IjY2Ljg2MzMiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMCIgeDI9IjEzNzYuOTc0NCIgeTE9IjY5Ljg2MzMiIHkyPSI2OS44NjMzIi8+PHJlY3QgZmlsbD0iI0VFRUVFRSIgaGVpZ2h0PSIyMy4xMzI4IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjI7IiB3aWR0aD0iNzAuNTI1OSIgeD0iNjUzLjIyNDIiIHk9IjU2LjI5NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNTIuMDAwMSIgeD0iNjU5LjIyNDIiIHk9IjcyLjM2MzgiPiYjMjU1Njk7JiMyNTE2MzsmIzM4NDU0OyYjMjc1NzM7PC90ZXh0PjxyZWN0IGZpbGw9IiNFRUVFRUUiIGhlaWdodD0iMyIgc3R5bGU9InN0cm9rZTojRUVFRUVFO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEzNzYuOTc0NCIgeD0iMCIgeT0iMTA5Ljk5NjEiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMCIgeDI9IjEzNzYuOTc0NCIgeTE9IjEwOS45OTYxIiB5Mj0iMTA5Ljk5NjEiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMCIgeDI9IjEzNzYuOTc0NCIgeTE9IjExMi45OTYxIiB5Mj0iMTEyLjk5NjEiLz48cmVjdCBmaWxsPSIjRUVFRUVFIiBoZWlnaHQ9IjIzLjEzMjgiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MjsiIHdpZHRoPSIxMTIuNzEyNSIgeD0iNjMyLjEzMSIgeT0iOTkuNDI5NyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI5NC4xODY2IiB4PSI2MzguMTMxIiB5PSIxMTUuNDk2NiI+JiMyNTU2OTsmIzI1MTYzOyYjMzg0NTQ7JiMyNzU3MzstLS0mIzI2MTI2OyYjMjU5OTE7PC90ZXh0PjxnIGNsYXNzPSJtZXNzYWdlIiBkYXRhLXBhcnRpY2lwYW50LTE9IkMiIGRhdGEtcGFydGljaXBhbnQtMj0iUyI+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI2NDAuNjg1MSwxNDkuNjk1Myw2NTAuNjg1MSwxNTMuNjk1Myw2NDAuNjg1MSwxNTcuNjk1Myw2NDQuNjg1MSwxNTMuNjk1MyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSIzMi4yNjUxIiB4Mj0iNjQ2LjY4NTEiIHkxPSIxNTMuNjk1MyIgeTI9IjE1My42OTUzIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzQwLjgzNzYiIHg9IjM5LjI2NTEiIHk9IjE0OC42Mjk0Ij4mIzIxNDU3OyYjMjA5ODY7JiMyMTE1MjsmIzIzNDk0OyYjMzY4OTA7JiMyMDQ0OTsmIzMwMzQwOyYjMzU4MzE7JiMyNzcxNDssICYjMjEyNTM7JiMyNTMyNDtTU0wvVExTIHZlcnNpb24sICYjMjM0NTg7JiMyNTE0MzsmIzMxNDcxOyYjMjk5ODM7JiMyNTEwNDsmIzMwMzQwOzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzkiIHg9IjM4MC4xMDI3IiB5PSIxNDguNjI5NCI+JiMzODU0MzsmIzI2NDI2OyYjMjU5Njg7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE3My4xMzI1IiB4PSI0MTkuMTAyOCIgeT0iMTQ4LjYyOTQiPiYjNjUyOTI7ICYjMjU5MDM7JiMyNTM0NTsmIzMwMzQwOyYjMjExNTI7JiMyMzQ5NDsmIzI2MDQxOyYjMjc4NjE7JiMyMTY0NDsmIzIxMzg3OyYjMzI1NTM7JiMyNjA0MTsmIzI3ODYxOzwvdGV4dD48L2c+PGcgY2xhc3M9Im1lc3NhZ2UiIGRhdGEtcGFydGljaXBhbnQtMT0iUyIgZGF0YS1wYXJ0aWNpcGFudC0yPSJDIj48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjQzLjI2NTEsMTc4LjgyODEsMzMuMjY1MSwxODIuODI4MSw0My4yNjUxLDE4Ni44MjgxLDM5LjI2NTEsMTgyLjgyODEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMzcuMjY1MSIgeDI9IjY1MS42ODUxIiB5MT0iMTgyLjgyODEiIHkyPSIxODIuODI4MSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI2NC4xMzI2IiB4PSI0OS4yNjUxIiB5PSIxNzcuNzYyMiI+JiMzMDgzMDsmIzM1NzQ4OyYjMjAzNTE7JiMyOTk5MjsmIzMwMzQwOyYjMjExNTI7JiMyMzQ5NDsmIzM2ODkwOyYjMjA0NDk7JiMyMTMyNzsmIzM1NzU4OyYjMjkyNTY7JiMyNjQxMjsmIzY1MjkyOyAmIzI2MzgxOyYjMjExNTM7JiMyMjEyMDsmIzI5OTgzOyYjMjUxMDQ7JiMzMDM0MDs8L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjM5IiB4PSIzMTMuMzk3OCIgeT0iMTc3Ljc2MjIiPiYjMzg1NDM7JiMyNjQyNjsmIzI1OTY4OzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMTYuMjY0OSIgeD0iMzUyLjM5NzgiIHk9IjE3Ny43NjIyIj4mIzY1MjkyOyAmIzMwODMwOyYjMzU3NDg7JiMyMDM1MTsmIzI5OTkyOyYjMzAzNDA7JiMyMTE1MjsmIzIzNDk0OyYjMjYwNDE7JiMyNzg2MTsmIzY1MjkyOyAmIzI2MzgxOyYjMjExNTM7JiMyMjEyMDsmIzM1Nzc3OyYjMjAwNzA7PC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJDIiBkYXRhLXBhcnRpY2lwYW50LTI9IkNBIj48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjEzNDMuMjk4MSwyMDcuOTYwOSwxMzUzLjI5ODEsMjExLjk2MDksMTM0My4yOTgxLDIxNS45NjA5LDEzNDcuMjk4MSwyMTEuOTYwOSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSIzMi4yNjUxIiB4Mj0iMTM0OS4yOTgxIiB5MT0iMjExLjk2MDkiIHkyPSIyMTEuOTYwOSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjkxLjAwMDEiIHg9IjM5LjI2NTEiIHk9IjIwNi44OTUiPiYjMzk1NjQ7JiMzNTc3NzsmIzI2MzgxOyYjMjExNTM7JiMyMjEyMDsmIzM1Nzc3OyYjMjAwNzA7PC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJDIiBkYXRhLXBhcnRpY2lwYW50LTI9IkMiPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSIzMi4yNjUxIiB4Mj0iNzQuMjY1MSIgeTE9IjI0MS4wOTM4IiB5Mj0iMjQxLjA5MzgiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iNzQuMjY1MSIgeDI9Ijc0LjI2NTEiIHkxPSIyNDEuMDkzOCIgeTI9IjI1NC4wOTM4Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjMzLjI2NTEiIHgyPSI3NC4yNjUxIiB5MT0iMjU0LjA5MzgiIHkyPSIyNTQuMDkzOCIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDMuMjY1MSwyNTAuMDkzOCwzMy4yNjUxLDI1NC4wOTM4LDQzLjI2NTEsMjU4LjA5MzgsMzkuMjY1MSwyNTQuMDkzOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE1Ni4wMDAyIiB4PSIzOS4yNjUxIiB5PSIyMzYuMDI3OCI+JiMyMDE3NDsmIzM1Nzc3OyYjMjAwNzA7JiMyMDAxMzsmIzIxNDYyOyYjMjA5ODY7JiMyNjM4MTsmIzIxMTUzOyYjMjIxMjA7JiMzMDM0MDsmIzIwODQ0OyYjMzgwNTM7PC90ZXh0PjwvZz48cmVjdCBmaWxsPSIjRUVFRUVFIiBoZWlnaHQ9IjMiIHN0eWxlPSJzdHJva2U6I0VFRUVFRTtzdHJva2Utd2lkdGg6MTsiIHdpZHRoPSIxMzc2Ljk3NDQiIHg9IjAiIHk9IjI4Mi42NjAyIi8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgeDE9IjAiIHgyPSIxMzc2Ljk3NDQiIHkxPSIyODIuNjYwMiIgeTI9IjI4Mi42NjAyIi8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxOyIgeDE9IjAiIHgyPSIxMzc2Ljk3NDQiIHkxPSIyODUuNjYwMiIgeTI9IjI4NS42NjAyIi8+PHJlY3QgZmlsbD0iI0VFRUVFRSIgaGVpZ2h0PSIyMy4xMzI4IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjI7IiB3aWR0aD0iMTEyLjcxMjUiIHg9IjYzMi4xMzEiIHk9IjI3Mi4wOTM4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijk0LjE4NjYiIHg9IjYzOC4xMzEiIHk9IjI4OC4xNjA2Ij4mIzI1NTY5OyYjMjUxNjM7JiMzODQ1NDsmIzI3NTczOy0tLSYjMjM0OTQ7JiMyNTk5MTs8L3RleHQ+PGcgY2xhc3M9Im1lc3NhZ2UiIGRhdGEtcGFydGljaXBhbnQtMT0iQyIgZGF0YS1wYXJ0aWNpcGFudC0yPSJTIj48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjY0MC42ODUxLDMyMi4zNTk0LDY1MC42ODUxLDMyNi4zNTk0LDY0MC42ODUxLDMzMC4zNTk0LDY0NC42ODUxLDMyNi4zNTk0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjMyLjI2NTEiIHgyPSI2NDYuNjg1MSIgeTE9IjMyNi4zNTk0IiB5Mj0iMzI2LjM1OTQiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMTcuMDAwMSIgeD0iMzkuMjY1MSIgeT0iMzIxLjI5MzUiPiYjMjk5OTI7JiMyNjM4MTsmIzIxMTUzOyYjMjIxMjA7JiMyMDg0NDsmIzM4MDUzOyYjMjExNTI7JiMyMzQ5NDsmIzMwMzQwOzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9ImJvbGQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTc2Ljg5MDIiIHg9IjE1Ni4yNjUzIiB5PSIzMjEuMjkzNSI+JiMzODU0MzsmIzI2NDI2OyYjMjU5Njg7JiM2NTI4ODtwcmUtbWFzdGVyIGtleSYjNjUyODk7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjMwMi41Mjk2IiB4PSIzMzMuMTU1NSIgeT0iMzIxLjI5MzUiPiYjNjUyOTI7ICYjMzI1MzQ7JiMzMDcyMTsmIzI1OTEzOyYjMjE0NjQ7JiMzNjg5MDsmIzMwNjkzOywgJiMyMzQ1ODsmIzI1MTQzOyYjMzE0NzE7JiMzNTc3NzsmIzIwMDcwOyYjNjUyOTI7ICYjMjM0NTg7JiMyNTE0MzsmIzMxNDcxOyYjMjU1Njk7JiMyNTE2MzsmIzMyNDY3OyYjMjY0NjM7JiMzNjg5MDsmIzMwNjkzOzwvdGV4dD48L2c+PGcgY2xhc3M9Im1lc3NhZ2UiIGRhdGEtcGFydGljaXBhbnQtMT0iQyIgZGF0YS1wYXJ0aWNpcGFudC0yPSJDIj48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMzIuMjY1MSIgeDI9Ijc0LjI2NTEiIHkxPSIzNTUuNDkyMiIgeTI9IjM1NS40OTIyIi8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9Ijc0LjI2NTEiIHgyPSI3NC4yNjUxIiB5MT0iMzU1LjQ5MjIiIHkyPSIzNjguNDkyMiIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSIzMy4yNjUxIiB4Mj0iNzQuMjY1MSIgeTE9IjM2OC40OTIyIiB5Mj0iMzY4LjQ5MjIiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjQzLjI2NTEsMzY0LjQ5MjIsMzMuMjY1MSwzNjguNDkyMiw0My4yNjUxLDM3Mi40OTIyLDM5LjI2NTEsMzY4LjQ5MjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyNDcuMDAwMyIgeD0iMzkuMjY1MSIgeT0iMzUwLjQyNjMiPiYjMjk5OTI7JiMxOTk3NzsmIzIwMDEwOyYjMzg1NDM7JiMyNjQyNjsmIzI1OTY4OyYjMjI1MjI7JiMyMDExMDsmIzMwODMwOyYjMzU3NDg7JiMzMDM0MDsmIzIxMTUyOyYjMjM0OTQ7JiMyNjA0MTsmIzI3ODYxOyYjMjk5ODM7JiMyNTEwNDsmIzE5OTY4OyYjMjAwMTA7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iYm9sZCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI1Mi4wMDAxIiB4PSIyODYuMjY1NCIgeT0iMzUwLjQyNjMiPiYjMjM1NDU7JiMzMTIxNjsmIzIzNDk0OyYjMzgwNTM7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijc4LjAwMDEiIHg9IjMzOC4yNjU1IiB5PSIzNTAuNDI2MyI+JiMyMDMxNjsmIzIwMDI2OyYjMjAyNTA7JiMzNTgwNTsmIzIzNDk0OyYjMzgwNTM7PC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJTIiBkYXRhLXBhcnRpY2lwYW50LTI9IlMiPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSI2NTIuNjg1MSIgeDI9IjY5NC42ODUxIiB5MT0iMzk3LjYyNSIgeTI9IjM5Ny42MjUiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iNjk0LjY4NTEiIHgyPSI2OTQuNjg1MSIgeTE9IjM5Ny42MjUiIHkyPSI0MTAuNjI1Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjY1My42ODUxIiB4Mj0iNjk0LjY4NTEiIHkxPSI0MTAuNjI1IiB5Mj0iNDEwLjYyNSIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNjYzLjY4NTEsNDA2LjYyNSw2NTMuNjg1MSw0MTAuNjI1LDY2My42ODUxLDQxNC42MjUsNjU5LjY4NTEsNDEwLjYyNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjY4OC42MTMiIHg9IjY1OS42ODUxIiB5PSIzOTIuNTU5MSI+JiMyOTk5MjsmIzI2MzgxOyYjMjExNTM7JiMyMjEyMDsmIzMxMTY5OyYjMzgwNTM7JiMzNTI5OTsmIzIzNDk0OyYjMzM3MTk7JiMyNDQ3MTsmIzM4NTQzOyYjMjY0MjY7JiMyNTk2ODsmIzY1Mjg4O3ByZS1tYXN0ZXIga2V5JiM2NTI4OTsmIzY1MjkyOyAmIzI5OTkyOyYjMTk5Nzc7JiMyMDAxMDsmIzM4NTQzOyYjMjY0MjY7JiMyNTk2ODsmIzIyNTIyOyYjMjAxMTA7JiMzMDgzMDsmIzM1NzQ4OyYjMzAzNDA7JiMyMTE1MjsmIzIzNDk0OyYjMjYwNDE7JiMyNzg2MTsmIzIzNTQ4OyYjMjA5ODY7JiMxOTk2ODsmIzIwMDEwOyYjMjM1NDU7JiMzMTIxNjsmIzIzNDk0OyYjMzgwNTM7JiMyMDMxNjsmIzIwMDI2OyYjMjAyNTA7JiMzNTgwNTsmIzIzNDk0OyYjMzgwNTM7PC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJTIiBkYXRhLXBhcnRpY2lwYW50LTI9IkMiPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDMuMjY1MSw0MzUuNzU3OCwzMy4yNjUxLDQzOS43NTc4LDQzLjI2NTEsNDQzLjc1NzgsMzkuMjY1MSw0MzkuNzU3OCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSIzNy4yNjUxIiB4Mj0iNjUxLjY4NTEiIHkxPSI0MzkuNzU3OCIgeTI9IjQzOS43NTc4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjEyLjEzMjYiIHg9IjQ5LjI2NTEiIHk9IjQzNC42OTE5Ij4mIzMyNTM0OyYjMzA3MjE7JiMyNTkxMzsmIzIxNDY0OyYjMzY4OTA7JiMzMDY5MzsmIzY1MjkyOyAmIzI2MzgxOyYjMjExNTM7JiMyMjEyMDsmIzI1NTY5OyYjMjUxNjM7JiMzMjQ2NzsmIzI2NDYzOyYjMzY4OTA7JiMzMDY5Mzs8L3RleHQ+PC9nPjxyZWN0IGZpbGw9IiNFRUVFRUUiIGhlaWdodD0iMyIgc3R5bGU9InN0cm9rZTojRUVFRUVFO3N0cm9rZS13aWR0aDoxOyIgd2lkdGg9IjEzNzYuOTc0NCIgeD0iMCIgeT0iNDY4LjMyNDIiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMCIgeDI9IjEzNzYuOTc0NCIgeTE9IjQ2OC4zMjQyIiB5Mj0iNDY4LjMyNDIiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjE7IiB4MT0iMCIgeDI9IjEzNzYuOTc0NCIgeTE9IjQ3MS4zMjQyIiB5Mj0iNDcxLjMyNDIiLz48cmVjdCBmaWxsPSIjRUVFRUVFIiBoZWlnaHQ9IjIzLjEzMjgiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MjsiIHdpZHRoPSIxOTIuNTE1MyIgeD0iNTkyLjIyOTUiIHk9IjQ1Ny43NTc4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE3My45ODk0IiB4PSI1OTguMjI5NSIgeT0iNDczLjgyNDciPiYjMjAzNTE7JiMyOTk5MjsmIzIwMjUwOyYjMzU4MDU7JiMyMzQ5NDsmIzM4MDUzOyYjMjM1NDU7aHR0cCYjMzY4Mjc7JiMzNDg5MjsmIzIxMTUyOyYjMjM0OTQ7PC90ZXh0PjwhLS1TUkM9W2JMOVRSejlHNkJ4ZEx2cGhuaVB4NGFvTXRrd2tfVzVZY2FaS3NLMVp1anFtcGk3ZU1hTTZZMm9pSmNIRVI2VUNLaGZFX2ltdnhwY3p1WV91YmFDT0hKM25na2RwVlpwRi1wcDdCOVFqcWVFSU1Ub3BZRlF1UEUyZE0yNVFwYnAxVFFGeXAyWWRrOXgxalByU2hiMFd1N2ZHUm9JVE4tM185OE4yRWdJZ0FkR1NRMS1jRE9zZXdac1l2bWJwdHgzM1kxc1RpVTFMaWotYkt1enROdWZXM0R6VnQyN0NGZTM2SURUdHh6eFZyR2JvTHFmRnpuM3NGcTlqcEJ5NmxETTdzY2lTSzlJYXdxOGxXZkNoSFBkNURlNU0wN09MQXQ4cGoyVm11dUdyUlVPcVVGbjVfa1Jxa0dXakp4WmQyX3lKbFBkb3JpTG9IZ2ZYbnd4bVZMd2xHTXlxTnpteFBhU1VVdC1uZE5sWkRhY1BzSTIyQWZyeU5iWVh4VUg5U2NhWmpnTVU5X0pRYUgwRGxwNnRaUlJUWWE2UVdyN0k3Nm1tVkt3VURIczVCS1ZiZDFJUGxNT01yeW9vZUp1ZkxZbkNfUDduVjFSTjVuVjZSTnZNWFRRNGtIc3FZVlM3QXc1OFpNZFI0ZkFBLUZMUkVFdEJfamtoSzBpRHdwSXlORkFvVmFHWkh4Z3V2ZnlxZE9SeHNBeWVCOVptdUxLUUxORVdBRkljSHlFOG5icUhkNGZpNFYzUW1Obk9uUGVPZGNFSlNDUml6eGpfTlpvX3p0eXFpWTM2UUFKNkxPTFJ6UUtjXzZMZXZnTGl5MnlETVp3bnJPdDh6ejJvSjM3ejgzblJZaUJXX20wMF0tLT48L2c+PC9zdmc+'>
+
+<ul>
+<li>整个握手阶段都不加密（也没法加密），都是明文的。<br>整个通话的安全，只取决于第三个随机数（Premaster secret）能不能被破解</li>
+<li>CA证书</li>
+<li>会话密钥，<strong>对称加密</strong>生成, 用三个随机数通过密钥导出器最终导出一个对称密钥</li>
+<li>服务器的公钥和私钥， <strong>非对称加密</strong>生成， 整个会话过程只使用<strong>一次</strong>， 用于加密和解密”会话密钥”</li>
+</ul>
+<h3 id="会话恢复"><a href="#会话恢复" class="headerlink" title="会话恢复"></a>会话恢复</h3><ul>
+<li>session id, 只保留在一台服务器上</li>
+<li>session ticket, 加密的，只有服务器才能解密，其中包括本次会话的主要信息，比如会话密钥和加密方法。<br>当服务器收到session ticket以后，解密后就不必重新生成会话密钥了。</li>
+</ul>
+<h2 id="报文完整性的校验机制"><a href="#报文完整性的校验机制" class="headerlink" title="报文完整性的校验机制"></a>报文完整性的校验机制</h2><p>使用散列算法来计算哈希值，用于完整性的校验。<br>主要使用以下散列算法</p>
+<ul>
+<li>MD5，生成128bit的散列</li>
+<li>SHA-1，生成160bit的散列</li>
+</ul>
+<h2 id="报文机密性"><a href="#报文机密性" class="headerlink" title="报文机密性"></a>报文机密性</h2><p>报文的机密性用于进行<strong>端点校验</strong>，不是必要的，<br>取决于应用的场景，常见于金融领域</p>
+<h3 id="报文鉴别码MAC"><a href="#报文鉴别码MAC" class="headerlink" title="报文鉴别码MAC"></a>报文鉴别码MAC</h3><p>有些通信需要保证通信双方的机密性，防止中间人冒充通信双方。</p>
+<p>鉴别密钥只有通信双方知道，通过将鉴别密钥和报文内容一起进行散列计算，然后发送给对方。</p>
+<h3 id="数字签名"><a href="#数字签名" class="headerlink" title="数字签名"></a>数字签名</h3><p>使用数字签名作为鉴别密钥，而非对称加密可用于实现数字签名。</p>
+<p>由于私钥只有生成密钥对的人保留，通过使用私钥对报文的散列码进行加密处理生成数字签名，<br>然后将报文以及数字签名一起发送给对方;<br>接收方使用公钥对报文散列码进行解密，解密成功则保证了报文的完整性，也验证了发送方是指定的对象。</p>
+<p>数字签名需要依赖具有认证中心支撑的公钥基础设施PKI。</p>
+<h4 id="公钥认证"><a href="#公钥认证" class="headerlink" title="公钥认证"></a>公钥认证</h4><p>公钥认证，即证实一个公钥属于某个特定的实体。<br>而将公钥和特定实体绑定通常由<strong>认证中心CA</strong>完成，它的职责就是使识别和发行<strong>证书</strong>合法化。<br>它的主要职责：</p>
+<ul>
+<li>证实一个实体的真实身份</li>
+<li>负责生成一个将身份和公钥绑定的证书，即CA Certificate</li>
+</ul>
+<img src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IlNFUVVFTkNFIiBoZWlnaHQ9IjM3NnB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6NTM5cHg7aGVpZ2h0OjM3NnB4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDUzOSAzNzYiIHdpZHRoPSI1MzlweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PGRlZnMvPjxnPjxnPjx0aXRsZT5Pd25lcjwvdGl0bGU+PHJlY3QgZmlsbD0iIzAwMDAwMCIgZmlsbC1vcGFjaXR5PSIwLjAwMDAwIiBoZWlnaHQ9IjMwNS4wNjI1IiB3aWR0aD0iOCIgeD0iMzAuODU2IiB5PSIzNi4yOTY5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWRhc2hhcnJheTo1LDU7IiB4MT0iMzQiIHgyPSIzNCIgeTE9IjM2LjI5NjkiIHkyPSIzNDEuMzU5NCIvPjwvZz48Zz48dGl0bGU+VXNlcjwvdGl0bGU+PHJlY3QgZmlsbD0iIzAwMDAwMCIgZmlsbC1vcGFjaXR5PSIwLjAwMDAwIiBoZWlnaHQ9IjMwNS4wNjI1IiB3aWR0aD0iOCIgeD0iMjgwLjM4NTciIHk9IjM2LjI5NjkiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtZGFzaGFycmF5OjUsNTsiIHgxPSIyODMuNDMwNyIgeDI9IjI4My40MzA3IiB5MT0iMzYuMjk2OSIgeTI9IjM0MS4zNTk0Ii8+PC9nPjxnPjx0aXRsZT5DQTwvdGl0bGU+PHJlY3QgZmlsbD0iIzAwMDAwMCIgZmlsbC1vcGFjaXR5PSIwLjAwMDAwIiBoZWlnaHQ9IjMwNS4wNjI1IiB3aWR0aD0iOCIgeD0iNTEyLjgzNCIgeT0iMzYuMjk2OSIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41O3N0cm9rZS1kYXNoYXJyYXk6NSw1OyIgeDE9IjUxNi4xNTc3IiB4Mj0iNTE2LjE1NzciIHkxPSIzNi4yOTY5IiB5Mj0iMzQxLjM1OTQiLz48L2c+PGcgY2xhc3M9InBhcnRpY2lwYW50IHBhcnRpY2lwYW50LWhlYWQiIGRhdGEtcGFydGljaXBhbnQ9Ik8iPjxyZWN0IGZpbGw9IiNFMkUyRjAiIGhlaWdodD0iMzAuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTkuNzExOSIgeD0iNSIgeT0iNSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQ1LjcxMTkiIHg9IjEyIiB5PSIyNC45OTUxIj5Pd25lcjwvdGV4dD48L2c+PGcgY2xhc3M9InBhcnRpY2lwYW50IHBhcnRpY2lwYW50LXRhaWwiIGRhdGEtcGFydGljaXBhbnQ9Ik8iPjxyZWN0IGZpbGw9IiNFMkUyRjAiIGhlaWdodD0iMzAuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNTkuNzExOSIgeD0iNSIgeT0iMzQwLjM1OTQiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI0NS43MTE5IiB4PSIxMiIgeT0iMzYwLjM1NDUiPk93bmVyPC90ZXh0PjwvZz48ZyBjbGFzcz0icGFydGljaXBhbnQgcGFydGljaXBhbnQtaGVhZCIgZGF0YS1wYXJ0aWNpcGFudD0iVSI+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0NS45MTAyIiB4PSIyNjEuNDMwNyIgeT0iNSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjMxLjkxMDIiIHg9IjI2OC40MzA3IiB5PSIyNC45OTUxIj5Vc2VyPC90ZXh0PjwvZz48ZyBjbGFzcz0icGFydGljaXBhbnQgcGFydGljaXBhbnQtdGFpbCIgZGF0YS1wYXJ0aWNpcGFudD0iVSI+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0NS45MTAyIiB4PSIyNjEuNDMwNyIgeT0iMzQwLjM1OTQiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIzMS45MTAyIiB4PSIyNjguNDMwNyIgeT0iMzYwLjM1NDUiPlVzZXI8L3RleHQ+PC9nPjxnIGNsYXNzPSJwYXJ0aWNpcGFudCBwYXJ0aWNpcGFudC1oZWFkIiBkYXRhLXBhcnRpY2lwYW50PSJDQSI+PHJlY3QgZmlsbD0iI0UyRTJGMCIgaGVpZ2h0PSIzMC4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIzMy4zNTI1IiB4PSI1MDAuMTU3NyIgeT0iNSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE5LjM1MjUiIHg9IjUwNy4xNTc3IiB5PSIyNC45OTUxIj5DQTwvdGV4dD48L2c+PGcgY2xhc3M9InBhcnRpY2lwYW50IHBhcnRpY2lwYW50LXRhaWwiIGRhdGEtcGFydGljaXBhbnQ9IkNBIj48cmVjdCBmaWxsPSIjRTJFMkYwIiBoZWlnaHQ9IjMwLjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjMzLjM1MjUiIHg9IjUwMC4xNTc3IiB5PSIzNDAuMzU5NCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE5LjM1MjUiIHg9IjUwNy4xNTc3IiB5PSIzNjAuMzU0NSI+Q0E8L3RleHQ+PC9nPjxnIGNsYXNzPSJtZXNzYWdlIiBkYXRhLXBhcnRpY2lwYW50LTE9Ik8iIGRhdGEtcGFydGljaXBhbnQtMj0iTyI+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjM0Ljg1NiIgeDI9Ijc2Ljg1NiIgeTE9IjY3LjQyOTciIHkyPSI2Ny40Mjk3Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9Ijc2Ljg1NiIgeDI9Ijc2Ljg1NiIgeTE9IjY3LjQyOTciIHkyPSI4MC40Mjk3Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjM1Ljg1NiIgeDI9Ijc2Ljg1NiIgeTE9IjgwLjQyOTciIHkyPSI4MC40Mjk3Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI0NS44NTYsNzYuNDI5NywzNS44NTYsODAuNDI5Nyw0NS44NTYsODQuNDI5Nyw0MS44NTYsODAuNDI5NyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIzNS41Mjk4IiB4PSI0MS44NTYiIHk9IjYyLjM2MzgiPmdlbmVyYXRlIHB1YmxpYyBrZXkgYW5kIHByaXZhdGUga2V5PC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJPIiBkYXRhLXBhcnRpY2lwYW50LTI9IkNBIj48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjUwNC44MzQsMTA1LjU2MjUsNTE0LjgzNCwxMDkuNTYyNSw1MDQuODM0LDExMy41NjI1LDUwOC44MzQsMTA5LjU2MjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMzQuODU2IiB4Mj0iNTEwLjgzNCIgeTE9IjEwOS41NjI1IiB5Mj0iMTA5LjU2MjUiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyNTMuMDM2NiIgeD0iNDEuODU2IiB5PSIxMDQuNDk2NiI+Z2VuZXJhdGUgQ0EgY2VydGlmaWNhdGUgd2l0aCBwdWJsaWMga2V5PC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJVIiBkYXRhLXBhcnRpY2lwYW50LTI9Ik8iPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDUuODU2LDEzNC42OTUzLDM1Ljg1NiwxMzguNjk1Myw0NS44NTYsMTQyLjY5NTMsNDEuODU2LDEzOC42OTUzIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjM5Ljg1NiIgeDI9IjI4My4zODU3IiB5MT0iMTM4LjY5NTMiIHkyPSIxMzguNjk1MyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE2Ny44MjU3IiB4PSI1MS44NTYiIHk9IjEzMy42Mjk0Ij5nZXQgb3duZXIncyBDQSBjZXJ0aWZpY2F0ZTwvdGV4dD48L2c+PGcgY2xhc3M9Im1lc3NhZ2UiIGRhdGEtcGFydGljaXBhbnQtMT0iVSIgZGF0YS1wYXJ0aWNpcGFudC0yPSJDQSI+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI1MDQuODM0LDE2My44MjgxLDUxNC44MzQsMTY3LjgyODEsNTA0LjgzNCwxNzEuODI4MSw1MDguODM0LDE2Ny44MjgxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjI4NC4zODU3IiB4Mj0iNTEwLjgzNCIgeTE9IjE2Ny44MjgxIiB5Mj0iMTY3LjgyODEiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMjguNzQ5NSIgeD0iMjkxLjM4NTciIHk9IjE2Mi43NjIyIj52ZXJpZnkgQ0EgY2VydGlmaWNhdGU8L3RleHQ+PC9nPjxnIGNsYXNzPSJtZXNzYWdlIiBkYXRhLXBhcnRpY2lwYW50LTE9IlUiIGRhdGEtcGFydGljaXBhbnQtMj0iVSI+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjI4NC4zODU3IiB4Mj0iMzI2LjM4NTciIHkxPSIxOTYuOTYwOSIgeTI9IjE5Ni45NjA5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjMyNi4zODU3IiB4Mj0iMzI2LjM4NTciIHkxPSIxOTYuOTYwOSIgeTI9IjIwOS45NjA5Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjI4NS4zODU3IiB4Mj0iMzI2LjM4NTciIHkxPSIyMDkuOTYwOSIgeTI9IjIwOS45NjA5Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIyOTUuMzg1NywyMDUuOTYwOSwyODUuMzg1NywyMDkuOTYwOSwyOTUuMzg1NywyMTMuOTYwOSwyOTEuMzg1NywyMDkuOTYwOSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIxOC40NDgyIiB4PSIyOTEuMzg1NyIgeT0iMTkxLjg5NSI+Z2V0IHB1YmxpYyBrZXkgZnJvbSBDQSBjZXJ0aWZpY2F0ZTwvdGV4dD48L2c+PGcgY2xhc3M9Im1lc3NhZ2UiIGRhdGEtcGFydGljaXBhbnQtMT0iVSIgZGF0YS1wYXJ0aWNpcGFudC0yPSJVIj48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMjg0LjM4NTciIHgyPSIzMjYuMzg1NyIgeTE9IjIzOS4wOTM4IiB5Mj0iMjM5LjA5MzgiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMzI2LjM4NTciIHgyPSIzMjYuMzg1NyIgeTE9IjIzOS4wOTM4IiB5Mj0iMjUyLjA5MzgiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMjg1LjM4NTciIHgyPSIzMjYuMzg1NyIgeTE9IjI1Mi4wOTM4IiB5Mj0iMjUyLjA5MzgiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjI5NS4zODU3LDI0OC4wOTM4LDI4NS4zODU3LDI1Mi4wOTM4LDI5NS4zODU3LDI1Ni4wOTM4LDI5MS4zODU3LDI1Mi4wOTM4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTk4LjExMDQiIHg9IjI5MS4zODU3IiB5PSIyMzQuMDI3OCI+dXNlIHB1YmxpYyBrZXkgdG8gZW5jcnlwdCBkYXRhPC90ZXh0PjwvZz48ZyBjbGFzcz0ibWVzc2FnZSIgZGF0YS1wYXJ0aWNpcGFudC0xPSJVIiBkYXRhLXBhcnRpY2lwYW50LTI9Ik8iPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDUuODU2LDI3Ny4yMjY2LDM1Ljg1NiwyODEuMjI2Niw0NS44NTYsMjg1LjIyNjYsNDEuODU2LDI4MS4yMjY2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjM5Ljg1NiIgeDI9IjI4My4zODU3IiB5MT0iMjgxLjIyNjYiIHkyPSIyODEuMjI2NiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjExOC41ODA2IiB4PSI1MS44NTYiIHk9IjI3Ni4xNjA2Ij5zZW5kIGVuY3J5cHQgZGF0YTwvdGV4dD48L2c+PGcgY2xhc3M9Im1lc3NhZ2UiIGRhdGEtcGFydGljaXBhbnQtMT0iTyIgZGF0YS1wYXJ0aWNpcGFudC0yPSJPIj48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheToyLDI7IiB4MT0iMzQuODU2IiB4Mj0iNzYuODU2IiB5MT0iMzEwLjM1OTQiIHkyPSIzMTAuMzU5NCIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtZGFzaGFycmF5OjIsMjsiIHgxPSI3Ni44NTYiIHgyPSI3Ni44NTYiIHkxPSIzMTAuMzU5NCIgeTI9IjMyMy4zNTk0Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6MiwyOyIgeDE9IjM1Ljg1NiIgeDI9Ijc2Ljg1NiIgeTE9IjMyMy4zNTk0IiB5Mj0iMzIzLjM1OTQiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjQ1Ljg1NiwzMTkuMzU5NCwzNS44NTYsMzIzLjM1OTQsNDUuODU2LDMyNy4zNTk0LDQxLjg1NiwzMjMuMzU5NCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE4MC43MjQxIiB4PSI0MS44NTYiIHk9IjMwNS4yOTM1Ij5kZWNyeXB0IGRhdGEgYnkgcHJpdmF0ZSBrZXk8L3RleHQ+PC9nPjwhLS1TUkM9W1RQMTEzaThXNDROdGRFQmxORksyQmFvUTdlMEwxdzFxZ2FJYjFBT3J0NXY4NnFrREJrVkRkdl9fbi1sMHJiWWw3S0UtNzBOZTIyYnlYTExTZ0poR2hYTDJlY2FrYTZUU0FMemc5bFl2VnJZM0VvTGVEeTA3a25JU3ZxdFNqUE13UXM0ZU11eE1iRjViLUxPdjJCTlJDd09JeFhJX1JaUERTTHFlczM3enRnbExlcWV0WGtkdkxwbDdHbkVVR0N3NHYxYzNQaHRkWWZHeDdiUVZabW9xS19JZl9pR1JdLS0+PC9nPjwvc3ZnPg=='>
+
+<p>涉及几个关键元素：</p>
+<ul>
+<li>CA证书</li>
+<li>公钥</li>
+<li>私钥，私钥只保存在拥有者那</li>
+</ul>
+<h2 id="SSL证书格式"><a href="#SSL证书格式" class="headerlink" title="SSL证书格式"></a>SSL证书格式</h2><p>公钥证书的格式标准为<strong>X509</strong>，可使用openssl工具进行处理</p>
+<p>编码格式：</p>
+<ul>
+<li>DER编码, 二进制格式</li>
+<li>PEM编码, ASCII文本格式，经过base64处理</li>
+</ul>
+<p>各种文件类型：</p>
+<ul>
+<li>.DER .CER，文件是<strong>二进制格式</strong>，只保存证书，不保存私钥，多用于Java和Windows服务器端</li>
+<li>.PEM，一般是<strong>文本格式</strong>，可保存证书，可保存私钥; 常用语apache&#x2F;nginx</li>
+<li>.CRT，可能使用PEM编码，也可能使用DER编码，不保存私钥。</li>
+<li>.PFX .P12，二进制格式，同时包含证书和私钥，一般有密码保护; 一般用于Windows IIS以及Mac。</li>
+<li>.JKS，二进制格式，同时包含证书和私钥，一般有密码保护; java专用格式，使用keytool进行处理，一般用于tomcat服务器</li>
+</ul>
+<h3 id="证书链"><a href="#证书链" class="headerlink" title="证书链"></a>证书链</h3><p>证书链(certificate chain)可以有任意长度，但证书链越长，加载速度越慢，信任度越差。<br>合规SSL证书一般有3层：根证书、中间证书、服务器证书。</p>
+<p>在验证证书的有效性的时候，会逐级去寻找签发者的证书，直至根证书为结束，<br>然后通过公钥一级一级验证数字签名的正确性。</p>
+<h3 id="openssl-常用命令"><a href="#openssl-常用命令" class="headerlink" title="openssl 常用命令"></a>openssl 常用命令</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 获取证书</span></span><br><span class="line">openssl s_client -showcerts -connect &lt;server host&gt;:443</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看证书</span></span><br><span class="line">openssl x509 -noout -text -<span class="keyword">in</span> &lt;certificate file&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 校验证书</span></span><br><span class="line">openssl verify -CAfile &lt;certificate chain file&gt; &lt;certificate file&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 将pem转换为der, 或者从der转换为pem</span></span><br><span class="line">openssl x509 -inform &lt;pem/der&gt; -<span class="keyword">in</span> &lt;input certificate file&gt; -outform &lt;der/pem&gt; -out &lt;out certificate file&gt;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Java证书管理"><a href="#Java证书管理" class="headerlink" title="Java证书管理"></a>Java证书管理</h3><p>在Java中通过keytool来对证书以及密钥进行管理，证书的格式为jks</p>
+<ul>
+<li>keystore, 一般存储<strong>自己的私钥和公钥</strong>，需要<strong>密码保护</strong>，不可被分享, 向客户端提供所需的证书和公钥信息</li>
+<li>truststore， 本质上也是keystore, 只是用来存储<strong>信任对象的公钥</strong>， 可被分享，用于验证服务端是否可信</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 查看证书</span></span><br><span class="line">keytool -list -keystore &lt;keystore file&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 添加证书</span></span><br><span class="line">keytool -import -<span class="built_in">alias</span> &lt;<span class="built_in">alias</span> name&gt; -file &lt;certificate file&gt; -keystore &lt;keystore file&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 删除证书</span></span><br><span class="line">keytool -delete -keystore &lt;keystore file&gt; -<span class="built_in">alias</span> &lt;<span class="built_in">alias</span> name&gt;</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a href="https://www.ruanyifeng.com/blog/2014/02/ssl_tls.html">SSL&#x2F;TLS协议运行机制的概述</a> </li>
+<li><a href="https://blog.freessl.cn/ssl-cert-format-introduce/">SSL 证书格式普及，PEM、CER、JKS、PKCS12</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>it</category>
+      </categories>
+      <tags>
+        <tag>https</tag>
+        <tag>ssl</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Security的认证设计</title>
+    <url>/2021/02/spring-security%E7%9A%84%E8%AE%A4%E8%AF%81%E8%AE%BE%E8%AE%A1/</url>
+    <content><![CDATA[<p>通过对应的<code>AuthenticationProvider</code>对特定的<code>Authentication</code>进行认证处理。</p>
+<span id="more"></span>
+
+<p><img src="/2021/02/spring-security%E7%9A%84%E8%AE%A4%E8%AF%81%E8%AE%BE%E8%AE%A1/authorization-flow.png"></p>
+<ul>
+<li>SecurityContextHolder, 认证成功后, 可以在后续的处理中通过它来获取认证后的用户信息</li>
+</ul>
+<h2 id="Authentication-Design"><a href="#Authentication-Design" class="headerlink" title="Authentication Design"></a>Authentication Design</h2><p><img src="/2021/02/spring-security%E7%9A%84%E8%AE%A4%E8%AF%81%E8%AE%BE%E8%AE%A1/authentication-design.png"><br><img src="/2021/02/spring-security%E7%9A%84%E8%AE%A4%E8%AF%81%E8%AE%BE%E8%AE%A1/provider-manager.png"></p>
+<h2 id="常见的认证方式"><a href="#常见的认证方式" class="headerlink" title="常见的认证方式"></a>常见的认证方式</h2><h3 id="DaoAuthenticationProvider"><a href="#DaoAuthenticationProvider" class="headerlink" title="DaoAuthenticationProvider"></a>DaoAuthenticationProvider</h3><p>用于对<strong>username&#x2F;password</strong>这种形式的认证信息进行校验,<br>认证信息通过<code>UsernamePasswordAuthenticationToken</code>进行包装.<br>其中password可以从本地服务中获取.</p>
+<p><img src="/2021/02/spring-security%E7%9A%84%E8%AE%A4%E8%AF%81%E8%AE%BE%E8%AE%A1/dao-authentication-provider.png"></p>
+<p><img src="/2021/02/spring-security%E7%9A%84%E8%AE%A4%E8%AF%81%E8%AE%BE%E8%AE%A1/dao-authentication-provider-design.png"></p>
+<p>通过<code>UserDetailsService</code>来查询username来获取对应的UserDetails用户信息, 包括用于校验的密码信息.</p>
+<p>由于密码往往通过某种加密方式加密后保存,<br>所以需要通过PasswordEncoder对输入的password进行加密后, 再同UserDetails中的密码信息进行比较.</p>
+<h4 id="对FormLogin的支持"><a href="#对FormLogin的支持" class="headerlink" title="对FormLogin的支持"></a>对FormLogin的支持</h4><p><img src="/2021/02/spring-security%E7%9A%84%E8%AE%A4%E8%AF%81%E8%AE%BE%E8%AE%A1/form-login.png"></p>
+<p><img src="/2021/02/spring-security%E7%9A%84%E8%AE%A4%E8%AF%81%E8%AE%BE%E8%AE%A1/form-login-design.png"></p>
+<ul>
+<li>LoginUrlAuthenticationEntryPoint, 在认证失败时, 重导向到登录页面</li>
+<li>UsernamePasswordAuthenticationFilter处理登录页面的认证请求</li>
+</ul>
+<h4 id="对Basic的支持"><a href="#对Basic的支持" class="headerlink" title="对Basic的支持"></a>对Basic的支持</h4><p><img src="/2021/02/spring-security%E7%9A%84%E8%AE%A4%E8%AF%81%E8%AE%BE%E8%AE%A1/basic-login-flow.png"></p>
+<p><img src="/2021/02/spring-security%E7%9A%84%E8%AE%A4%E8%AF%81%E8%AE%BE%E8%AE%A1/basic-login-design.png"></p>
+<ul>
+<li>BasicAuthenticationEntryPoint, 在认证失败时返回WWW-Authenticate头信息</li>
+<li>BasicAuthenticationFilter, 处理Basic认证请求</li>
+</ul>
+<h3 id="Pre-Authentication-Framework对第三方认证的集成"><a href="#Pre-Authentication-Framework对第三方认证的集成" class="headerlink" title="Pre-Authentication Framework对第三方认证的集成"></a>Pre-Authentication Framework对第三方认证的集成</h3><p><img src="/2021/02/spring-security%E7%9A%84%E8%AE%A4%E8%AF%81%E8%AE%BE%E8%AE%A1/Pre-Authentication-design.png"></p>
+<ul>
+<li>AbstractPreAuthenticatedProcessingFilter, Pre-Authentication Framework的入口</li>
+<li>PreAuthenticatedAuthenticationToken, 包含第三方的用户校验信息或者认证成功后的用户信息</li>
+<li>PreAuthenticatedAuthenticationProvider, Pre-Authentication Framework默认的校验器</li>
+<li>AuthenticationUserDetailsService, 同第三方进行校验, 在校验成功后获取系统中的用户信息</li>
+</ul>
+<h2 id="Session管理"><a href="#Session管理" class="headerlink" title="Session管理"></a>Session管理</h2><p>Http Session相关的功能都在以下组件中进行处理:</p>
+<ul>
+<li>SessionManagementFilter</li>
+<li>SessionAuthenticationStrategy, 对认证成功的用户进行session校验</li>
+<li>SessionRegistry, 存储session和认证后的用户信息的键值对</li>
+</ul>
+<p>主要处理以下问题:</p>
+<ul>
+<li>防御会话固定攻击(session-fixation protection attack)<ul>
+<li>SessionFixationProtectionStrategy</li>
+</ul>
+</li>
+<li>检查Session是否超时<ul>
+<li>InvalidSessionStrategy, 对无效session进行处理</li>
+</ul>
+</li>
+<li>限制用户的同时登录数<ul>
+<li>ConcurrentSessionFilter</li>
+<li>ConcurrentSessionControlAuthenticationStrategy</li>
+</ul>
+</li>
+</ul>
+<h2 id="登出处理"><a href="#登出处理" class="headerlink" title="登出处理"></a>登出处理</h2><p>登出时会对用户相关的登录信息进行清理:</p>
+<ul>
+<li>session无效化</li>
+<li>清理SecurityContextHolder</li>
+<li>重导向到登录页面</li>
+<li>清理Cookies</li>
+</ul>
+<p>通过LogoutHandler进行清理, 不可以抛出异常.</p>
+<p>LogoutSuccessHandler在logout成功后,<br>进行重定向(默认为&#x2F;login?logout)或者返回指定的http status code(默认为200).</p>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a href="https://docs.spring.io/spring-security/site/docs/5.4.2/reference/html5/#servlet-authentication">Servlet Authentication</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>spring</category>
+      </categories>
+      <tags>
+        <tag>spring</tag>
+        <tag>web</tag>
+        <tag>spring security</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>NextJS Guide</title>
+    <url>/2025/05/nextjs-guide/</url>
+    <content><![CDATA[<p>NextJS 快速入门</p>
+<span id="more"></span>
+<h2 id="app-router">App Router</h2>
+<p>nextjs use <code>app router</code> for routing, it follows
+<strong>directory hierarchy</strong> and requires below files in
+directory to enable routing:</p>
+<ul>
+<li><code>page.tsx</code>, page component</li>
+<li><code>route.tsx</code>, API endpoint</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># directory hierarchy example for routing</span></span><br><span class="line">app                         --&gt; /</span><br><span class="line">  |-- items                 --&gt; /items</span><br><span class="line">        |-- [&lt;item-id&gt;]     --&gt; /items/&lt;item-id&gt;</span><br></pre></td></tr></table></figure>
+<p>get path variables from dynamic routing
+<code>[&lt;item-id&gt;]</code> by <code>params</code> parameters and
+<code>params</code> could by customized by
+<code>function generateStaticParams(&#123; params &#125;)</code>, details please
+refer to <a
+href="https://nextjs.org/docs/app/api-reference/functions/generate-static-params">generateStaticParams</a>.</p>
+<h3 id="route-files">Route files</h3>
+<figure>
+<img src="route-files.png" alt="route files" />
+<figcaption aria-hidden="true">route files</figcaption>
+</figure>
+<h3 id="navigation">Navigation</h3>
+<ul>
+<li>use <code>&lt;Link&gt;</code> component</li>
+<li>use <code>useRouter</code> hook</li>
+</ul>
+<h2 id="component">Component</h2>
+<p>Component is <code>Server Component</code> by default.</p>
+<h3 id="pure-server-component">Pure Server Component</h3>
+<ul>
+<li>use <code>async/await</code>
+<ul>
+<li><strong>async</strong> Page</li>
+<li><strong>await</strong> data from API/db</li>
+</ul></li>
+</ul>
+<figure class="highlight tsx"><table><tr><td class="code"><pre><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> <span class="keyword">async</span> <span class="keyword">function</span> <span class="title function_">Page</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="comment">// get from API</span></span><br><span class="line"><span class="comment">//   const data = await fetch(&#x27;https://api.vercel.app/blog&#x27;)</span></span><br><span class="line"><span class="comment">//   const allPosts = await data.json()</span></span><br><span class="line">  </span><br><span class="line">  <span class="comment">// get from DB</span></span><br><span class="line">  <span class="keyword">const</span> allPosts = <span class="keyword">await</span> db.<span class="title function_">select</span>().<span class="title function_">from</span>(posts)</span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="language-xml"><span class="tag">&lt;<span class="name">ul</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      &#123;allPosts.map((post) =&gt; (</span></span><br><span class="line"><span class="language-xml">        <span class="tag">&lt;<span class="name">li</span> <span class="attr">key</span>=<span class="string">&#123;post.id&#125;</span>&gt;</span>&#123;post.title&#125;<span class="tag">&lt;/<span class="name">li</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      ))&#125;</span></span><br><span class="line"><span class="language-xml">    <span class="tag">&lt;/<span class="name">ul</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="client-component">Client Component</h3>
+<ul>
+<li>require <code>'use client'</code> at top of component file</li>
+<li>not async Page</li>
+<li>get data from client state, such like <code>useState</code>,
+<code>RTK</code> and so on.</li>
+</ul>
+<figure class="highlight tsx"><table><tr><td class="code"><pre><span class="line"><span class="string">&#x27;use client&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> <span class="keyword">function</span> <span class="title function_">Page</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> &#123; data, error, isLoading &#125; = <span class="title function_">useQueryByRTK</span>()</span><br><span class="line"> </span><br><span class="line">  <span class="keyword">if</span> (isLoading) <span class="keyword">return</span> <span class="language-xml"><span class="tag">&lt;<span class="name">div</span>&gt;</span>Loading...<span class="tag">&lt;/<span class="name">div</span>&gt;</span></span></span><br><span class="line">  <span class="keyword">if</span> (error) <span class="keyword">return</span> <span class="language-xml"><span class="tag">&lt;<span class="name">div</span>&gt;</span>Error: &#123;error.message&#125;<span class="tag">&lt;/<span class="name">div</span>&gt;</span></span></span><br><span class="line"> </span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="language-xml"><span class="tag">&lt;<span class="name">ul</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      &#123;data.map((post: &#123; id: string; title: string &#125;) =&gt; (</span></span><br><span class="line"><span class="language-xml">        <span class="tag">&lt;<span class="name">li</span> <span class="attr">key</span>=<span class="string">&#123;post.id&#125;</span>&gt;</span>&#123;post.title&#125;<span class="tag">&lt;/<span class="name">li</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      ))&#125;</span></span><br><span class="line"><span class="language-xml">    <span class="tag">&lt;/<span class="name">ul</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="mixture-for-server-component-with-client-component">Mixture for
+Server Component with Client Component</h3>
+<ul>
+<li>use React's <code>use</code> hook to <strong>stream data</strong>
+with <code>Promise</code> from the server to client in Client
+Component.</li>
+<li>use streaming to break up the page's HTML into smaller chunks and
+send those chunks from the server to the client.</li>
+<li>wrap Client component with loading component
+<ul>
+<li>use <code>loading.tsx</code> file in route directory</li>
+<li>wrap with <code>Suspense</code> by manual</li>
+</ul></li>
+</ul>
+<figure class="highlight tsx"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Server Component part</span></span><br><span class="line"><span class="keyword">import</span> <span class="title class_">Posts</span> <span class="keyword">from</span> <span class="string">&#x27;@/app/ui/posts</span></span><br><span class="line"><span class="string">import &#123; Suspense &#125; from &#x27;</span>react<span class="string">&#x27;</span></span><br><span class="line"><span class="string"> </span></span><br><span class="line"><span class="string">export default function Page() &#123;</span></span><br><span class="line"><span class="string">  // Don&#x27;</span>t <span class="keyword">await</span> the data fetching <span class="keyword">function</span></span><br><span class="line">  <span class="keyword">const</span> posts = <span class="title function_">getPosts</span>()</span><br><span class="line"> </span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="language-xml"><span class="tag">&lt;<span class="name">Suspense</span> <span class="attr">fallback</span>=<span class="string">&#123;</span>&lt;<span class="attr">div</span>&gt;</span>Loading...<span class="tag">&lt;/<span class="name">div</span>&gt;</span>&#125;&gt;</span></span><br><span class="line"><span class="language-xml">      <span class="tag">&lt;<span class="name">Posts</span> <span class="attr">posts</span>=<span class="string">&#123;posts&#125;</span> /&gt;</span></span></span><br><span class="line"><span class="language-xml">    <span class="tag">&lt;/<span class="name">Suspense</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight tsx"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Client Component part</span></span><br><span class="line"><span class="string">&#x27;use client&#x27;</span></span><br><span class="line"><span class="keyword">import</span> &#123; use &#125; <span class="keyword">from</span> <span class="string">&#x27;react&#x27;</span></span><br><span class="line"> </span><br><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> <span class="keyword">function</span> <span class="title function_">Posts</span>(<span class="params">&#123;</span></span><br><span class="line"><span class="params">  posts,</span></span><br><span class="line"><span class="params">&#125;: &#123;</span></span><br><span class="line"><span class="params">  posts: <span class="built_in">Promise</span>&lt;&#123; id: <span class="built_in">string</span>; title: <span class="built_in">string</span> &#125;[]&gt;</span></span><br><span class="line"><span class="params">&#125;</span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> allPosts = <span class="title function_">use</span>(posts)</span><br><span class="line"> </span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="language-xml"><span class="tag">&lt;<span class="name">ul</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      &#123;allPosts.map((post) =&gt; (</span></span><br><span class="line"><span class="language-xml">        <span class="tag">&lt;<span class="name">li</span> <span class="attr">key</span>=<span class="string">&#123;post.id&#125;</span>&gt;</span>&#123;post.title&#125;<span class="tag">&lt;/<span class="name">li</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      ))&#125;</span></span><br><span class="line"><span class="language-xml">    <span class="tag">&lt;/<span class="name">ul</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="server-render-features">Server Render Features</h2>
+<h3 id="server-function">Server Function</h3>
+<ul>
+<li>place <code>use server</code> directive at the top of an
+asynchronous function</li>
+</ul>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="keyword">export</span> <span class="keyword">async</span> <span class="keyword">function</span> <span class="title function_">createPost</span>(<span class="params"><span class="attr">formData</span>: <span class="title class_">FormData</span></span>) &#123;</span><br><span class="line">  <span class="string">&#x27;use server&#x27;</span></span><br><span class="line">  <span class="keyword">const</span> title = formData.<span class="title function_">get</span>(<span class="string">&#x27;title&#x27;</span>)</span><br><span class="line">  <span class="keyword">const</span> content = formData.<span class="title function_">get</span>(<span class="string">&#x27;content&#x27;</span>)</span><br><span class="line"> </span><br><span class="line">  <span class="comment">// Update data</span></span><br><span class="line">  <span class="comment">// Revalidate cache</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="invoke-a-server-function">invoke a Server Function</h4>
+<ul>
+<li><strong>Forms</strong> in Server and Client Components</li>
+<li><strong>Event Handlers</strong> in Client Components</li>
+</ul>
+<figure class="highlight tsx"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; createPost &#125; <span class="keyword">from</span> <span class="string">&#x27;@/app/actions&#x27;</span></span><br><span class="line"> </span><br><span class="line"><span class="keyword">export</span> <span class="keyword">function</span> <span class="title function_">Form</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="language-xml"><span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">&#123;createPost&#125;</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;text&quot;</span> <span class="attr">name</span>=<span class="string">&quot;title&quot;</span> /&gt;</span></span></span><br><span class="line"><span class="language-xml">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;text&quot;</span> <span class="attr">name</span>=<span class="string">&quot;content&quot;</span> /&gt;</span></span></span><br><span class="line"><span class="language-xml">      <span class="tag">&lt;<span class="name">button</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span>&gt;</span>Create<span class="tag">&lt;/<span class="name">button</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">    <span class="tag">&lt;/<span class="name">form</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight tsx"><table><tr><td class="code"><pre><span class="line"><span class="string">&#x27;use client&#x27;</span></span><br><span class="line"> </span><br><span class="line"><span class="keyword">import</span> &#123; useActionState &#125; <span class="keyword">from</span> <span class="string">&#x27;react&#x27;</span></span><br><span class="line"><span class="keyword">import</span> &#123; createPost &#125; <span class="keyword">from</span> <span class="string">&#x27;@/app/actions&#x27;</span></span><br><span class="line"><span class="keyword">import</span> &#123; <span class="title class_">LoadingSpinner</span> &#125; <span class="keyword">from</span> <span class="string">&#x27;@/app/ui/loading-spinner&#x27;</span></span><br><span class="line"> </span><br><span class="line"><span class="keyword">export</span> <span class="keyword">function</span> <span class="title function_">Button</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> [response, action, pending] = <span class="title function_">useActionState</span>(createPost, <span class="literal">false</span>)</span><br><span class="line"> </span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="language-xml"><span class="tag">&lt;<span class="name">button</span> <span class="attr">onClick</span>=<span class="string">&#123;async</span> () =&gt;</span> action()&#125;&gt;</span></span><br><span class="line"><span class="language-xml">      &#123;pending ? <span class="tag">&lt;<span class="name">LoadingSpinner</span> /&gt;</span> : &#x27;Create Post&#x27;&#125;</span></span><br><span class="line"><span class="language-xml">    <span class="tag">&lt;/<span class="name">button</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>use <code>useActionState</code> to get more status of server function
+invokation.</p>
+<h3 id="error-handler-in-server">Error Handler In Server</h3>
+<ul>
+<li>define a <strong>fixed Error Response</strong> and return it when
+<strong>expected</strong> error is raised.</li>
+<li><strong>Error Boundary</strong> in <code>error.tsx</code> file in
+route directory to handle <strong>uncaught</strong> exceptions, it only
+exists for client component.</li>
+</ul>
+<h2 id="reference">Reference</h2>
+<ul>
+<li><a href="https://nextjs.org/docs">NextJS Document</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>quick-guide</category>
+      </categories>
+      <tags>
+        <tag>quick-guide</tag>
+        <tag>NextJS</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Security的框架设计</title>
+    <url>/2021/08/spring-security%E7%9A%84%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1/</url>
+    <content><![CDATA[<p>Spring Security的架构是完全基于标准的Servlet过滤器进行实现的,<br>所以只要是基于Java Servlet框架就可以集成它.</p>
+<p>整个Spring Security的入口为<code>FilterChainProxy</code>.</p>
+<span id="more"></span>
+
+<p><img src="/2021/08/spring-security%E7%9A%84%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1/spring-security-entry.png"></p>
+<p>在Spring中定义名为<code>springSecurityFilterChain</code>的FilterChainProxy的bean实例,<br>然后通过DelegatingFilterProxy获取它, 并将它插入到Servlet的过滤器链中.</p>
+<h2 id="过滤器链的设计"><a href="#过滤器链的设计" class="headerlink" title="过滤器链的设计"></a>过滤器链的设计</h2><p>FilterChainProxy的内部维护了多个过滤器链(SecurityFilterChain),<br>会按照<code>Order</code>注解定义的顺序, 每个SecurityFilterChain通过<code>RequestMatcher</code>对请求url进行匹配,<br>并使用第一个匹配的SecurityFilterChain对请求进行处理.<br>所以每个SecurityFilterChain的匹配规则和顺序.</p>
+<ul>
+<li>AutowiredWebSecurityConfigurersIgnoreParents#getWebSecurityConfigurers,<br>获取所有实现了<code>WebSecurityConfigurer接口</code>的SecurityFilterChain的配置</li>
+<li>WebSecurityConfiguration#setFilterChainProxySecurityConfigurer,<br>对所有的SecurityFilterChain的配置根据Order注解进行排序,<br>并加载到WebSecurity中用于生成SecurityFilterChain.</li>
+<li>WebSecurityConfiguration#springSecurityFilterChain,<br>定义了名为<strong>springSecurityFilterChain</strong>的FilterChainProxy的bean实例</li>
+</ul>
+<p><img src="/2021/08/spring-security%E7%9A%84%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1/multi-filter-chains.png"></p>
+<h2 id="怎样配置过滤器链"><a href="#怎样配置过滤器链" class="headerlink" title="怎样配置过滤器链"></a>怎样配置过滤器链</h2><p>Spring Security通过实现WebSecurityConfigurer接口来进行相关的配置,<br>并且它提供了一个默认的抽象实现WebSecurityConfigurerAdapter,<br>它主要提供了3个方面的配置:</p>
+<ul>
+<li>WebSecurityConfigurerAdapter#configure(WebSecurity), 对FilterChainProxy进行配置</li>
+<li>WebSecurityConfigurerAdapter#configure(HttpSecurity), 对SecurityFilterChain进行配置</li>
+<li>WebSecurityConfigurerAdapter#configure(AuthenticationManagerBuilder), 对认证相关进行配置</li>
+</ul>
+<h2 id="核心的过滤器介绍"><a href="#核心的过滤器介绍" class="headerlink" title="核心的过滤器介绍"></a>核心的过滤器介绍</h2><p>每个SecurityFilterChain中都包含多个过滤器(Filter),<br>下面是一般默认加载的Filter.</p>
+<p><img src="/2021/08/spring-security%E7%9A%84%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1/default-security-filters.png"></p>
+<h3 id="SecurityContextPersistenceFilter"><a href="#SecurityContextPersistenceFilter" class="headerlink" title="SecurityContextPersistenceFilter"></a>SecurityContextPersistenceFilter</h3><p>检查当前请求是否有相关的session存在, 如果存在, 则获取保存的SecurityContext;<br>不存在, 则创建新的SecurityContext.</p>
+<p><img src="/2021/08/spring-security%E7%9A%84%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1/security-context-filter.png"></p>
+<p>在请求处理的过程中, 可以通过SecurityContextHolder来获取SecurityContext,<br>SecurityContext中包含了Authentication信息.</p>
+<p><img src="/2021/08/spring-security%E7%9A%84%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1/security-context-holder.png"></p>
+<p>SecurityContextHolder默认将SecurityContext保存在ThreadLocal中</p>
+<h3 id="LogoutFilter"><a href="#LogoutFilter" class="headerlink" title="LogoutFilter"></a>LogoutFilter</h3><p>处理用户的登出请求, 通过LogoutHandler实例对相关的数据进行清理,<br>成功清理完成后调用LogoutSuccessHandler</p>
+<h3 id="AuthenticationFilter"><a href="#AuthenticationFilter" class="headerlink" title="AuthenticationFilter"></a>AuthenticationFilter</h3><p>Authentication描述登录的认证输入信息,<br>通过校验认证输入信息, 得到认证成功后的Authentication信息.<br>认证成功后的Authentication会被保存在SecurityContext中.</p>
+<p>详情会在认证章节进行讨论.</p>
+<h3 id="SessionManagementFilter"><a href="#SessionManagementFilter" class="headerlink" title="SessionManagementFilter"></a>SessionManagementFilter</h3><p>对刚刚认证通过的用户进行session校验, 主要针对同时登录数之类的检查.</p>
+<p>详情会在Session章节进行讨论.</p>
+<h3 id="ExceptionTranslationFilter"><a href="#ExceptionTranslationFilter" class="headerlink" title="ExceptionTranslationFilter"></a>ExceptionTranslationFilter</h3><p>Spring Security中的全局异常处理,<br>用于对ExceptionTranslationFilter之后的所有Filter产生的<br>AccessDeniedException和AuthenticationException进行捕获处理.</p>
+<p><img src="/2021/08/spring-security%E7%9A%84%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1/exception-translation-filter.png"></p>
+<h3 id="FilterSecurityInterceptor"><a href="#FilterSecurityInterceptor" class="headerlink" title="FilterSecurityInterceptor"></a>FilterSecurityInterceptor</h3><p>根据在<strong>SecurityFilterChain</strong>中预先配置的鉴权信息, 对当前请求进行校验.</p>
+<p><img src="/2021/08/spring-security%E7%9A%84%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1/filter-security-interceptor.png"></p>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a href="https://spring.io/guides/topicals/spring-security-architecture">Spring Security Architecture</a></li>
+<li><a href="https://docs.spring.io/spring-security/site/docs/current/reference/html5/">Spring Security Reference</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>spring</category>
+      </categories>
+      <tags>
+        <tag>spring</tag>
+        <tag>web</tag>
+        <tag>spring security</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring Security 鉴权设计</title>
+    <url>/2021/12/spring-security-%E9%89%B4%E6%9D%83%E8%AE%BE%E8%AE%A1/</url>
+    <content><![CDATA[<p>Spring Security提供了以下几种方式进行鉴权:</p>
+<ul>
+<li>pre-invocation handling, 在使用被保护资源之前进行鉴权</li>
+<li>after invocation handling， 对调用后返回的被保护资源， 通过鉴权进行过滤</li>
+<li>FilterSecurityInterceptor, 在请求处理链中根据请求进行鉴权</li>
+<li>基于SpEL(Spring Expression Language)， 通过注解对被保护资源进行鉴权</li>
+</ul>
+<span id="more"></span>
+
+<h2 id="Architecture-Core"><a href="#Architecture-Core" class="headerlink" title="Architecture Core"></a>Architecture Core</h2><h3 id="Pre-Invocation-Handling"><a href="#Pre-Invocation-Handling" class="headerlink" title="Pre-Invocation Handling"></a>Pre-Invocation Handling</h3><p><img src="/2021/12/spring-security-%E9%89%B4%E6%9D%83%E8%AE%BE%E8%AE%A1/pre-invocation-design.png"></p>
+<ul>
+<li>GrantedAuthority, 描述用户的权限</li>
+<li>AccessDecisionManager， 决定用户是否有对受保护资源的访问权限</li>
+</ul>
+<p>在访问受保护资源之前， 对用户进行鉴权</p>
+<p><img src="/2021/12/spring-security-%E9%89%B4%E6%9D%83%E8%AE%BE%E8%AE%A1/pre-invocation-design2.png"></p>
+<h3 id="After-Invocation-Handling"><a href="#After-Invocation-Handling" class="headerlink" title="After Invocation Handling"></a>After Invocation Handling</h3><p>对方法放回的值根据用户权限进行再过滤，只返回用户可以访问的资源</p>
+<p><img src="/2021/12/spring-security-%E9%89%B4%E6%9D%83%E8%AE%BE%E8%AE%A1/after-invocation-design.png"></p>
+<ul>
+<li>PostInvocationAdviceProvider, 当使用@PostAuthorize和@PostFilter注解时调用</li>
+</ul>
+<h2 id="FilterSecurityInterceptor"><a href="#FilterSecurityInterceptor" class="headerlink" title="FilterSecurityInterceptor"></a>FilterSecurityInterceptor</h2><p>在调用链中对请求进行鉴权</p>
+<p><img src="/2021/12/spring-security-%E9%89%B4%E6%9D%83%E8%AE%BE%E8%AE%A1/FilterSecurityInterceptor-flow.png"></p>
+<h2 id="基于SpEL-Spring-Expression-Language"><a href="#基于SpEL-Spring-Expression-Language" class="headerlink" title="基于SpEL(Spring Expression Language)"></a>基于SpEL(Spring Expression Language)</h2><p>Spring Security 3.0引入， 通过注解对被保护资源进行鉴权</p>
+<ul>
+<li>内置校验表达式，返回boolean进行校验，常用的有：<ul>
+<li>hasRole</li>
+<li>hasPermission</li>
+<li>authentication, 访问Authentication对象</li>
+<li>principal，访问当前对象</li>
+</ul>
+</li>
+<li><code>@&lt;bean_name&gt;.&lt;function&gt;</code>, 引用bean中返回boolean的方法</li>
+<li><code>#&lt;path_variable&gt;</code>, 引用方法参数列表中的变量</li>
+</ul>
+<p>通过<code>EnableGlobalMethodSecurity注解</code>开启@Pre和@Post注解功能:</p>
+<ul>
+<li>@PreAuthorize, 对方法是否可以访问进行校验</li>
+<li>@PostAuthorize注解， 可通过returnObject来引用返回值, 校验用户是否可以访问返回对象</li>
+<li>@PreFilter, 对方法参数列表中的Iterable的对象进行过滤，</li>
+<li>@PostFilter注解，对方法返回的Iterable对象进行过滤，可通过filterObject来引用方法返回值</li>
+</ul>
+<p>优先通过PreFilter进行过滤，避免后续大量无效数据的获取</p>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a href="https://docs.spring.io/spring-security/site/docs/current/reference/html5/#servlet-authorization">Spring Security Authorization</a></li>
+<li><a href="https://amos.s2u2m.com/2021/08/spring-security/authorization/">JSR-250</a></li>
+<li><a href="https://amos.s2u2m.com/2021/08/spring-security/authorization/">ACL</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>spring</category>
+      </categories>
+      <tags>
+        <tag>spring</tag>
+        <tag>web</tag>
+        <tag>spring security</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>TypeScript 快速入门</title>
+    <url>/2024/06/typescript-%E5%BF%AB%E9%80%9F%E5%85%A5%E9%97%A8/</url>
+    <content><![CDATA[<p>TS
+是<strong>强类型</strong>语言，<strong>只涉及类型，不涉及值</strong>，所有和值相关的处理，都是由
+JS 完成。通过<strong>编译</strong>，会将 TS 转为 JS 代码。</p>
+<ul>
+<li><strong>类型</strong>相关计算由 TS 负责</li>
+<li><strong>值</strong>相关的计算由 JS 负责</li>
+</ul>
+<span id="more"></span>
+<h2 id="类型系统">类型系统</h2>
+<h3 id="基础类型">基础类型</h3>
+<ul>
+<li>原始类型，它的值是最基本的，不可再分的。
+<ul>
+<li>boolean</li>
+<li>string</li>
+<li>number</li>
+<li>bigint</li>
+<li>symbol, 通过 <code>Symbol()</code>
+函数来生成，它的每个值都是独一无二的。</li>
+</ul></li>
+<li>object，包括对象，数组，函数。</li>
+<li>undefined，表示<strong>未定义</strong>，只有一个值
+<code>undefined</code></li>
+<li>null，表示<strong>空</strong>，只有一个值 <code>null</code></li>
+</ul>
+<p>特殊类型:</p>
+<ul>
+<li>any，类型不确定，可能是任意类型，可以赋予任意类型的值，并可以赋值给其他任何类型，导致类型<strong>污染</strong>，不安全，不推荐使用</li>
+<li>unknown，严格版 any，一般只有经过 type narrowing 之后才能使用</li>
+<li>never，表示不包含任何值，一般用于表达式运算的完整性。</li>
+</ul>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="title function_">fn</span>(<span class="params"><span class="attr">x</span>: <span class="built_in">string</span> | <span class="built_in">number</span></span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">typeof</span> x === <span class="string">&#x27;string&#x27;</span>) &#123;&#125;</span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (<span class="keyword">typeof</span> x === <span class="string">&#x27;number&#x27;</span>) &#123;&#125;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// 此时 x 的类型为 never</span></span><br><span class="line">        x;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在关闭编译设置 <code>noImplicitAny</code> 和
+<code>strictNullChecks</code> 时，被赋值为 <code>undefined</code> 或
+<code>null</code> 的变量，会被类型推断为 <code>any</code>; 若开启，则是
+<code>undefined</code> 或 <code>null</code> 类型。</p>
+<h4 id="字面量">字面量</h4>
+<p>指<strong>直接使用的固定值</strong>，而 ​字面量类型（Literal
+Types）则是对这些固定值的类型约束，用于限制变量或属性只能取特定的字面量值。</p>
+<ul>
+<li>字符串字面量</li>
+<li>数字字面量</li>
+<li>布尔字面量</li>
+<li>对象字面量</li>
+</ul>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 字符串字面量</span></span><br><span class="line"><span class="keyword">type</span> <span class="title class_">Direction</span> = <span class="string">&quot;up&quot;</span> | <span class="string">&quot;down&quot;</span> | <span class="string">&quot;left&quot;</span> | <span class="string">&quot;right&quot;</span>;</span><br><span class="line"><span class="keyword">let</span> <span class="attr">move</span>: <span class="title class_">Direction</span> = <span class="string">&quot;up&quot;</span>; <span class="comment">// 合法</span></span><br><span class="line">move = <span class="string">&quot;jump&quot;</span>;              <span class="comment">// 报错</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 对象字面量</span></span><br><span class="line"><span class="keyword">type</span> <span class="title class_">User</span> = &#123;</span><br><span class="line">  <span class="attr">name</span>: <span class="string">&quot;Alice&quot;</span>;</span><br><span class="line">  <span class="attr">age</span>: <span class="number">25</span>;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="keyword">const</span> <span class="attr">user</span>: <span class="title class_">User</span> = &#123; <span class="attr">name</span>: <span class="string">&quot;Alice&quot;</span>, <span class="attr">age</span>: <span class="number">25</span> &#125;; <span class="comment">// 合法</span></span><br><span class="line"><span class="keyword">const</span> <span class="attr">user2</span>: <span class="title class_">User</span> = &#123; <span class="attr">name</span>: <span class="string">&quot;Bob&quot;</span>, <span class="attr">age</span>: <span class="number">30</span> &#125;;  <span class="comment">// 报错</span></span><br></pre></td></tr></table></figure>
+<h4 id="function">Function</h4>
+<p>函数参数：</p>
+<ul>
+<li>可选参数用 <code>&lt;variable&gt;?: &lt;type&gt;</code>
+来表示，它的类型为 <code>&lt;type | undefined&gt;</code>,
+可选参数只能放在末尾处。</li>
+<li>默认值</li>
+<li>rest 剩余参数，
+<code>...&lt;variable&gt;: &lt;array/tuple&gt;</code></li>
+</ul>
+<p>对同一个函数参数，可选参数和默认值不能同时使用。</p>
+<h5 id="高阶函数-higher-order-function">高阶函数 higher-order
+function</h5>
+<p>返回值是一个函数，用于对某个功能进行扩展和包装</p>
+<h5 id="构造函数">构造函数</h5>
+<p>需要通过 <code>new</code> 命令来调用。</p>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Animal</span> &#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> <span class="title class_">AnimalConstructor</span> = <span class="title function_">new</span> () =&gt; <span class="title class_">Animal</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> a = <span class="keyword">new</span> <span class="title class_">AnimalConstructor</span>();</span><br></pre></td></tr></table></figure>
+<h4 id="object">Object</h4>
+<p><strong>在 JS
+中只有对象才有方法</strong>，而原始类型的值本身没有方法，需要通过对应的包装对象才能调用方法。而每一个原始类型都有对应的包装类，会在需要的时候自动转为<strong>包装对象</strong>。包装对象的类型为
+<code>object</code>. <strong>一般情况下建议使用原始类型</strong>。</p>
+<p>Object vs object:</p>
+<ul>
+<li>object 类型的值只包括对象，数组，函数。</li>
+<li>只要能转成 object 类型的值，都是 Object 类型，包括原始类型的值和
+object 的值，除了 undefined 和 null。常用空对象 <code>&#123;&#125;</code> 来表示
+Object 类型。</li>
+</ul>
+<p>对象解构，直接从对象中提取属性, 在对象解构里使用冒号 <code>:</code>
+来对变量进行别名。</p>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="keyword">type</span> <span class="title class_">ObjType</span> = &#123;</span><br><span class="line">    <span class="attr">name</span>: <span class="built_in">string</span></span><br><span class="line">    <span class="attr">age</span>: <span class="built_in">number</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> obj = &#123;</span><br><span class="line">    <span class="attr">name</span>: <span class="string">&quot;test&quot;</span>,</span><br><span class="line">    <span class="attr">age</span>: <span class="number">11</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 对象解构, </span></span><br><span class="line"><span class="keyword">const</span> &#123;name, age： objAge&#125; = obj</span><br></pre></td></tr></table></figure>
+<h5 id="索引类型">索引类型</h5>
+<p>用于不确定属性的多少的场景，可以用于以下的场景</p>
+<ul>
+<li>属性名的索引类型</li>
+<li>数组的索引类型</li>
+<li>symbol的索引类型</li>
+</ul>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 属性名的索引类型</span></span><br><span class="line"><span class="keyword">type</span> <span class="title class_">MyObj</span> = &#123;</span><br><span class="line">    [<span class="attr">prop</span>: <span class="built_in">string</span>]: <span class="built_in">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> <span class="attr">obj</span>: <span class="title class_">MyObj</span> = &#123;</span><br><span class="line">    <span class="attr">foo</span>: <span class="string">&#x27;a&#x27;</span>,</span><br><span class="line">    <span class="attr">bar</span>: <span class="string">&#x27;b&#x27;</span>,</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 组的索引类型</span></span><br><span class="line"><span class="keyword">type</span> <span class="title class_">MyArr</span> = &#123;</span><br><span class="line">    [<span class="attr">i</span>: <span class="built_in">number</span>]: <span class="built_in">string</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">const</span> <span class="attr">arr</span>: <span class="title class_">MyArr</span> = [<span class="string">&quot;1&quot;</span>, <span class="string">&quot;2&quot;</span>]</span><br></pre></td></tr></table></figure>
+<p>在 JS
+中，如果存在字符串索引，要求其他索引类型不能与其冲突，并且单个属性的声明也必须符合索引类型的定义，否则会报错。所以建议谨慎使用索引类型。</p>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="keyword">type</span> <span class="title class_">MyObj</span> = &#123;</span><br><span class="line">    [<span class="attr">prop</span>: <span class="built_in">string</span>]: <span class="built_in">string</span></span><br><span class="line">    [<span class="attr">x</span>: <span class="built_in">number</span>]: <span class="built_in">boolean</span> <span class="comment">// error</span></span><br><span class="line">    <span class="attr">foo</span>: <span class="built_in">boolean</span> <span class="comment">// error</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h5 id="结构类型原则-structural-typing">结构类型原则 structural
+typing</h5>
+<p>只要对象 B 满足对象 A 的结构特征，TS 则认为对象 B 兼容对象 A
+的类型，可以将 B 赋值给 A。</p>
+<p><strong>TS
+检查某个值是否符合指定类型时，并不是检查这个值的类型（名义类型），而是检查这个值的结构是否符合要求，即结构类型是否符合。</strong></p>
+<p>如果对象直接使用字面量来表示，则会触发 TS
+的<strong>严格字面量检查(strict object literal
+checking)</strong>。如果字面量的结构和类型定义不完全一样，则会报错。</p>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 直接使用对象字面量</span></span><br><span class="line"><span class="keyword">const</span> <span class="attr">A</span>: &#123;<span class="attr">x</span>: <span class="built_in">number</span>&#125; = &#123;</span><br><span class="line">    <span class="attr">x</span>: <span class="number">1</span>,</span><br><span class="line">    <span class="attr">y</span>: <span class="number">2</span> <span class="comment">// error</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> B = &#123;</span><br><span class="line">    <span class="attr">x</span>: <span class="number">1</span>,</span><br><span class="line">    <span class="attr">y</span>: <span class="number">2</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 不直接使用字面量</span></span><br><span class="line"><span class="keyword">const</span> <span class="attr">A</span>: &#123;<span class="attr">x</span>: <span class="built_in">number</span>&#125; = B <span class="comment">// correct</span></span><br></pre></td></tr></table></figure>
+<p><strong>最小可选属性规则</strong>：如果某个类型的所有属性都是可选的，那么该类型的对象必须至少存在一个可选属性，不能都不存在。</p>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="keyword">type</span> <span class="title class_">Options</span> &#123;</span><br><span class="line">    <span class="attr">a</span>?: <span class="built_in">number</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> opts = &#123;<span class="attr">d</span>: <span class="number">123</span>&#125;</span><br><span class="line"><span class="keyword">const</span> <span class="attr">obj</span>: <span class="title class_">Options</span> = opts <span class="comment">// error</span></span><br></pre></td></tr></table></figure>
+<p>可以通过扩展操作符 <code>...</code> 展开对象，用于合成新的对象。</p>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="keyword">const</span> p1 = &#123;<span class="attr">x</span>:<span class="number">3</span>&#125;</span><br><span class="line"><span class="keyword">const</span> p2 = &#123;<span class="attr">y</span>:<span class="number">4</span>&#125;</span><br><span class="line"><span class="keyword">const</span> p3 = &#123;</span><br><span class="line">    ...p1,</span><br><span class="line">    ...p2</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="interface-type">interface &amp;&amp; type</h4>
+<h3 id="数组类型">数组类型</h3>
+<ul>
+<li>array 数组，使用 <code>&lt;type&gt;[]</code> 表示</li>
+<li>tuple 元组，使用 <code>[type1, type2, ...]</code> 表示,
+用于表示成员类型不同的数组，必须<strong>明确给出类型声明</strong>，否则类型推断为联合类型的数组。可选参数(用
+<code>?</code> 表示)只能用于尾部的成员，即只能放最后。</li>
+</ul>
+<p>若数组<strong>没有声明类型并且初始值为空数组 <code>[]</code></strong>
+时，则 TS
+会在每次赋值时，自动更新类型推断，否则不会自动更新类型推断。</p>
+<p>使用扩展运算符 <code>...</code> 来表示不限成员数量的元组。</p>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="keyword">type</span> <span class="title class_">NamedNumsType</span> = [<span class="built_in">string</span>, ...<span class="built_in">number</span>[]]</span><br><span class="line"><span class="keyword">const</span> <span class="attr">n1</span>: <span class="title class_">NamedNumsType</span> = [<span class="string">&#x27;A&#x27;</span>, <span class="number">1</span>, <span class="number">2</span>]</span><br><span class="line"><span class="keyword">const</span> <span class="attr">n2</span>: <span class="title class_">NamedNumsType</span> = [<span class="string">&#x27;A&#x27;</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]</span><br></pre></td></tr></table></figure>
+<p>只读数组
+<code>readonly &lt;type&gt;[]</code>，对数组成员的新增，修改，删除都会报错</p>
+<h3 id="特殊类型">特殊类型</h3>
+<ul>
+<li>值类型，单个值也可以作为一种类型，表示这个类型只有一个值，就是它本身。常见的情况是使用
+const 声明变量时没有指定类型，则该变量的类型就是赋给它值的值类型。</li>
+<li>联合类型，使用 <code>|</code>
+分割的多个类型组成的新类型，它的值只需要属于其中任一一个类型即可。当需要它的值进行使用时，需要进行
+<code>type narrowing</code>。</li>
+<li>交叉类型，使用 <code>&amp;</code>
+分割的多个类型组成的新类型，它的值要符合所有类型才可以，若多个类型之间存在冲突，则类型为
+<code>never</code>，
+因为不存在这样类型的值。交叉类型主要用于<strong>对象的合成</strong>。</li>
+</ul>
+<h3 id="类型声明">类型声明</h3>
+<p>类型声明的格式：
+<code>&lt;let/const&gt; &lt;variable/function&gt;:&lt;type&gt; = &lt;value&gt;</code></p>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 常量</span></span><br><span class="line"><span class="keyword">const</span> <span class="attr">foo</span>: <span class="built_in">string</span> = <span class="string">&quot;hello&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 可修改</span></span><br><span class="line"><span class="keyword">let</span> <span class="attr">x</span>: <span class="built_in">number</span> = <span class="number">1</span>;</span><br><span class="line">x = <span class="number">2</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">toString</span>(<span class="params"><span class="attr">num</span>: <span class="built_in">number</span></span>): <span class="built_in">string</span> &#123;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在不声明类型时，TS 会根据值进行<strong>类型推断</strong>,
+如果无法推断出来，则类型为 <code>any</code>。</p>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="comment">// foo: string</span></span><br><span class="line"><span class="keyword">const</span> foo = <span class="string">&quot;hello&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// t: any</span></span><br><span class="line"><span class="keyword">let</span> t;</span><br></pre></td></tr></table></figure>
+<p>type，用来对类型进行别名，使类型的名字更有意义，增加代码可读性</p>
+<p>typeof
+的参数必须是<strong>编译时</strong>决定的值，有两种使用场景：</p>
+<ul>
+<li>值运算，结果<strong>当作值</strong>来使用，在 JS 中使用 typeof
+获取值的类型，只能返回 <strong>8
+种基础类型</strong>的<strong>字符串</strong>。</li>
+<li>类型运算，结果<strong>作为类型</strong>来使用，是 TS
+扩展的功能，返回 TS 中的类型。</li>
+</ul>
+<h3 id="类型缩小-type-narrowing">类型缩小 Type Narrowing</h3>
+<h2 id="运算">运算</h2>
+<h3 id="常用的运算技巧">常用的运算技巧</h3>
+<h4 id="falsy-value">Falsy value</h4>
+<p>falsy values 指在 <code>boolean</code> 上下文中会被自动转换为 false
+的值。</p>
+<ul>
+<li><code>false</code></li>
+<li><code>0</code></li>
+<li>空字符串， <code>""</code> 或者 <code>''</code></li>
+<li><code>null</code></li>
+<li><code>undefined</code></li>
+<li><code>NaN</code></li>
+</ul>
+<p><code>boolean</code> 上下文：</p>
+<ul>
+<li>条件判断</li>
+<li>逻辑或 <code>||</code>, 用于提供默认值</li>
+<li>逻辑与 <code>&amp;&amp;</code>, 用于条件执行</li>
+<li>空值合并运算符 <code>??</code>, 只用于判断非
+<code>null/undefined</code></li>
+</ul>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 空值合并运算符 `??`</span></span><br><span class="line"><span class="comment">// 下面 2 种写法是一样的作用，建议使用 ??</span></span><br><span class="line"><span class="keyword">const</span> name = name === <span class="literal">undefined</span> ? <span class="string">&quot;default name&quot;</span> : name;</span><br><span class="line"><span class="keyword">const</span> name = name ?? <span class="string">&quot;default name&quot;</span>;</span><br></pre></td></tr></table></figure>
+<h4 id="双重否定">双重否定 <code>!!</code></h4>
+<p><strong>双重否定</strong>常用来将变量强制转换为 Boolean 来判断真假
+<code>!!&lt;variable&gt;</code>,</p>
+<figure class="highlight ts"><table><tr><td class="code"><pre><span class="line"><span class="keyword">const</span> a = <span class="number">0</span> <span class="comment">// falsy value</span></span><br><span class="line"><span class="keyword">const</span> result = !!a</span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(result) <span class="comment">// false</span></span><br></pre></td></tr></table></figure>
+<h2 id="reference">Reference</h2>
+<ul>
+<li><a href="https://wangdoc.com/typescript/">TypeScript 教程</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>quick-guide</category>
+      </categories>
+      <tags>
+        <tag>quick-guide</tag>
+        <tag>TypeScript</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring MVC请求处理流程</title>
+    <url>/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/</url>
+    <content><![CDATA[<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">环境: </span><br><span class="line">- org.springframework:spring-webmvc:5.3.10</span><br><span class="line">- org.springframework.boot:spring-boot:2.5.5</span><br></pre></td></tr></table></figure>
+
+<p>web程序启动时的初始化顺序: ServletContext -&gt; listener -&gt; filter -&gt; servlet<br>spring bean的初始化是在listener中声明的, 可以在后面使用.</p>
+<span id="more"></span>
+
+<p><img src="/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/request-workflow.jpg"></p>
+<h2 id="Filter"><a href="#Filter" class="headerlink" title="Filter"></a>Filter</h2><ul>
+<li>Servlet规范规定的，只能用于Web程序中, 由Servlet容器提供支持</li>
+<li>作用于Servlet执行前后</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Order(1)</span></span><br><span class="line"><span class="meta">@WebFilter(filterName = &quot;customized&quot;, urlPatterns = &quot;/*&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">CustomizedFilter</span> <span class="keyword">implements</span> <span class="title class_">Filter</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">init</span><span class="params">(FilterConfig filterConfig)</span> <span class="keyword">throws</span> ServletException &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter Init&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">doFilter</span><span class="params">(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)</span> <span class="keyword">throws</span> IOException, ServletException &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter doFilter before&quot;</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 执行Servlet</span></span><br><span class="line">        filterChain.doFilter(servletRequest, servletResponse);</span><br><span class="line"></span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter doFilter after&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">destroy</span><span class="params">()</span> &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedFilter destroy&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>必须要注解<strong>ServletComponentScan</strong>才能让自定义的Filter其效果.</p>
+<p>在filterChain.doFilter调用的前后来执行操作, 作用于Servlet之前的前后.</p>
+<h2 id="DispatcherServlet"><a href="#DispatcherServlet" class="headerlink" title="DispatcherServlet"></a>DispatcherServlet</h2><p>为Spring框架定制的Servlet, 用来对请求进行处理</p>
+<ul>
+<li>获取请求处理链HandlerExecutionChain以及相应的HandlerAdapter</li>
+<li>通过HandlerAdapter对请求进行处理</li>
+<li>使用Interceptor对request&#x2F;response进行拦截</li>
+<li>对异常进行处理</li>
+</ul>
+<p>Spring MVC中的各种相关配置可参考<code>WebMvcAutoConfigurationAdapter</code>.<br>通过定义一个或者多个<code>WebMvcConfigurer</code>来扩展Spring MVC中的配置</p>
+<h2 id="获取Handler"><a href="#获取Handler" class="headerlink" title="获取Handler"></a>获取Handler</h2><p><img src="/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/request-mapping.png"></p>
+<p>通过<code>@RequestMapping</code>注解定义方法Handler的匹配要求，<br>生成对应的<code>RequestMappingInfo</code>和多个<code>RequestCondition</code>，<br>用于请求匹配, 匹配成功后调用对应的方法Handler。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@RequestMapping(value = &quot;/&#123;ping&#125;&quot;, method = RequestMethod.GET)</span></span><br><span class="line"><span class="keyword">public</span> String <span class="title function_">getPingPong</span><span class="params">( String ping)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> ping;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@GetMapping(value = &quot;/&#123;ping&#125;&quot;, params = &quot;ex=1&quot;)</span></span><br><span class="line"><span class="keyword">public</span> String <span class="title function_">getPingPongEx</span><span class="params">( String ping)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> ping + <span class="string">&quot; Ex&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>DispatcherServlet::getHandler</code>用于获取请求处理链HandlerExecutionChain，<br>通过比较RequestMappingInfo和RequestCondition，查找最匹配的方法Handler。<br>定义的RequestCondition越多，则方法Handler的针对性越强；反之，则方法Handler越通用。</p>
+<h2 id="通过HandlerAdapter处理请求"><a href="#通过HandlerAdapter处理请求" class="headerlink" title="通过HandlerAdapter处理请求"></a>通过HandlerAdapter处理请求</h2><p><code>HandlerAdapter.handle</code>主要做以下几件事：</p>
+<ul>
+<li><code>HandlerMethodArgumentResolver</code>对输入参数进行解析</li>
+<li>调用handler对请求进行处理</li>
+<li><code>HandlerMethodReturnValueHandler</code>对返回进行处理</li>
+<li>ExceptionHandler异常统一处理</li>
+</ul>
+<h3 id="基于String输入的参数解析"><a href="#基于String输入的参数解析" class="headerlink" title="基于String输入的参数解析"></a>基于String输入的参数解析</h3><p><img src="/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/string-param-resolver.png"></p>
+<p>通过定义Converters中的bean，就可以在启动时<br>通过<code>WebMvcAutoConfigurationAdapter#addFormatters</code>添加进来，<br>用于<code>AbstractNamedValueMethodArgumentResolver</code>的输入类型转换。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Money.java</span></span><br><span class="line"><span class="meta">@Getter</span></span><br><span class="line"><span class="meta">@Setter</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Money</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="type">String</span> <span class="variable">currency</span> <span class="operator">=</span> <span class="string">&quot;CNY&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> String value;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">toString</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> currency + <span class="string">&quot; &quot;</span> + value;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// MoneyFormatter.java</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">MoneyFormatter</span> <span class="keyword">implements</span> <span class="title class_">Formatter</span>&lt;Money&gt; &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> Money <span class="title function_">parse</span><span class="params">(String text, Locale locale)</span> <span class="keyword">throws</span> ParseException &#123;</span><br><span class="line">        String[] input = text.split(<span class="string">&quot; &quot;</span>);</span><br><span class="line">        <span class="type">Money</span> <span class="variable">money</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Money</span>();</span><br><span class="line">        <span class="keyword">if</span> (input.length == <span class="number">1</span>) &#123;</span><br><span class="line">            money.setValue(input[<span class="number">0</span>]);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            money.setCurrency(input[<span class="number">0</span>]);</span><br><span class="line">            money.setValue(input[<span class="number">1</span>]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> money;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">print</span><span class="params">(Money object, Locale locale)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> object.getCurrency()</span><br><span class="line">                + <span class="string">&quot; &quot;</span> + object.getValue();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// IndexController.java</span></span><br><span class="line"><span class="meta">@GetMapping(value = &quot;/price&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Money <span class="title function_">price</span><span class="params">( Money money)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> money;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="针对Body的输入和输出处理"><a href="#针对Body的输入和输出处理" class="headerlink" title="针对Body的输入和输出处理"></a>针对Body的输入和输出处理</h3><p><img src="/2022/03/spring-mvc%E8%AF%B7%E6%B1%82%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B/body-param-resolver.png"></p>
+<p>通过<code>HttpMessageConverter</code>对body进行序列化和反序列化,<br>其中最常用的就是json的处理模块<code>MappingJackson2HttpMessageConverter</code>.</p>
+<p>通过定义<code>HttpMessageConverters</code>的bean，将自定义的<code>HttpMessageConverter</code>添加进来，<br>通过<code>WebMvcAutoConfigurationAdapter#configureMessageConverters</code>进行注册</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// StringConverter.java</span></span><br><span class="line"><span class="keyword">public</span> StringConverter <span class="keyword">implements</span> <span class="title class_">HttpMessageConverter</span>&lt;String&gt; &#123;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// ConverterConfig.java</span></span><br><span class="line"><span class="meta">@Bean</span></span><br><span class="line"><span class="keyword">public</span> HttpMessageConverters <span class="title function_">converters</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">HttpMessageConverters</span>(<span class="keyword">new</span> <span class="title class_">StringConverter</span>());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="JacksonJson序列化的支持"><a href="#JacksonJson序列化的支持" class="headerlink" title="JacksonJson序列化的支持"></a>JacksonJson序列化的支持</h3><p>Spring MVC中提供了<code>MappingJackson2HttpMessageConverter</code>对json对象进行序列化处理。<br>通过JsonComponnet相关的bean来注册JSON序列化组件</p>
+<ul>
+<li>JsonSerializer</li>
+<li>JsonDeserializer</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@JsonComponent</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">MoneyJson</span> <span class="keyword">extends</span> <span class="title class_">StdSerializer</span>&lt;Money&gt; &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">protected</span> <span class="title function_">MoneyJson</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="built_in">super</span>(Money.class);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">serialize</span><span class="params">(Money money, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)</span> <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">        jsonGenerator.writeString(money.toString());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="Interceptor"><a href="#Interceptor" class="headerlink" title="Interceptor"></a>Interceptor</h2><p>Interceptor用于对Controller层进行拦截，<br>处理一些和controller没有依赖的业务，比如鉴权，日志等</p>
+<ul>
+<li>作用于Controller前后执行</li>
+<li>不能修改request</li>
+<li>spring中优先使用Interceptor, 而不是filter</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">CustomizedInterceptor</span> <span class="keyword">extends</span> <span class="title class_">HandlerInterceptorAdapter</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">preHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler)</span></span><br><span class="line">            <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        log.info(<span class="string">&quot;CustomizedInterceptor prehandle&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">postHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler,</span></span><br><span class="line"><span class="params">			<span class="meta">@Nullable</span> ModelAndView modelAndView)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">		log.info(<span class="string">&quot;CustomizedInterceptor postHandle&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">afterCompletion</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler,</span></span><br><span class="line"><span class="params">			<span class="meta">@Nullable</span> Exception ex)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">		log.info(<span class="string">&quot;CustomizedInterceptor afterCompletion&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 添加interceptor</span></span><br><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">AppServiceConfig</span> <span class="keyword">extends</span> <span class="title class_">WebMvcConfigurationSupport</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> CustomizedInterceptor customizedInterceptor;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">addInterceptors</span><span class="params">(InterceptorRegistry registry)</span> &#123;</span><br><span class="line">        registry.addInterceptor(customizedInterceptor).addPathPatterns(<span class="string">&quot;/**&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="Exception处理"><a href="#Exception处理" class="headerlink" title="Exception处理"></a>Exception处理</h2><p>对Request Mapping Handler方法抛出的异常进行处理。</p>
+<ul>
+<li>ExceptionHandler<ul>
+<li>Controller层异常处理</li>
+<li>ControllerAdvice全局异常处理</li>
+</ul>
+</li>
+</ul>
+<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
+<li><a href="https://jcp.org/en/jsr/detail?id=340">JSR 340: Java Servlet 3.1 Specification</a></li>
+<li><a href="https://waylau.gitbooks.io/servlet-3-1-specification/content/">中文翻译</a></li>
+<li><a href="https://docs.spring.io/spring-framework/reference/">Spring MVC</a></li>
+<li><a href="https://time.geekbang.org/course/detail/100023501-85504">玩转Spring全家桶 — 46 | Spring MVC中的常用视图（上）</a></li>
+<li><a href="https://blog.csdn.net/zhaolijing2012/article/details/41596803">SpringMVC系列（一）核心：处理请求流程</a></li>
+<li><a href="http://www.cnblogs.com/cnndevelop/p/7255622.html">Spring Boot :Request请求处理流程</a></li>
+<li><a href="http://www.51gjie.com/javaweb/909.html">Spring MVC工作流程以及请求处理流程</a></li>
+<li><a href="https://blog.csdn.net/u012881904/article/details/51292211">码农小汪-Spring MVC -DispatcherServlet 详解</a></li>
+<li><a href="https://www.ibm.com/developerworks/cn/java/j-lo-servlet/index.html">Servlet 工作原理解析</a></li>
+<li><a href="https://www.cnblogs.com/ycpanda/p/3637312.html">Spring filter和拦截器(Interceptor)的区别和执行顺序</a></li>
+<li><a href="http://fanlychie.github.io/post/spring-boot-servlet-filter-listener-usage.html">Spring Boot 使用 Servlet、Filter、Listener</a></li>
+<li><a href="https://my.oschina.net/lichhao/blog/172562">SpringMVC源码剖析（五)-消息转换器HttpMessageConverter</a></li>
+<li><a href="https://leokongwq.github.io/2015/04/17/springMVCOutlines.html">Spring MVC HandlerMapping HandlerAdapter</a></li>
+<li><a href="https://blog.csdn.net/hongxingxiaonan/article/details/50282001">SpringMVC中WebDataBinder的应用及原理</a></li>
+<li><a href="https://blog.csdn.net/u010913106/article/details/50855691">说说Spring中的WebDataBinder</a></li>
+<li><a href="https://www.jianshu.com/p/ffe56d9553fd">Spring Boot：定制HTTP消息转换器</a></li>
+<li><a href="https://cloud.tencent.com/developer/article/1561782">Spring Boot 统一异常处理最佳实践 – 拓展篇</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>spring</category>
+      </categories>
+      <tags>
+        <tag>spring</tag>
+        <tag>web</tag>
+      </tags>
+  </entry>
+</search>
