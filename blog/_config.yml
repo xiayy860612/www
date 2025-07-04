@@ -109,6 +109,7 @@ deploy:
   type: git
   repo: git@github.com:xiayy860612/www.git
   branch: master
+  message: Site updated on {{ now('YYYY-MM-DD HH:mm:ss') }}
 
 search:
   path: search.xml
