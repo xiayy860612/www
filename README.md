@@ -1,7 +1,5 @@
 # articles
 
-个人博客内容存储在[gitee仓库](https://gitee.com/s2u2m-amos/articles)
-
 使用[hexo](https://hexo.io/)生成静态网站
 
 ```bash
