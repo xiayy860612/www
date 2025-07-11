@@ -124,14 +124,53 @@ Reference:
 
 ### Server Component
 
-place `use server` directive at the top of file
+It's **static** by default, it will be pre-render during build stage and generate static files.
+
+Limits:
+
+- not use dynamic data or runtime evaluation
+- no interactivity or state
+
+Benifits:
+
+- fast initial loading
+- SEO optimization
+- fetch static data
+- use ISR (Incremental Static Regeneration) to regenerate periodly.
+
+you can place `use server` directive at the top of file to specify it's a server component.
+
+```tsx
+export default async function HomePage() {
+  // static data
+  const res = await fetch('https://api.example.com/data', {
+    next: { revalidate: 60 } // Revalidate every 60 seconds (ISR)
+  });
+  const data = await res.json();
+
+  return <div>{data.message}</div>;
+}
+```
+
+#### Dynamic Server Component
+
+mostly **not** use dynamic server component.
+
+if use dynamic server component, it requires to export `dynamic` config.
 
 ```tsx
 'use server';
 
-// Page with SSR, pure server component
-export default async function Page() {  
-  const allPosts = await postRepository.getAll();
+export const dynamic = 'force-dynamic';
+
+interface PageProps {
+  params: Promise<{ postId: string }>
+}
+
+export default async function Page({ postId }: PageProps) {
+  // runtime evalution
+  const { postId } = params;
+  const allPosts = await postRepository.findById(itemId);
   return (
     <ul>
       {allPosts.map((post) => (
@@ -141,6 +180,8 @@ export default async function Page() {
   )
 }
 ```
+
+More details please refer [dynamic](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config#dynamic)
 
 ## Client Component
 
