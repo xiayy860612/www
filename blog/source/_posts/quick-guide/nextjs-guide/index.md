@@ -21,9 +21,9 @@ root
 ├── components, server/client, inclue reusable pure React Components
 ├── hooks, client only, inclue reusable logic work with states
 ├── models, server/client, represent domain data structure
-├── prisma, server only
+├── db, server only
 │   ├── migrations, include database migrations
-│   └── schema.prisma, define database schemas
+│   └── seeds, define test data
 ├── public, client only, contains static assets
 ├── server，server only
 │   ├── middlewares, process before route handler and process returned response 
@@ -65,7 +65,7 @@ DATABASE_URL="mysql://root:root@localhost:3306/kid-resource"
 nextjs use `app router` for routing, it follows **directory hierarchy**,
 all route/controller handlers define in `app` folder, it contains:
 
-- `page.tsx`, Page with Server Side Render (SSR), it's a pure server component.
+- `page.tsx`, Page component with Server Side Render (SSR)
 - `route.tsx`, API route handler
 
 ```bash
@@ -86,12 +86,104 @@ Reference:
 
 - [Route Handlers](https://nextjs.org/docs/app/getting-started/route-handlers-and-middleware#route-handlers)
 
-### Request Parameters
+### Page Component with SSR
+
+defined in `page.tsx`, it's a **static Server Component** by default,
+it will be pre-render during build stage and generate static files.
+
+Limits:
+
+- not use dynamic data or runtime evaluation
+- no interactivity or state
+
+Benifits:
+
+- fast initial loading
+- SEO optimization
+- fetch static data
+- use ISR (Incremental Static Regeneration) to regenerate periodly.
+
+```tsx
+export default async function HomePage() {
+  // static data
+  const res = await fetch('https://api.example.com/data', {
+    next: { revalidate: 60 } // Revalidate every 60 seconds (ISR)
+  });
+  const data = await res.json();
+
+  return <div>{data.message}</div>;
+}
+```
+
+mostly do not use dynamic server component,
+if required, please refer [dynamic](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config#dynamic)
+
+Reference:
+
+- [Page with SSR](https://nextjs.org/docs/app/api-reference/file-conventions/page)
+
+#### Page Parameters
+
+Page Component parameters source:
+
+- path variables
+- query string
+- headers
+
+```tsx
+import { headers } from 'next/headers'
+
+interface PageProps {
+  params: Promise<{ postId: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function Page({ params, searchParams }: PageProps) {
+  const { postId } = await params;
+  const { pageIndex, pageSize } =  await searchParams;
+  const headersList = await headers()
+  const posts = await postRepository.findById(itemId, pageIndex, pageSize);
+  return (
+    <ul>
+      {posts.map((post) => (
+        <li key={post.id}>{post.title}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+Reference:
+
+- [headers](https://nextjs.org/docs/app/api-reference/functions/headers)
+- [Dynamic Route Segments](https://nextjs.org/docs/app/api-reference/file-conventions/dynamic-routes)
+
+### Route Handler
+
+defined in `route.tsx` and must export function with **http method name** as handlers.
+recommend to use `NextRequest/NextResponse` that extend `Request/Response`.
+
+```tsx
+export async function GET(request: NextRequest) {
+  return NextResponse.json({ data: "hello world" })
+}
+```
+
+reference:
+
+- [Route Handlers](https://nextjs.org/docs/app/getting-started/route-handlers-and-middleware#route-handlers)
+- [route.js](https://nextjs.org/docs/app/api-reference/file-conventions/route)
+
+#### Route Handler Parameters
+
+Route Handler parameter source:
 
 - path variable
 - querystring
 - header parameter
 - request body
+
+recommend to use `zod` library to validate parameters.
 
 ```tsx
 // get path variable
@@ -100,14 +192,14 @@ import { headers } from 'next/headers'
 
 interface PageProps {
   params: Promise<{ itemId: string }>
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-export async function POST(req: NextRequest, { params, searchParams }: PageProps) {
-  const body = await req.json(); // parse JSON body
+export async function POST(req: NextRequest, { params }: PageProps) {
+  const body = await req.json();
   const headers = req.headers; // await headers()
   const { itemId } = await params;
-  const { page } = await searchParams;
+  const searchParams = request.nextUrl.searchParams;
+  const page = Number(searchParams.get('page'))
 
   return Response.json({
     message: `Received data for user ${userId}`,
@@ -116,33 +208,9 @@ export async function POST(req: NextRequest, { params, searchParams }: PageProps
 }
 ```
 
-Reference:
-
-- [Page with SSR](https://nextjs.org/docs/app/api-reference/file-conventions/page)
-- [headers](https://nextjs.org/docs/app/api-reference/functions/headers)
-- [Dynamic Route Segments](https://nextjs.org/docs/app/api-reference/file-conventions/dynamic-routes)
-
-### Server Component
-
-place `use server` directive at the top of file
-
-```tsx
-'use server';
-
-// Page with SSR, pure server component
-export default async function Page() {  
-  const allPosts = await postRepository.getAll();
-  return (
-    <ul>
-      {allPosts.map((post) => (
-        <li key={post.id}>{post.title}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
 ## Client Component
+
+follow React rules to create client components.
 
 - require `'use client'` at top of component file
 - not async Page
@@ -228,7 +296,7 @@ export default function Posts({
 
 ### Interaction with Server
 
-- invoke API route handlers by http request, **recommend**
+- invoke API route handlers by request, **recommend**
 - invoke server function
 
 #### Invoke Server Function
