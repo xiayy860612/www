@@ -12,25 +12,84 @@ OIDC Infrastructure design
 
 <!--more-->
 
-## Endpoints
+## OIDC IDP Design
 
-### IDP endpoints
+### Endpoints
 
-- discovery endpoint(`/.well-known/openid-configuration`)
-- auth endpoint(`/auth`)
-- token endpoint(`/token`)
-- JWKS endpoint(`/.well-known/jwks.json`)
-- user endpoint(`/me`)
-- end session endpoint(`/session/end`)
+- discovery endpoint(`/.well-known/openid-configuration`), show all endpoints for client
+- auth endpoint(`/auth`), trigger auth workflow
+- token endpoint(`/token`), get token info
+- JWKS endpoint(`/.well-known/jwks.json`), is used to verify jwt token, such like id token
+- user endpoint(`/me`), get lateset user info
+- end session endpoint(`/session/end`), is used to logout
 
-### Client endpoints
+### Token
 
-- login callback
-- logout callback
+#### ID Token
 
-## authorization_code Workflow
+It's a `JWT token`, represents a user credentials for successful login user,
+and includes basic user profile which defined by scope and claim.
 
-```puml
+It's always passed to client and is used show user info.
+
+most important fields in ID Token:
+
+- sub(Subject), subject contains user unique id
+- iss(Issuer), IDP host which signed ID Token
+- exp(Expiration time), expiration timestamp for ID Token
+- iat(Issued at), sign timestamp for ID Token
+- aud(Audience), mostly is client id
+- user claims, show basic user info
+
+```json
+{
+   "iss": "https://idp-doamin",
+   "sub": "24400320",
+   "aud": "client-id",
+   "exp": 1311281970,
+   "iat": 1311280970,
+   ...
+   <user claims>
+}
+```
+
+Client uses HTTP Header `Authorization: "Bearer <ID Token>"` to send request to server,
+then server could use `JWKS endpoint` to get public key to verify ID Token.
+
+#### Access Token
+
+It mostly is an `Opaque token` which is a random string
+and used to access IDP resources, such like below cases:
+
+- invoke user endpoint to get more user details.
+
+Access token is mostly `saved in backend`. If client required IDP resources, backend service could be proxy to get related resources and return to client.
+
+#### Refresh Token
+
+It's used to get a new Access Token and ID Token when Access Token is expired by invoking `token endpoint`.
+
+It should be `saved in backend` for security.
+
+It requires scope `offline_access` and `prompt=consent` in querystring when trigger auth workflow.
+
+More details for reference:
+
+- [刷新 Access Token](https://docs.authing.cn/v2/guides/federation/oidc.html#%E5%88%B7%E6%96%B0-access-token)
+
+#### Expiration Time for Tokens
+
+`Refresh Token > ID Token >= Access Token`
+
+When ID Token/Access Token is expired, client can trigger refresh token action in server to get new one,
+that's why expiration time for ID Token/Access Token could be short.
+
+When Refresh Token is expired, user must re-login again to obtain new token info include refresh token,
+to avoid requiring users to login frequently, refresh tokens are given a long expiration time.
+
+### auth Workflow with authorization_code
+
+```plantuml
 
 actor User as U
 actor Client as C
@@ -99,14 +158,42 @@ end
 
 ```
 
+good resources for reference:
+
+- demo show in [使用 OIDC 授权码模式](https://docs.authing.cn/v2/federation/oidc/authorization-code/?step=0)
+
+#### SPA with authorization_code + PCKE
+
 for SPA application without server, it recommends use `authorization_code + PCKE` flow.
 
-## Token
+TODO
 
-- id token
-- access token
+### Model Design
+
+TODO
+
+## Client Integration
+
+### Login
+
+- login callback
+
+TODO
+
+### Token Refresh
+
 - refresh token
+- Silent Authentication
+
+TODO
+
+### Logout
+
+- logout callback
+
+TODO
 
 ## Reference
 
 - [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0-final.html)
+- [JSON Web Token (JWT)](https://datatracker.ietf.org/doc/html/rfc7519)
