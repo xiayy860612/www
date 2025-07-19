@@ -1,21 +1,10 @@
-# articles
+# 👋 Welcome to My Github
 
-使用[hexo](https://hexo.io/)生成静态网站
+Thanks for stopping in my profile, I'm grad you're here.
 
-```bash
-# run blog in local
-cd blog
-npm install
+This space is used to share my tools, study resources and personal projects. I hope you can find something interesting or usefull.
 
-# generate article
+## 🤝 Let's Connect
 
-
-# run blog in local
-npm run server
-
-# generate blog
-npm run deploy
-```
-
-
-## 参考
+- [Amos' Blog](https://amos.s2u2m.com/)
+- [LinkedIn](https://www.linkedin.com/in/amosxia/)
